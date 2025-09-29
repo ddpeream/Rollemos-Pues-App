@@ -1,0 +1,63 @@
+{
+  "nav": {
+    "inicio": "Accueil",
+    "patinadores": "Patineurs",
+    "parches": "Groupes",
+    "spots": "Spots",
+    "galeria": "Galerie"
+  },
+  "screens": {
+    "inicio": "Accueil",
+    "patinadores": "Patineurs",
+    "parches": "Groupes",
+    "spots": "Spots",
+    "galeria": "Galerie"
+  },
+  "home": {
+    "hero": {
+      "title": "Patinez la ville avec style",
+      "subtitle": "Explorez les patineurs, groupes et spots. Découvrez des itinéraires, événements et vibrez avec la communauté.",
+      "exploreSkaters": "Explorer les patineurs",
+      "viewSpots": "Voir les spots"
+    },
+    "whatYouCanDo": {
+      "title": "Ce que vous pouvez faire",
+      "connect": {
+        "title": "Connecter",
+        "description": "Trouvez des riders par ville, discipline et niveau."
+      },
+      "join": {
+        "title": "Rejoindre",
+        "description": "Découvrez des groupes et horaires pour rouler."
+      },
+      "explore": {
+        "title": "Explorer",
+        "description": "Spots et parcs favoris de la communauté."
+      }
+    },
+    "carousel": {
+      "title": "Moments sur roues"
+    },
+    "featured": {
+      "title": "En vedette",
+      "skaters": "Patineurs en vedette",
+      "parches": "Groupes en vedette",
+      "spots": "Spots en vedette"
+    },
+    "about": {
+      "title": "À propos du projet",
+      "description": "Une vision partagée pour renforcer la communauté de patinage à Medellín, l'amenant au niveau supérieur grâce à la technologie et l'expérience.",
+      "mission": "Rollemos Pues!!! naît de la collaboration entre l'innovation technologique et la connaissance approfondie de la culture du skateboard urbain. Notre objectif est d'organiser, enrichir et projeter cette communauté dynamique vers de nouvelles opportunités.",
+      "team": "L'équipe",
+      "deimar": "Deimar Perea Moreno - Développement Web & Vision Numérique",
+      "carlos": "Carlos Andrés Saldarriaga - Expérience & Communauté",
+      "learnMore": "En savoir plus sur le projet"
+    },
+    "cta": {
+      "title": "Prêt à rouler?",
+      "subtitle": "Abonnez-vous pour recevoir des itinéraires, événements et nouvelles.",
+      "emailPlaceholder": "votre@email.com",
+      "subscribe": "S'abonner"
+    }
+  }
+}

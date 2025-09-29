@@ -1,0 +1,63 @@
+{
+  "nav": {
+    "inicio": "Home",
+    "patinadores": "Skaters",
+    "parches": "Crews",
+    "spots": "Spots",
+    "galeria": "Gallery"
+  },
+  "screens": {
+    "inicio": "Home",
+    "patinadores": "Skaters",
+    "parches": "Crews",
+    "spots": "Spots",
+    "galeria": "Gallery"
+  },
+  "home": {
+    "hero": {
+      "title": "Skate the city in style",
+      "subtitle": "Explore skaters, crews and spots. Discover routes, events and vibe with the community.",
+      "exploreSkaters": "Explore skaters",
+      "viewSpots": "View spots"
+    },
+    "whatYouCanDo": {
+      "title": "What you can do",
+      "connect": {
+        "title": "Connect",
+        "description": "Find riders by city, discipline and level."
+      },
+      "join": {
+        "title": "Join",
+        "description": "Discover crews and schedules to ride."
+      },
+      "explore": {
+        "title": "Explore",
+        "description": "Community favorite spots and parks."
+      }
+    },
+    "carousel": {
+      "title": "Moments on wheels"
+    },
+    "featured": {
+      "title": "Featured",
+      "skaters": "Featured skaters",
+      "parches": "Featured crews",
+      "spots": "Featured spots"
+    },
+    "about": {
+      "title": "About the project",
+      "description": "A shared vision to empower the skating community in Medellín, taking it to the next level through technology and experience.",
+      "mission": "Rollemos Pues!!! is born from the collaboration between technological innovation and deep knowledge of urban skating culture. Our goal is to organize, enrich and project this vibrant community towards new opportunities.",
+      "team": "The team",
+      "deimar": "Deimar Perea Moreno - Web Development & Digital Vision",
+      "carlos": "Carlos Andrés Saldarriaga - Experience & Community",
+      "learnMore": "Learn more about the project"
+    },
+    "cta": {
+      "title": "Ready to roll?",
+      "subtitle": "Subscribe to receive routes, events and news.",
+      "emailPlaceholder": "your@email.com",
+      "subscribe": "Subscribe"
+    }
+  }
+}

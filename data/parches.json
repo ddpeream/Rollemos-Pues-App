@@ -1,0 +1,5 @@
+[
+  { "id": 12, "nombre": "Urban Roll Medellín", "ciudad": "Medellín", "foto": "https://images.unsplash.com/photo-1503342217505-b0a15cf70489?q=80&w=1200&auto=format&fit=crop", "disciplinas": ["street","park"], "descripcion": "Rodadas semanales por el centro y parques.", "contacto": {"correo": "contacto@urbanroll.co", "instagram": "https://instagram.com/urbanroll"}, "miembrosAprox": 45 },
+  { "id": 11, "nombre": "Medallo Downhill", "ciudad": "Medellín", "foto": "https://images.unsplash.com/photo-1513883049090-d0b7439799bf?q=80&w=1200&auto=format&fit=crop", "disciplinas": ["downhill"], "descripcion": "Bajadas técnicas y seguras.", "contacto": {"correo": "downhill@mde.co"}, "miembrosAprox": 26 },
+  { "id": 10, "nombre": "Medallo Park Rats", "ciudad": "Medellín", "foto": "https://images.unsplash.com/photo-1512359243361-6020f0f2c8f6?q=80&w=1200&auto=format&fit=crop", "disciplinas": ["park"], "descripcion": "Bowl sessions y transiciones.", "miembrosAprox": 20 }
+]

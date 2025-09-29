@@ -1,0 +1,63 @@
+{
+  "nav": {
+    "inicio": "Inicio",
+    "patinadores": "Patinadores",
+    "parches": "Parches",
+    "spots": "Spots",
+    "galeria": "Galería"
+  },
+  "screens": {
+    "inicio": "Inicio",
+    "patinadores": "Patinadores",
+    "parches": "Parches",
+    "spots": "Spots",
+    "galeria": "Galería"
+  },
+  "home": {
+    "hero": {
+      "title": "Patina la ciudad con estilo",
+      "subtitle": "Explora patinadores, parches y spots. Descubre rutas, eventos y vibra con la comunidad.",
+      "exploreSkaters": "Explorar patinadores",
+      "viewSpots": "Ver spots"
+    },
+    "whatYouCanDo": {
+      "title": "Qué puedes hacer",
+      "connect": {
+        "title": "Conectar",
+        "description": "Encuentra riders por ciudad, disciplina y nivel."
+      },
+      "join": {
+        "title": "Unirte",
+        "description": "Descubre parches y horarios para rodar."
+      },
+      "explore": {
+        "title": "Explorar",
+        "description": "Spots y parques favoritos de la comunidad."
+      }
+    },
+    "carousel": {
+      "title": "Momentos en ruedas"
+    },
+    "featured": {
+      "title": "Destacados",
+      "skaters": "Patinadores destacados",
+      "parches": "Parches destacados",
+      "spots": "Spots destacados"
+    },
+    "about": {
+      "title": "Acerca del proyecto",
+      "description": "Una visión compartida para potencializar la comunidad de patinaje en Medellín, llevándola al siguiente nivel a través de tecnología y experiencia.",
+      "mission": "Rollemos Pues!!! nace de la colaboración entre la innovación tecnológica y el profundo conocimiento de la cultura del patinaje urbano. Nuestro objetivo es organizar, enriquecer y proyectar esta vibrante comunidad hacia nuevas oportunidades.",
+      "team": "El equipo",
+      "deimar": "Deimar Perea Moreno - Desarrollo Web & Visión Digital",
+      "carlos": "Carlos Andrés Saldarriaga - Experiencia & Comunidad",
+      "learnMore": "Conoce más del proyecto"
+    },
+    "cta": {
+      "title": "¿Listo para rodar?",
+      "subtitle": "Suscríbete para recibir rutas, eventos y novedades.",
+      "emailPlaceholder": "tu@email.com",
+      "subscribe": "Suscribirme"
+    }
+  }
+}
