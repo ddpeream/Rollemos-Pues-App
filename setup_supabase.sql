@@ -1,0 +1,424 @@
+-- =============================================
+-- SUPABASE SETUP - TODAS LAS TABLAS
+-- Fecha: 22 Octubre 2025
+-- App: Rollemos Pues - Patinaje App
+-- =============================================
+
+-- IMPORTANTE: Este script asume que la tabla 'usuarios' YA EXISTE
+-- con la estructura creada previamente en el proyecto.
+
+-- INSTRUCCIONES:
+-- 1. Ve a Supabase Dashboard > SQL Editor
+-- 2. Copia y pega TODO este archivo
+-- 3. Click "RUN" para ejecutar
+-- 4. Verificar que las 6 tablas se crearon correctamente
+
+-- =============================================
+-- VERIFICAR TABLA USUARIOS EXISTENTE
+-- =============================================
+
+-- Verificar que la tabla usuarios existe
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name = 'usuarios'
+  ) THEN
+    RAISE EXCEPTION 'La tabla usuarios no existe. Debes crearla primero.';
+  END IF;
+END
+$$;
+
+-- =============================================
+-- 1. TABLA: GALERIA (Posts de fotos)
+-- =============================================
+
+-- Eliminar tabla si existe (solo para desarrollo)
+DROP TABLE IF EXISTS galeria CASCADE;
+
+CREATE TABLE galeria (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  imagen TEXT NOT NULL,
+  descripcion TEXT,
+  likes_count INTEGER DEFAULT 0,
+  comentarios_count INTEGER DEFAULT 0,
+  ubicacion TEXT,
+  aspect_ratio NUMERIC DEFAULT 0.75,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Índices para performance
+CREATE INDEX idx_galeria_usuario ON galeria(usuario_id);
+CREATE INDEX idx_galeria_created_at ON galeria(created_at DESC);
+
+-- =============================================
+-- 2. TABLA: GALERIA_LIKES (Likes en posts)
+-- =============================================
+
+-- Eliminar tabla si existe (solo para desarrollo)
+DROP TABLE IF EXISTS galeria_likes CASCADE;
+
+CREATE TABLE galeria_likes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  galeria_id UUID NOT NULL REFERENCES galeria(id) ON DELETE CASCADE,
+  usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(galeria_id, usuario_id)
+);
+
+-- Índices para performance
+CREATE INDEX idx_galeria_likes_post ON galeria_likes(galeria_id);
+CREATE INDEX idx_galeria_likes_user ON galeria_likes(usuario_id);
+
+-- =============================================
+-- 3. TABLA: GALERIA_COMENTARIOS (Comentarios)
+-- =============================================
+
+-- Eliminar tabla si existe (solo para desarrollo)
+DROP TABLE IF EXISTS galeria_comentarios CASCADE;
+
+CREATE TABLE galeria_comentarios (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  galeria_id UUID NOT NULL REFERENCES galeria(id) ON DELETE CASCADE,
+  usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  texto TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Índices para performance
+CREATE INDEX idx_comentarios_post ON galeria_comentarios(galeria_id);
+CREATE INDEX idx_comentarios_user ON galeria_comentarios(usuario_id);
+
+-- =============================================
+-- 4. TABLA: PARCHES (Crews - Opción 1)
+-- =============================================
+
+-- Eliminar tabla si existe (solo para desarrollo)
+DROP TABLE IF EXISTS parches CASCADE;
+
+CREATE TABLE parches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre TEXT NOT NULL,
+  ciudad TEXT NOT NULL,
+  foto TEXT,
+  disciplinas TEXT[] NOT NULL,
+  descripcion TEXT,
+  miembros_aprox INTEGER,
+  contacto JSONB,
+  created_by UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  is_global BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Índices para performance
+CREATE INDEX idx_parches_created_by ON parches(created_by);
+CREATE INDEX idx_parches_ciudad ON parches(ciudad);
+CREATE INDEX idx_parches_is_global ON parches(is_global);
+
+-- =============================================
+-- 5. TABLA: SPOTS (Lugares para patinar)
+-- =============================================
+
+-- Eliminar tabla si existe (solo para desarrollo)
+DROP TABLE IF EXISTS spots CASCADE;
+
+CREATE TABLE spots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre TEXT NOT NULL,
+  lat NUMERIC NOT NULL,
+  lng NUMERIC NOT NULL,
+  tipo TEXT NOT NULL,
+  ciudad TEXT NOT NULL,
+  dificultad TEXT,
+  foto TEXT,
+  descripcion TEXT,
+  created_by UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Índices para performance
+CREATE INDEX idx_spots_ciudad ON spots(ciudad);
+CREATE INDEX idx_spots_tipo ON spots(tipo);
+CREATE INDEX idx_spots_created_by ON spots(created_by);
+
+-- =============================================
+-- 6. TABLA: SPOTS_FAVORITOS (Spots guardados)
+-- =============================================
+
+-- Eliminar tabla si existe (solo para desarrollo)
+DROP TABLE IF EXISTS spots_favoritos CASCADE;
+
+CREATE TABLE spots_favoritos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  spot_id UUID NOT NULL REFERENCES spots(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(usuario_id, spot_id)
+);
+
+-- Índices para performance
+CREATE INDEX idx_spots_fav_user ON spots_favoritos(usuario_id);
+CREATE INDEX idx_spots_fav_spot ON spots_favoritos(spot_id);
+
+-- =============================================
+-- HABILITAR ROW LEVEL SECURITY (RLS)
+-- =============================================
+
+ALTER TABLE galeria ENABLE ROW LEVEL SECURITY;
+ALTER TABLE galeria_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE galeria_comentarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE parches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spots_favoritos ENABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- RLS POLICIES - GALERIA
+-- =============================================
+
+-- Eliminar policies existentes si las hay (por si acaso)
+DROP POLICY IF EXISTS "Todos pueden ver galeria" ON galeria;
+DROP POLICY IF EXISTS "Usuario puede crear post" ON galeria;
+DROP POLICY IF EXISTS "Autor puede editar post" ON galeria;
+DROP POLICY IF EXISTS "Autor puede eliminar post" ON galeria;
+
+-- Todos pueden ver posts
+CREATE POLICY "Todos pueden ver galeria" ON galeria
+  FOR SELECT USING (true);
+
+-- Solo usuario autenticado puede crear (sin auth por ahora)
+CREATE POLICY "Usuario puede crear post" ON galeria
+  FOR INSERT WITH CHECK (true);
+
+-- Solo el autor puede editar (sin auth por ahora)
+CREATE POLICY "Autor puede editar post" ON galeria
+  FOR UPDATE USING (true);
+
+-- Solo el autor puede eliminar (sin auth por ahora)
+CREATE POLICY "Autor puede eliminar post" ON galeria
+  FOR DELETE USING (true);
+
+-- =============================================
+-- RLS POLICIES - GALERIA_LIKES
+-- =============================================
+
+-- Eliminar policies existentes si las hay
+DROP POLICY IF EXISTS "Todos ven likes" ON galeria_likes;
+DROP POLICY IF EXISTS "Usuario da like" ON galeria_likes;
+DROP POLICY IF EXISTS "Usuario quita like" ON galeria_likes;
+
+-- Todos pueden ver likes
+CREATE POLICY "Todos ven likes" ON galeria_likes
+  FOR SELECT USING (true);
+
+-- Usuario puede dar like
+CREATE POLICY "Usuario da like" ON galeria_likes
+  FOR INSERT WITH CHECK (true);
+
+-- Usuario puede quitar su like
+CREATE POLICY "Usuario quita like" ON galeria_likes
+  FOR DELETE USING (true);
+
+-- =============================================
+-- RLS POLICIES - GALERIA_COMENTARIOS
+-- =============================================
+
+-- Eliminar policies existentes si las hay
+DROP POLICY IF EXISTS "Todos ven comentarios" ON galeria_comentarios;
+DROP POLICY IF EXISTS "Usuario comenta" ON galeria_comentarios;
+DROP POLICY IF EXISTS "Usuario edita comentario" ON galeria_comentarios;
+DROP POLICY IF EXISTS "Usuario elimina comentario" ON galeria_comentarios;
+
+-- Todos pueden ver comentarios
+CREATE POLICY "Todos ven comentarios" ON galeria_comentarios
+  FOR SELECT USING (true);
+
+-- Usuario puede comentar
+CREATE POLICY "Usuario comenta" ON galeria_comentarios
+  FOR INSERT WITH CHECK (true);
+
+-- Usuario puede editar su comentario
+CREATE POLICY "Usuario edita comentario" ON galeria_comentarios
+  FOR UPDATE USING (true);
+
+-- Usuario puede eliminar su comentario
+CREATE POLICY "Usuario elimina comentario" ON galeria_comentarios
+  FOR DELETE USING (true);
+
+-- =============================================
+-- RLS POLICIES - PARCHES
+-- =============================================
+
+-- Eliminar policies existentes si las hay
+DROP POLICY IF EXISTS "Todos ven parches" ON parches;
+DROP POLICY IF EXISTS "Usuario crea parche" ON parches;
+DROP POLICY IF EXISTS "Autor edita parche" ON parches;
+DROP POLICY IF EXISTS "Autor elimina parche" ON parches;
+
+-- Todos pueden ver parches
+CREATE POLICY "Todos ven parches" ON parches
+  FOR SELECT USING (true);
+
+-- Usuario puede crear parche
+CREATE POLICY "Usuario crea parche" ON parches
+  FOR INSERT WITH CHECK (true);
+
+-- Autor puede editar su parche
+CREATE POLICY "Autor edita parche" ON parches
+  FOR UPDATE USING (true);
+
+-- Autor puede eliminar su parche
+CREATE POLICY "Autor elimina parche" ON parches
+  FOR DELETE USING (true);
+
+-- =============================================
+-- RLS POLICIES - SPOTS
+-- =============================================
+
+-- Eliminar policies existentes si las hay
+DROP POLICY IF EXISTS "Todos ven spots" ON spots;
+DROP POLICY IF EXISTS "Usuario crea spot" ON spots;
+DROP POLICY IF EXISTS "Autor edita spot" ON spots;
+DROP POLICY IF EXISTS "Autor elimina spot" ON spots;
+
+-- Todos pueden ver spots
+CREATE POLICY "Todos ven spots" ON spots
+  FOR SELECT USING (true);
+
+-- Usuario puede crear spot
+CREATE POLICY "Usuario crea spot" ON spots
+  FOR INSERT WITH CHECK (true);
+
+-- Autor puede editar su spot
+CREATE POLICY "Autor edita spot" ON spots
+  FOR UPDATE USING (true);
+
+-- Autor puede eliminar su spot
+CREATE POLICY "Autor elimina spot" ON spots
+  FOR DELETE USING (true);
+
+-- =============================================
+-- RLS POLICIES - SPOTS_FAVORITOS
+-- =============================================
+
+-- Eliminar policies existentes si las hay
+DROP POLICY IF EXISTS "Usuario ve favoritos" ON spots_favoritos;
+DROP POLICY IF EXISTS "Usuario marca favorito" ON spots_favoritos;
+DROP POLICY IF EXISTS "Usuario quita favorito" ON spots_favoritos;
+
+-- Usuario ve sus favoritos
+CREATE POLICY "Usuario ve favoritos" ON spots_favoritos
+  FOR SELECT USING (true);
+
+-- Usuario puede marcar favorito
+CREATE POLICY "Usuario marca favorito" ON spots_favoritos
+  FOR INSERT WITH CHECK (true);
+
+-- Usuario puede quitar favorito
+CREATE POLICY "Usuario quita favorito" ON spots_favoritos
+  FOR DELETE USING (true);
+
+-- =============================================
+-- FUNCIONES PARA ACTUALIZAR CONTADORES
+-- =============================================
+
+-- Eliminar triggers existentes si los hay
+DROP TRIGGER IF EXISTS trigger_update_galeria_likes_count ON galeria_likes;
+DROP TRIGGER IF EXISTS trigger_update_galeria_comentarios_count ON galeria_comentarios;
+
+-- Función para actualizar likes_count
+CREATE OR REPLACE FUNCTION update_galeria_likes_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE galeria 
+    SET likes_count = (
+      SELECT COUNT(*) FROM galeria_likes 
+      WHERE galeria_id = NEW.galeria_id
+    )
+    WHERE id = NEW.galeria_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE galeria 
+    SET likes_count = (
+      SELECT COUNT(*) FROM galeria_likes 
+      WHERE galeria_id = OLD.galeria_id
+    )
+    WHERE id = OLD.galeria_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger para likes_count
+CREATE TRIGGER trigger_update_galeria_likes_count
+  AFTER INSERT OR DELETE ON galeria_likes
+  FOR EACH ROW
+  EXECUTE FUNCTION update_galeria_likes_count();
+
+-- Función para actualizar comentarios_count
+CREATE OR REPLACE FUNCTION update_galeria_comentarios_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE galeria 
+    SET comentarios_count = (
+      SELECT COUNT(*) FROM galeria_comentarios 
+      WHERE galeria_id = NEW.galeria_id
+    )
+    WHERE id = NEW.galeria_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE galeria 
+    SET comentarios_count = (
+      SELECT COUNT(*) FROM galeria_comentarios 
+      WHERE galeria_id = OLD.galeria_id
+    )
+    WHERE id = OLD.galeria_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger para comentarios_count
+CREATE TRIGGER trigger_update_galeria_comentarios_count
+  AFTER INSERT OR DELETE ON galeria_comentarios
+  FOR EACH ROW
+  EXECUTE FUNCTION update_galeria_comentarios_count();
+
+-- =============================================
+-- VERIFICACIÓN FINAL
+-- =============================================
+
+-- Ver todas las tablas creadas
+SELECT 
+  schemaname,
+  tablename,
+  tableowner
+FROM pg_tables 
+WHERE schemaname = 'public' 
+  AND tablename IN ('galeria', 'galeria_likes', 'galeria_comentarios', 'parches', 'spots', 'spots_favoritos')
+ORDER BY tablename;
+
+-- Ver policies creadas
+SELECT 
+  tablename,
+  policyname,
+  cmd,
+  qual
+FROM pg_policies 
+WHERE schemaname = 'public'
+  AND tablename IN ('galeria', 'galeria_likes', 'galeria_comentarios', 'parches', 'spots', 'spots_favoritos')
+ORDER BY tablename, policyname;
+
+-- =============================================
+-- ✅ LISTO! 
+-- Ejecuta este archivo completo en Supabase SQL Editor
+-- =============================================

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "1",
+    "usuario": {
+      "nombre": "Carlos Saldarriaga",
+      "avatar": "https://i.pravatar.cc/150?img=12",
+      "username": "@carlitos_skate"
+    },
+    "imagen": "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=800&q=80",
+    "descripcion": "Session de patinaje en el parque! �🔥",
+    "likes": 234,
+    "comentarios": 45,
+    "fecha": "2025-09-28T15:30:00Z",
+    "ubicacion": "Medellín, Colombia",
+    "aspectRatio": 0.75
+  },
+  {
+    "id": "2",
+    "usuario": {
+      "nombre": "María Rodríguez",
+      "avatar": "https://i.pravatar.cc/150?img=5",
+      "username": "@maria_rolls"
+    },
+    "imagen": "https://images.unsplash.com/photo-1609036880771-7ccdc4266d2e?w=800&q=80",
+    "descripcion": "Tarde de patinaje con las chicas 💜✨",
+    "likes": 412,
+    "comentarios": 89,
+    "fecha": "2025-09-27T18:45:00Z",
+    "ubicacion": "Bogotá, Colombia",
+    "aspectRatio": 1.33
+  },
+  {
+    "id": "3",
+    "usuario": {
+      "nombre": "Deimar Perea",
+      "avatar": "https://i.pravatar.cc/150?img=33",
+      "username": "@deimar_pro"
+    },
+    "imagen": "https://images.unsplash.com/photo-1593642532400-2682810df593?w=800&q=80",
+    "descripcion": "Entrenando para la competencia! 🎯",
+    "likes": 567,
+    "comentarios": 123,
+    "fecha": "2025-09-26T12:20:00Z",
+    "ubicacion": "Cali, Colombia",
+    "aspectRatio": 1.0
+  },
+  {
+    "id": "4",
+    "usuario": {
+      "nombre": "Laura Gómez",
+      "avatar": "https://i.pravatar.cc/150?img=9",
+      "username": "@laura_skates"
+    },
+    "imagen": "https://images.unsplash.com/photo-1520338258655-e0ae3be33c09?w=800&q=80",
+    "descripcion": "Sunset session en la pista 🌅",
+    "likes": 189,
+    "comentarios": 34,
+    "fecha": "2025-09-25T19:15:00Z",
+    "ubicacion": "Cartagena, Colombia",
+    "aspectRatio": 0.8
+  },
+  {
+    "id": "5",
+    "usuario": {
+      "nombre": "Andrés Moreno",
+      "avatar": "https://i.pravatar.cc/150?img=68",
+      "username": "@andres_wheels"
+    },
+    "imagen": "https://images.unsplash.com/photo-1621544402532-5e4e222a0c0a?w=800&q=80",
+    "descripcion": "Street skating con la crew 🏙️",
+    "likes": 345,
+    "comentarios": 67,
+    "fecha": "2025-09-24T16:00:00Z",
+    "ubicacion": "Barranquilla, Colombia",
+    "aspectRatio": 1.2
+  },
+  {
+    "id": "6",
+    "usuario": {
+      "nombre": "Camila Torres",
+      "avatar": "https://i.pravatar.cc/150?img=20",
+      "username": "@cami_roller"
+    },
+    "imagen": "https://images.unsplash.com/photo-1547447134-cd3f5c716030?w=800&q=80",
+    "descripcion": "Primera competencia! 🏆 Súper emocionada",
+    "likes": 678,
+    "comentarios": 145,
+    "fecha": "2025-09-23T14:30:00Z",
+    "ubicacion": "Medellín, Colombia",
+    "aspectRatio": 0.9
+  },
+  {
+    "id": "7",
+    "usuario": {
+      "nombre": "Juliana Pérez",
+      "avatar": "https://i.pravatar.cc/150?img=45",
+      "username": "@juli_inline"
+    },
+    "imagen": "https://images.unsplash.com/photo-1564982752979-87f32c0a0e5e?w=800&q=80",
+    "descripcion": "Patinaje artístico en el centro 🎨✨",
+    "likes": 523,
+    "comentarios": 98,
+    "fecha": "2025-09-22T10:30:00Z",
+    "ubicacion": "Medellín, Colombia",
+    "aspectRatio": 0.85
+  },
+  {
+    "id": "8",
+    "usuario": {
+      "nombre": "Santiago Villa",
+      "avatar": "https://i.pravatar.cc/150?img=52",
+      "username": "@santi_speed"
+    },
+    "imagen": "https://images.unsplash.com/photo-1621544402532-5e4e222a0c0a?w=800&q=80",
+    "descripcion": "Velocidad pura! 💨🛼",
+    "likes": 401,
+    "comentarios": 76,
+    "fecha": "2025-09-21T17:00:00Z",
+    "ubicacion": "Bucaramanga, Colombia",
+    "aspectRatio": 1.1
+  }
+]
