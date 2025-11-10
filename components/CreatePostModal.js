@@ -281,15 +281,17 @@ const CreatePostModal = ({
           {/* Campos de Texto */}
           <View style={styles.form}>
             {/* Usuario Info */}
-            <View style={styles.userRow}>
-              <Image 
-                source={{ uri: usuario.avatar_url || 'https://via.placeholder.com/40' }} 
-                style={styles.userAvatar}
-              />
-              <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
-                {usuario.nombre}
-              </Text>
-            </View>
+            {usuario && (
+              <View style={styles.userRow}>
+                <Image 
+                  source={{ uri: usuario?.avatar_url || 'https://via.placeholder.com/40' }} 
+                  style={styles.userAvatar}
+                />
+                <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
+                  {usuario?.nombre || 'Usuario'}
+                </Text>
+              </View>
+            )}
 
             {/* Descripción */}
             <TextInput

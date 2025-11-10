@@ -16,7 +16,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Appearance } from 'react-native';
 import { supabase } from '../utils/supabase';
-import { lightTheme, darkTheme } from '../theme';
+import { theme } from '../theme';
 
 // ============================================
 // STORE PRINCIPAL
@@ -29,7 +29,7 @@ export const useAppStore = create(
       // 🎨 THEME STATE
       // ==========================================
       isDark: true,
-      theme: darkTheme,
+      theme: theme,
       isThemeLoading: true,
 
       // Inicializar tema desde el sistema o storage
@@ -40,7 +40,7 @@ export const useAppStore = create(
             const isDark = savedTheme === 'dark';
             set({
               isDark,
-              theme: isDark ? darkTheme : lightTheme,
+              theme: theme,
               isThemeLoading: false,
             });
           } else {
@@ -49,7 +49,7 @@ export const useAppStore = create(
             const isDark = systemTheme === 'dark';
             set({
               isDark,
-              theme: isDark ? darkTheme : lightTheme,
+              theme: theme,
               isThemeLoading: false,
             });
           }
@@ -62,11 +62,10 @@ export const useAppStore = create(
       // Toggle entre tema claro y oscuro
       toggleTheme: async () => {
         const newIsDark = !get().isDark;
-        const newTheme = newIsDark ? darkTheme : lightTheme;
         
         set({
           isDark: newIsDark,
-          theme: newTheme,
+          theme: theme,
         });
 
         try {
@@ -78,11 +77,10 @@ export const useAppStore = create(
 
       // Establecer tema específico
       setTheme: async (isDark) => {
-        const newTheme = isDark ? darkTheme : lightTheme;
         
         set({
           isDark,
-          theme: newTheme,
+          theme: theme,
         });
 
         try {

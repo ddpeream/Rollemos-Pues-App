@@ -20,6 +20,7 @@ export const colors = {
     light: '#F7F9FB',
     surface: 'rgba(255, 255, 255, 0.06)',
     surface2: 'rgba(255, 255, 255, 0.1)',
+    primary: '#0B0F14',  // Alias para compatibilidad
   },
   
   // Textos
@@ -60,6 +61,7 @@ export const colors = {
   
   // Transparencias útiles
   alpha: {
+    primary10: 'rgba(77, 215, 208, 0.1)',
     primary15: 'rgba(77, 215, 208, 0.15)',
     primary35: 'rgba(77, 215, 208, 0.35)',
     white06: 'rgba(255, 255, 255, 0.06)',
@@ -71,6 +73,12 @@ export const colors = {
     black50: 'rgba(0, 0, 0, 0.5)',
     black35: 'rgba(0, 0, 0, 0.35)',
   },
+  
+  // ALIASES PARA COMPATIBILIDAD CON CÓDIGO EXISTENTE
+  card: 'rgba(255, 255, 255, 0.06)',
+  border: 'rgba(255, 255, 255, 0.08)',
+  primaryLight: 'rgba(77, 215, 208, 0.15)',
+  textSecondary: '#A8B3BE',
 };
 
 // ============================================
