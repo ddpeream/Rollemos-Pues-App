@@ -52,22 +52,43 @@ export const useRouteTracker = () => {
    */
   const requestLocationPermission = useCallback(async () => {
     try {
+      console.log('🔍 Verificando permisos de ubicación...');
+      
+      // Primero verificar si ya tenemos permisos
+      const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+      
+      if (existingStatus === 'granted') {
+        setHasPermission(true);
+        console.log('✅ Permisos ya concedidos');
+        return true;
+      }
+
+      // Solicitar permisos foreground
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
       
       if (foregroundStatus !== 'granted') {
-        setError('Permiso de ubicación denegado');
+        setError('Permiso de ubicación denegado. Por favor, habilita la ubicación en la configuración de la app.');
+        setHasPermission(false);
+        console.log('❌ Permiso foreground denegado');
         return false;
       }
 
-      // Solicitar permiso de background para tracking continuo
-      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-      
       setHasPermission(true);
       console.log('✅ Permisos de ubicación concedidos');
+      
+      // Solicitar permiso de background solo si foreground fue concedido (opcional, no bloqueante)
+      try {
+        await Location.requestBackgroundPermissionsAsync();
+      } catch (bgErr) {
+        console.log('⚠️ Permiso background no disponible:', bgErr.message);
+        // No es crítico, continuar igual
+      }
+      
       return true;
     } catch (err) {
       console.error('❌ Error solicitando permisos:', err);
-      setError(err.message);
+      setError(`Error de permisos: ${err.message}`);
+      setHasPermission(false);
       return false;
     }
   }, []);

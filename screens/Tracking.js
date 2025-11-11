@@ -57,6 +57,20 @@ export default function Tracking() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const statsOpacity = useRef(new Animated.Value(1)).current;
 
+  // Pedir permisos al montar la pantalla
+  useEffect(() => {
+    const initPermissions = async () => {
+      if (!hasPermission) {
+        try {
+          await requestLocationPermission();
+        } catch (err) {
+          console.log('Error inicial de permisos:', err);
+        }
+      }
+    };
+    initPermissions();
+  }, []);
+
   // Animación de pulso para botón de tracking
   useEffect(() => {
     if (status === TRACKER_STATUS.TRACKING) {

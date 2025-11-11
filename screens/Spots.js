@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -42,6 +43,21 @@ export default function Spots() {
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [selectedSpot, setSelectedSpot] = useState(null);
   const mapRef = useRef(null);
+
+  // Pedir permisos de ubicación al montar la pantalla
+  useEffect(() => {
+    const requestPermissions = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('⚠️ Permiso de ubicación denegado en Spots');
+        }
+      } catch (error) {
+        console.log('Error solicitando permisos en Spots:', error);
+      }
+    };
+    requestPermissions();
+  }, []);
 
   // Cargar spots al entrar a la pantalla
   useFocusEffect(
