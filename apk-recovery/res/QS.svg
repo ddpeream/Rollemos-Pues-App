@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <!-- Skateboard deck -->
+  <g>
+    <!-- Main deck -->
+    <ellipse cx="100" cy="40" rx="70" ry="25" fill="#FF6B35" opacity="0.9"/>
+    <path d="M 35 40 Q 30 35 30 30 L 170 30 Q 170 35 165 40 L 35 40" fill="#FF8A50"/>
+    
+    <!-- Grip tape pattern -->
+    <circle cx="50" cy="40" r="3" fill="#333" opacity="0.3"/>
+    <circle cx="70" cy="35" r="3" fill="#333" opacity="0.3"/>
+    <circle cx="90" cy="38" r="3" fill="#333" opacity="0.3"/>
+    <circle cx="110" cy="35" r="3" fill="#333" opacity="0.3"/>
+    <circle cx="130" cy="40" r="3" fill="#333" opacity="0.3"/>
+    <circle cx="150" cy="37" r="3" fill="#333" opacity="0.3"/>
+    
+    <!-- Left truck -->
+    <g>
+      <rect x="40" y="55" width="8" height="20" fill="#1a1a1a" rx="2"/>
+      <circle cx="44" cy="75" r="6" fill="#333"/>
+      <circle cx="44" cy="75" r="4" fill="#666"/>
+    </g>
+    
+    <!-- Right truck -->
+    <g>
+      <rect x="152" y="55" width="8" height="20" fill="#1a1a1a" rx="2"/>
+      <circle cx="156" cy="75" r="6" fill="#333"/>
+      <circle cx="156" cy="75" r="4" fill="#666"/>
+    </g>
+    
+    <!-- Left wheel -->
+    <g>
+      <circle cx="44" cy="82" r="8" fill="#222"/>
+      <circle cx="44" cy="82" r="6" fill="#1a1a1a"/>
+      <circle cx="44" cy="82" r="3" fill="#444"/>
+    </g>
+    
+    <!-- Right wheel -->
+    <g>
+      <circle cx="156" cy="82" r="8" fill="#222"/>
+      <circle cx="156" cy="82" r="6" fill="#1a1a1a"/>
+      <circle cx="156" cy="82" r="3" fill="#444"/>
+    </g>
+  </g>
+</svg>

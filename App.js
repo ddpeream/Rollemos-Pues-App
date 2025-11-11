@@ -1,12 +1,12 @@
 import { StatusBar } from 'expo-status-bar';
-import { TouchableOpacity, Text } from 'react-native';
+import { TouchableOpacity, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { Menu, Provider as PaperProvider } from 'react-native-paper';
 import { useState } from 'react';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import { colors } from './theme';
 import './i18n';
 
 import Inicio from './screens/Inicio';
@@ -14,8 +14,13 @@ import Patinadores from './screens/Patinadores';
 import Parches from './screens/Parches';
 import Spots from './screens/Spots';
 import Galeria from './screens/Galeria';
+import Tracking from './screens/Tracking';
+import RoutesHistory from './screens/RoutesHistory';
+import ThemeToggle from './components/ThemeToggle';
+import useAppStore from './store/useAppStore';
 
 const Tab = createBottomTabNavigator();
+const RutasStack = createNativeStackNavigator();
 
 function LanguageSelector() {
   const { i18n } = useTranslation();
@@ -107,14 +112,45 @@ function LanguageSelector() {
   );
 }
 
+// Stack Navigator para la sección de Rutas (Tracking + History)
+function RutasStackScreen() {
+  const { theme } = useAppStore();
+  
+  return (
+    <RutasStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.colors.background.primary },
+      }}
+    >
+      <RutasStack.Screen name="TrackingMain" component={Tracking} />
+      <RutasStack.Screen name="RoutesHistoryScreen" component={RoutesHistory} />
+    </RutasStack.Navigator>
+  );
+}
+
 function Navigation() {
   const { t } = useTranslation();
+  const { isDark, theme } = useAppStore();
   
   return (
     <NavigationContainer>
       <Tab.Navigator
         screenOptions={({ route }) => ({
-          headerRight: () => <LanguageSelector />,
+          headerStyle: {
+            backgroundColor: theme.colors.background.primary,
+          },
+          headerTintColor: theme.colors.text.primary,
+          tabBarStyle: {
+            backgroundColor: theme.colors.background.primary,
+            borderTopColor: theme.colors.border,
+          },
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 10 }}>
+              <ThemeToggle />
+              <LanguageSelector />
+            </View>
+          ),
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;
             let IconComponent = Ionicons;
@@ -131,23 +167,32 @@ function Navigation() {
               return <IconComponent name={iconName} size={size - 2} color={color} />;
             } else if (route.name === 'Spots') {
               iconName = focused ? 'location' : 'location-outline';
+            } else if (route.name === 'Rutas') {
+              iconName = focused ? 'navigate-circle' : 'navigate-circle-outline';
             } else if (route.name === 'Galería') {
               iconName = focused ? 'images' : 'images-outline';
             }
 
             return <IconComponent name={iconName} size={size} color={color} />;
           },
-          tabBarActiveTintColor: colors.tabs.active,
-          tabBarInactiveTintColor: colors.tabs.inactive,
+          tabBarActiveTintColor: theme.colors.tabs.active,
+          tabBarInactiveTintColor: theme.colors.tabs.inactive,
         })}
       >
         <Tab.Screen name="Inicio" component={Inicio} />
         <Tab.Screen name="Patinadores" component={Patinadores} />
         <Tab.Screen name="Parches" component={Parches} />
         <Tab.Screen name="Spots" component={Spots} />
+        <Tab.Screen 
+          name="Rutas" 
+          component={RutasStackScreen}
+          options={{
+            headerShown: false,
+          }}
+        />
         <Tab.Screen name="Galería" component={Galeria} />
       </Tab.Navigator>
-      <StatusBar style="auto" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
     </NavigationContainer>
   );
 }
