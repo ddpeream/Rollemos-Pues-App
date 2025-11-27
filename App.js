@@ -9,6 +9,8 @@ import { useState } from 'react';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import './i18n';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 import Inicio from './screens/Inicio';
 import Patinadores from './screens/Patinadores';
 import Parches from './screens/Parches';
@@ -199,8 +201,10 @@ function Navigation() {
 
 export default function App() {
   return (
-    <PaperProvider>
-      <Navigation />
-    </PaperProvider>
+    <ErrorBoundary>
+      <PaperProvider>
+        <Navigation />
+      </PaperProvider>
+    </ErrorBoundary>
   );
 }

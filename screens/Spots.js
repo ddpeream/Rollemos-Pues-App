@@ -12,6 +12,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  SafeAreaView,
+  Alert,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -48,12 +50,15 @@ export default function Spots() {
   useEffect(() => {
     const requestPermissions = async () => {
       try {
+        console.log('🔐 Solicitando permisos en Spots...');
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          console.log('⚠️ Permiso de ubicación denegado en Spots');
+          console.warn('⚠️ Permiso de ubicación denegado en Spots');
+        } else {
+          console.log('✅ Permisos concedidos en Spots');
         }
       } catch (error) {
-        console.log('Error solicitando permisos en Spots:', error);
+        console.error('❌ Error solicitando permisos en Spots:', error);
       }
     };
     requestPermissions();
@@ -479,6 +484,10 @@ export default function Spots() {
             showsMyLocationButton
             showsCompass
             toolbarEnabled={false}
+            onError={(err) => {
+              console.error('❌ Error en MapView (Spots):', err);
+              Alert.alert('Error del Mapa', 'Hubo un problema al cargar el mapa. Intenta reiniciar la app.');
+            }}
           >
             {filteredSpots
               .filter(spot => spot.latitud && spot.longitud)

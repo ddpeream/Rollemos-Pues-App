@@ -129,24 +129,55 @@ export const useRouteTracker = () => {
   const startTracking = useCallback(async () => {
     console.log('▶️ Iniciando tracking...');
 
-    // Verificar permisos
-    const granted = hasPermission || (await requestLocationPermission());
-    if (!granted) {
-      setError('No hay permisos de ubicación');
-      return;
-    }
-
     try {
-      // Obtener ubicación inicial
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation,
-      });
+      // Verificar permisos
+      const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
+      if (foregroundStatus !== 'granted') {
+        const granted = await requestLocationPermission();
+        if (!granted) {
+          setError('No hay permisos de ubicación. Por favor habilita la ubicación en la configuración.');
+          console.error('❌ Permisos denegados');
+          return;
+        }
+      }
+
+      console.log('✅ Permisos verificados');
+
+      // Obtener ubicación inicial con timeout
+      console.log('📍 Obteniendo ubicación inicial...');
+      let location;
+      try {
+        location = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeoutMillis: 5000,
+          }),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Timeout obteniendo ubicación')),
+              10000
+            )
+          ),
+        ]);
+      } catch (locError) {
+        console.error('❌ Error obteniendo ubicación:', locError.message);
+        setError(`Error de ubicación: ${locError.message}`);
+        return;
+      }
+
+      if (!location || !location.coords) {
+        setError('No se pudo obtener la ubicación. Verifica que el GPS esté habilitado.');
+        console.error('❌ Ubicación inválida');
+        return;
+      }
 
       const initialCoord = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         timestamp: Date.now(),
       };
+
+      console.log('📍 Ubicación inicial:', initialCoord);
 
       setCurrentLocation(initialCoord);
       setRouteCoordinates([initialCoord]);
@@ -159,75 +190,89 @@ export const useRouteTracker = () => {
       }, 1000);
 
       // Suscribirse a actualizaciones de ubicación
-      locationSubscription.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: 1000, // Actualizar cada segundo
-          distanceInterval: 5, // O cada 5 metros
-        },
-        (location) => {
-          const newCoord = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            timestamp: Date.now(),
-            speed: location.coords.speed, // m/s
-          };
+      try {
+        locationSubscription.current = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 1000, // Actualizar cada segundo
+            distanceInterval: 5, // O cada 5 metros
+          },
+          (location) => {
+            try {
+              const newCoord = {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                timestamp: Date.now(),
+                speed: location.coords.speed, // m/s
+              };
 
-          setCurrentLocation(newCoord);
+              setCurrentLocation(newCoord);
 
-          // Agregar a la ruta solo si hay movimiento significativo
-          setRouteCoordinates((prev) => {
-            if (prev.length === 0) return [newCoord];
+              // Agregar a la ruta solo si hay movimiento significativo
+              setRouteCoordinates((prev) => {
+                if (prev.length === 0) return [newCoord];
 
-            const lastCoord = prev[prev.length - 1];
-            const distanceFromLast = calculateDistance(
-              lastCoord.latitude,
-              lastCoord.longitude,
-              newCoord.latitude,
-              newCoord.longitude
-            );
+                const lastCoord = prev[prev.length - 1];
+                const distanceFromLast = calculateDistance(
+                  lastCoord.latitude,
+                  lastCoord.longitude,
+                  newCoord.latitude,
+                  newCoord.longitude
+                );
 
-            // Solo agregar si se movió más de 3 metros (evitar ruido GPS)
-            if (distanceFromLast > 3) {
-              // Actualizar distancia total
-              setDistance((prevDist) => prevDist + distanceFromLast);
+                // Solo agregar si se movió más de 3 metros (evitar ruido GPS)
+                if (distanceFromLast > 3) {
+                  // Actualizar distancia total
+                  setDistance((prevDist) => prevDist + distanceFromLast);
 
-              // Calcular velocidad instantánea
-              const speedMps = location.coords.speed || 0;
-              const speedKmh = speedMps * 3.6;
-              setSpeed(speedKmh);
+                  // Calcular velocidad instantánea
+                  const speedMps = location.coords.speed || 0;
+                  const speedKmh = speedMps * 3.6;
+                  setSpeed(speedKmh);
 
-              // Actualizar historial de velocidades
-              speedHistory.current.push(speedKmh);
-              const avgSpd =
-                speedHistory.current.reduce((a, b) => a + b, 0) /
-                speedHistory.current.length;
-              setAvgSpeed(avgSpd);
+                  // Actualizar historial de velocidades
+                  speedHistory.current.push(speedKmh);
+                  const avgSpd =
+                    speedHistory.current.reduce((a, b) => a + b, 0) /
+                    speedHistory.current.length;
+                  setAvgSpeed(avgSpd);
 
-              // Actualizar velocidad máxima
-              if (speedKmh > maxSpeed) {
-                setMaxSpeed(speedKmh);
-              }
+                  // Actualizar velocidad máxima
+                  if (speedKmh > maxSpeed) {
+                    setMaxSpeed(speedKmh);
+                  }
 
-              // Calcular calorías
-              const durationMinutes = (Date.now() - startTime.current) / 60000;
-              setCalories(calculateCalories(durationMinutes, avgSpd));
+                  // Calcular calorías
+                  const durationMinutes = (Date.now() - startTime.current) / 60000;
+                  setCalories(calculateCalories(durationMinutes, avgSpd));
 
-              return [...prev, newCoord];
+                  return [...prev, newCoord];
+                }
+
+                return prev;
+              });
+            } catch (watchErr) {
+              console.error('❌ Error en watcher de ubicación:', watchErr);
             }
+          },
+          (error) => {
+            console.error('❌ Error en watchPositionAsync:', error);
+            setError(`Error de GPS: ${error.message}`);
+          }
+        );
+      } catch (watchError) {
+        console.error('❌ Error iniciando watcher:', watchError);
+        setError(`Error iniciando tracking: ${watchError.message}`);
+        setStatus(TRACKER_STATUS.IDLE);
+      }
 
-            return prev;
-          });
-        }
-      );
-
-      console.log('✅ Tracking iniciado');
+      console.log('✅ Tracking iniciado correctamente');
     } catch (err) {
-      console.error('❌ Error iniciando tracking:', err);
-      setError(err.message);
+      console.error('❌ Error general en startTracking:', err);
+      setError(`Error: ${err.message}`);
       setStatus(TRACKER_STATUS.IDLE);
     }
-  }, [hasPermission, requestLocationPermission, calculateDistance, calculateCalories, maxSpeed]);
+  }, [requestLocationPermission, calculateDistance, calculateCalories, maxSpeed]);
 
   /**
    * ⏸️ Pausar tracking

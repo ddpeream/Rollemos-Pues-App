@@ -21,6 +21,7 @@ import {
   Animated,
   StatusBar,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,14 +63,15 @@ export default function Tracking() {
     const initPermissions = async () => {
       if (!hasPermission) {
         try {
+          console.log('🔐 Solicitando permisos en Tracking...');
           await requestLocationPermission();
         } catch (err) {
-          console.log('Error inicial de permisos:', err);
+          console.error('❌ Error en inicialización de permisos:', err);
         }
       }
     };
     initPermissions();
-  }, []);
+  }, [hasPermission, requestLocationPermission]);
 
   // Animación de pulso para botón de tracking
   useEffect(() => {
@@ -216,7 +218,7 @@ export default function Tracking() {
   const buttonConfig = getButtonConfig();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
 
       {/* Mapa */}
@@ -229,10 +231,14 @@ export default function Tracking() {
         showsMyLocationButton={false}
         followsUserLocation={status === TRACKER_STATUS.TRACKING}
         initialRegion={{
-          latitude: currentLocation?.latitude || 37.78825,
-          longitude: currentLocation?.longitude || -122.4324,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
+          latitude: currentLocation?.latitude || 4.7110,
+          longitude: currentLocation?.longitude || -74.0055,
+          latitudeDelta: 0.015,
+          longitudeDelta: 0.015,
+        }}
+        onError={(err) => {
+          console.error('❌ Error en MapView:', err);
+          Alert.alert('Error del Mapa', 'Hubo un problema al cargar el mapa. Intenta reiniciar la app.');
         }}
       >
         {/* Polyline de la ruta */}
@@ -259,7 +265,10 @@ export default function Tracking() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.colors.background.overlay }]}>
         <TouchableOpacity 
-          onPress={() => navigation.navigate('RoutesHistoryScreen')} 
+          onPress={() => {
+            console.log('🔙 Volviendo a rutinas...');
+            navigation.navigate('RoutesHistoryScreen');
+          }}
           style={styles.headerButton}
         >
           <Ionicons name="list-outline" size={24} color={theme.colors.primary} />
@@ -388,10 +397,21 @@ export default function Tracking() {
       {error && (
         <View style={[styles.errorContainer, { backgroundColor: theme.colors.background.overlay }]}>
           <Ionicons name="alert-circle" size={20} color="#FF3B30" />
-          <Text style={[styles.errorText, { color: '#FF3B30' }]}>{error}</Text>
+          <Text style={[styles.errorText, { color: '#FF3B30' }]}>
+            {error}
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              console.log('🔄 Reintentando permisos...');
+              requestLocationPermission();
+            }}
+            style={{ paddingLeft: 12 }}
+          >
+            <Ionicons name="refresh" size={18} color="#FF3B30" />
+          </TouchableOpacity>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
