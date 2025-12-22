@@ -36,7 +36,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyCA5M5WVCr-5t18MfFgRMYw9xc-T5lQWPM"
+          "apiKey": "AIzaSyAp3esnudg_4QNvVOUBONnxpY06TVXC2Ck"
         }
       }
     },
@@ -48,6 +48,9 @@
         "projectId": "a5a8c678-8e55-45bf-80ec-f90edd49b7f7"
       }
     },
-    "owner": "ddpeream"
+    "owner": "ddpeream",
+    "plugins": [
+      "expo-localization"
+    ]
   }
 }

@@ -134,7 +134,7 @@ export default function RoutesHistory() {
       .join('|');
 
     // Google Static Maps API (requiere API key en producción)
-    return `https://maps.googleapis.com/maps/api/staticmap?size=400x200&path=color:0x4DD7D0FF|weight:3|${path}&markers=color:green|label:S|${start.latitude},${start.longitude}&key=AIzaSyCA5M5WVCr-5t18MfFgRMYw9xc-T5lQWPM`;
+    return `https://maps.googleapis.com/maps/api/staticmap?size=400x200&path=color:0x4DD7D0FF|weight:3|${path}&markers=color:green|label:S|${start.latitude},${start.longitude}&key=AIzaSyAp3esnudg_4QNvVOUBONnxpY06TVXC2Ck`;
   };
 
   // Renderizar ruta
