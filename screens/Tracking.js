@@ -24,7 +24,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import { useRouteTracker, TRACKER_STATUS } from '../hooks/useRouteTracker';
@@ -255,8 +255,8 @@ export default function Tracking() {
         {/* Marcador de inicio */}
         {routeCoordinates.length > 0 && (
           <Marker coordinate={routeCoordinates[0]}>
-            <View style={[styles.startMarker, { backgroundColor: '#34C759' }]}>
-              <Ionicons name="flag" size={16} color="#FFFFFF" />
+            <View style={[styles.startMarker, { backgroundColor: '#34C759' }]}> 
+              <MaterialCommunityIcons name="roller-skate" size={20} color="#FFFFFF" />
             </View>
           </Marker>
         )}
