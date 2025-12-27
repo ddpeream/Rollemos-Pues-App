@@ -26,7 +26,7 @@ import {
   getComentarios,
   deleteComentario,
   uploadPostImage,
-} from '../utils/galeria';
+} from '../services/galeria';
 import { useAppStore } from '../store/useAppStore';
 
 export const useGaleria = () => {

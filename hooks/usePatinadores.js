@@ -18,7 +18,7 @@ import {
   getUsuariosFiltered,
   updateUsuario,
   uploadAvatarImage,
-} from '../utils/usuarios';
+} from '../services/usuarios';
 import { useAppStore } from '../store/useAppStore';
 
 export const usePatinadores = () => {

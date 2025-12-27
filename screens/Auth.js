@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
 import { supabase } from '../config/supabase';
-import { getUsuarioByEmail } from '../utils/usuarios';
+import { getUsuarioByEmail } from '../services/usuarios';
 
 const { height, width } = Dimensions.get('window');
 

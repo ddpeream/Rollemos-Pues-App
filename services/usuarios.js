@@ -4,7 +4,6 @@
  */
 
 import { supabase } from '../config/supabase';
-import bcrypt from 'bcryptjs';
 
 /**
  * 🔍 LEER - Obtener todos los usuarios
@@ -87,68 +86,33 @@ export const getUsuarioByEmail = async (email) => {
  *
  * La contraseña se hashea con bcrypt antes de almacenarla
  */
-export const createUsuario = async (usuarioData) => {
-  try {
-    const { nombre, email, password, ciudad, nivel, disciplina, bio = null } = usuarioData;
+export const createUsuarioPerfil = async (perfil) => {
+  const { data, error } = await supabase
+    .from("usuarios")
+    .insert([
+      {
+        id: perfil.id, // mismo id que auth.user.id
+        nombre: perfil.nombre,
+        email: perfil.email,
+        ciudad: perfil.ciudad,
+        nivel: perfil.nivel,
+        disciplina: perfil.disciplina,
+        bio: perfil.bio || null,
+        avatar_url: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ])
+    .select()
+    .single();
 
-    // Validar campos requeridos
-    if (!nombre || !email || !password || !ciudad || !nivel || !disciplina) {
-      console.error('❌ Faltan campos requeridos');
-      return { success: false, error: 'Faltan campos requeridos' };
-    }
-
-    // Validar longitud mínima de password
-    if (password.length < 6) {
-      console.error('❌ La contraseña debe tener al menos 6 caracteres');
-      return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' };
-    }
-
-    // Verificar si el email ya existe
-    const usuarioExistente = await getUsuarioByEmail(email);
-    if (usuarioExistente) {
-      console.error('❌ El email ya está registrado');
-      return { success: false, error: 'El email ya está registrado' };
-    }
-
-    // Hashear la contraseña con bcrypt (10 salt rounds)
-    console.log('🔐 Hasheando contraseña...');
-    const hashedPassword = await bcrypt.hash(password, 10);
-    console.log('✅ Contraseña hasheada correctamente');
-
-    // Crear usuario con password hasheado
-    const { data, error } = await supabase
-      .from('usuarios')
-      .insert([
-        {
-          nombre,
-          email,
-          password: hashedPassword, // Contraseña hasheada con bcrypt
-          ciudad,
-          nivel,
-          disciplina,
-          bio,
-          avatar_url: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }
-      ])
-      .select();
-
-    if (error) {
-      console.error('❌ Error creando usuario:', error.message);
-      return { success: false, error: error.message };
-    }
-
-    console.log('✅ Usuario creado exitosamente:', data[0].email);
-    // No retornar el password hasheado
-    const { password: _, ...usuarioSeguro } = data[0];
-    return { success: true, data: usuarioSeguro };
-  } catch (error) {
-    console.error('❌ Error en createUsuario:', error);
-    return { success: false, error: error.message };
+  if (error) {
+    console.error("❌ Error creando perfil:", error.message);
+    return null;
   }
-};
 
+  return data;
+};
 /**
  * ✏️ ACTUALIZAR - Actualizar datos de un usuario
  */
@@ -205,33 +169,33 @@ export const deleteUsuario = async (id) => {
  * 🔐 VALIDAR - Verificar credenciales de login
  * Compara la contraseña hasheada con bcrypt
  */
-export const validateLogin = async (email, password) => {
-  try {
-    const usuario = await getUsuarioByEmail(email);
+// export const validateLogin = async (email, password) => {
+//   try {
+//     const usuario = await getUsuarioByEmail(email);
 
-    if (!usuario) {
-      console.error('❌ Usuario no encontrado');
-      return { success: false, error: 'Usuario o contraseña incorrectos' };
-    }
+//     if (!usuario) {
+//       console.error('❌ Usuario no encontrado');
+//       return { success: false, error: 'Usuario o contraseña incorrectos' };
+//     }
 
-    // Comparar contraseña usando bcrypt
-    console.log('🔐 Verificando contraseña...');
-    const passwordMatch = await bcrypt.compare(password, usuario.password);
+//     // Comparar contraseña usando bcrypt
+//     console.log('🔐 Verificando contraseña...');
+//     const passwordMatch = await bcrypt.compare(password, usuario.password);
 
-    if (!passwordMatch) {
-      console.error('❌ Contraseña incorrecta');
-      return { success: false, error: 'Usuario o contraseña incorrectos' };
-    }
+//     if (!passwordMatch) {
+//       console.error('❌ Contraseña incorrecta');
+//       return { success: false, error: 'Usuario o contraseña incorrectos' };
+//     }
 
-    console.log('✅ Login válido para:', email);
-    // No retornar password en la respuesta
-    const { password: _, ...usuarioSeguro } = usuario;
-    return { success: true, data: usuarioSeguro };
-  } catch (error) {
-    console.error('❌ Error en validateLogin:', error);
-    return { success: false, error: error.message };
-  }
-};
+//     console.log('✅ Login válido para:', email);
+//     // No retornar password en la respuesta
+//     const { password: _, ...usuarioSeguro } = usuario;
+//     return { success: true, data: usuarioSeguro };
+//   } catch (error) {
+//     console.error('❌ Error en validateLogin:', error);
+//     return { success: false, error: error.message };
+//   }
+// };
 
 /**
  * 📊 STATS - Obtener estadísticas de usuarios

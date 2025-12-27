@@ -9,8 +9,8 @@
  * - Manejo de estados de carga y errores
  */
 
-import { useState, useCallback } from 'react';
-import { supabase } from '../config/supabase';
+import { useState, useCallback } from "react";
+import { supabase } from "../config/supabase";
 
 export const useSpots = () => {
   const [spots, setSpots] = useState([]);
@@ -26,12 +26,12 @@ export const useSpots = () => {
     setError(null);
 
     try {
-      console.log('📋 Cargando spots...');
-      
+      console.log("📋 Cargando spots...");
+
       const { data, error: fetchError } = await supabase
-        .from('spots')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("spots")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (fetchError) throw fetchError;
 
@@ -40,9 +40,10 @@ export const useSpots = () => {
 
       return { success: true, data };
     } catch (err) {
-      console.error('❌ Error cargando spots:', err);
-      setError(err.message || 'Error al cargar spots');
-      return { success: false, error: err.message };
+      console.error('❌ Error cargando spots (raw):', err);
+      console.error('❌ Error cargando spots (string):', JSON.stringify(err));
+      setError(err?.message || 'Error al cargar spots');
+      return { success: false, error: err?.message };
     } finally {
       setLoading(false);
     }

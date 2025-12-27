@@ -14,7 +14,7 @@
 
 import { useState } from 'react';
 import { supabase } from '../config/supabase';
-import { getUsuarioByEmail } from '../utils/usuarios';
+import { getUsuarioByEmail } from '../services/usuarios';
 import { useAppStore } from '../store/useAppStore';
 
 export const useAuth = () => {
