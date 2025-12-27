@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase } from '../config/supabase';
 import { getUsuarioByEmail } from '../utils/usuarios';
 import { useAppStore } from '../store/useAppStore';
 

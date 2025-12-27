@@ -3,7 +3,7 @@
  * Todas las operaciones relacionadas con posts de galería
  */
 
-import { supabase } from './supabase';
+import { supabase } from "../config/supabase";
 
 // =============================================
 // 🔍 FUNCIONES DE LECTURA

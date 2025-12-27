@@ -23,7 +23,7 @@
  * - updated_at (timestamp)
  */
 
-import { supabase } from './supabase';
+import { supabase } from '../config/supabase';
 
 // ==========================================
 // 🔍 FUNCIONES DE LECTURA (READ)

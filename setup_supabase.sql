@@ -1,8 +1,21 @@
+
 -- =============================================
--- SUPABASE SETUP - TODAS LAS TABLAS
--- Fecha: 22 Octubre 2025
--- App: Rollemos Pues - Patinaje App
+-- 0. TABLA: USUARIOS (Usuarios de la app)
 -- =============================================
+
+
+CREATE TABLE IF NOT EXISTS usuarios (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  nombre TEXT NOT NULL,
+  avatar_url TEXT,
+  ciudad TEXT,
+  nivel TEXT,
+  disciplina TEXT,
+  bio TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 
 -- IMPORTANTE: Este script asume que la tabla 'usuarios' YA EXISTE
 -- con la estructura creada previamente en el proyecto.
@@ -13,22 +26,7 @@
 -- 3. Click "RUN" para ejecutar
 -- 4. Verificar que las 6 tablas se crearon correctamente
 
--- =============================================
--- VERIFICAR TABLA USUARIOS EXISTENTE
--- =============================================
 
--- Verificar que la tabla usuarios existe
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT FROM information_schema.tables 
-    WHERE table_schema = 'public' 
-    AND table_name = 'usuarios'
-  ) THEN
-    RAISE EXCEPTION 'La tabla usuarios no existe. Debes crearla primero.';
-  END IF;
-END
-$$;
 
 -- =============================================
 -- 1. TABLA: GALERIA (Posts de fotos)

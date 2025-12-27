@@ -3,7 +3,7 @@
  * Todas las operaciones relacionadas con la tabla 'usuarios'
  */
 
-import { supabase } from './supabase';
+import { supabase } from '../config/supabase';
 import bcrypt from 'bcryptjs';
 
 /**

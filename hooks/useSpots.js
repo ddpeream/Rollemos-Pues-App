@@ -10,7 +10,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { supabase } from '../utils/supabase';
+import { supabase } from '../config/supabase';
 
 export const useSpots = () => {
   const [spots, setSpots] = useState([]);
