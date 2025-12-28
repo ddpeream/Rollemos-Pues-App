@@ -14,8 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
-import { supabase } from '../utils/supabase';
-import { getUsuarioByEmail } from '../utils/usuarios';
+import { supabase } from '../config/supabase';
+import { getUsuarioByEmail } from '../services/usuarios';
 
 const { height, width } = Dimensions.get('window');
 

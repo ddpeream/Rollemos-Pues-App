@@ -15,8 +15,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Appearance } from 'react-native';
-import { supabase } from '../utils/supabase';
-import { theme } from '../theme';
+import { supabase } from '../config/supabase';
+import { getTheme } from '../theme';
 
 // ============================================
 // STORE PRINCIPAL
@@ -29,7 +29,7 @@ export const useAppStore = create(
       // 🎨 THEME STATE
       // ==========================================
       isDark: true,
-      theme: theme,
+      theme: getTheme(true),
       isThemeLoading: true,
 
       // Inicializar tema desde el sistema o storage
@@ -40,7 +40,7 @@ export const useAppStore = create(
             const isDark = savedTheme === 'dark';
             set({
               isDark,
-              theme: theme,
+              theme: getTheme(isDark),
               isThemeLoading: false,
             });
           } else {
@@ -49,7 +49,7 @@ export const useAppStore = create(
             const isDark = systemTheme === 'dark';
             set({
               isDark,
-              theme: theme,
+              theme: getTheme(isDark),
               isThemeLoading: false,
             });
           }
@@ -65,7 +65,7 @@ export const useAppStore = create(
         
         set({
           isDark: newIsDark,
-          theme: theme,
+          theme: getTheme(newIsDark),
         });
 
         try {
@@ -80,7 +80,7 @@ export const useAppStore = create(
         
         set({
           isDark,
-          theme: theme,
+          theme: getTheme(isDark),
         });
 
         try {
@@ -427,3 +427,6 @@ export const useUser = () => {
 
   return { user, isAuthenticated, setUser, logout };
 };
+
+// Export default para compatibilidad
+export default useAppStore;

@@ -13,7 +13,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../theme';
+import useAppStore from '../store/useAppStore';
+import { theme as staticTheme } from '../theme';
 
 // Import data
 import skatersData from '../data/skaters.json';
@@ -25,6 +26,7 @@ const { width } = Dimensions.get('window');
 export default function Inicio() {
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const { theme } = useAppStore();
   const [email, setEmail] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollViewRef = useRef(null);
@@ -64,12 +66,12 @@ export default function Inicio() {
   };
 
   const renderFeatureCard = (icon, title, description) => (
-    <View style={styles.featureCard}>
-      <View style={styles.featureIconContainer}>
+    <View style={[styles.featureCard, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.border }]}>
+      <View style={[styles.featureIconContainer, { backgroundColor: theme.colors.alpha.primary15 }]}>
         <Ionicons name={icon} size={32} color={theme.colors.primary} />
       </View>
-      <Text style={styles.featureTitle}>{title}</Text>
-      <Text style={styles.featureDescription}>{description}</Text>
+      <Text style={[styles.featureTitle, { color: theme.colors.text.primary }]}>{title}</Text>
+      <Text style={[styles.featureDescription, { color: theme.colors.text.secondary }]}>{description}</Text>
     </View>
   );
 
@@ -142,12 +144,12 @@ export default function Inicio() {
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background.primary }]} showsVerticalScrollIndicator={false}>
       {/* Hero Section */}
-      <View style={styles.hero}>
+      <View style={[styles.hero, { backgroundColor: theme.colors.glass.background, borderBottomColor: theme.colors.border }]}>
         <View style={styles.heroContent}>
-          <Text style={styles.heroTitle}>{t('home.hero.title')}</Text>
-          <Text style={styles.heroSubtitle}>{t('home.hero.subtitle')}</Text>
+          <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>{t('home.hero.title')}</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.text.secondary }]}>{t('home.hero.subtitle')}</Text>
           <View style={styles.heroButtons}>
             <TouchableOpacity
               style={[styles.button, styles.buttonPrimary]}
@@ -171,7 +173,7 @@ export default function Inicio() {
 
       {/* What You Can Do Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('home.whatYouCanDo.title')}</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('home.whatYouCanDo.title')}</Text>
         <View style={styles.featuresGrid}>
           {renderFeatureCard(
             'person-add',
@@ -231,10 +233,10 @@ export default function Inicio() {
 
       {/* Featured Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('home.featured.title')}</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('home.featured.title')}</Text>
 
         {/* Featured Skaters */}
-        <Text style={styles.subsectionTitle}>{t('home.featured.skaters')}</Text>
+        <Text style={[styles.subsectionTitle, { color: theme.colors.text.primary }]}>{t('home.featured.skaters')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.destacadosContainer}>
             {featuredSkaters.map(renderSkaterCard)}
@@ -242,7 +244,7 @@ export default function Inicio() {
         </ScrollView>
 
         {/* Featured Parches */}
-        <Text style={styles.subsectionTitle}>{t('home.featured.parches')}</Text>
+        <Text style={[styles.subsectionTitle, { color: theme.colors.text.primary }]}>{t('home.featured.parches')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.destacadosContainer}>
             {featuredParches.map(renderParcheCard)}
@@ -250,7 +252,7 @@ export default function Inicio() {
         </ScrollView>
 
         {/* Featured Spots */}
-        <Text style={styles.subsectionTitle}>{t('home.featured.spots')}</Text>
+        <Text style={[styles.subsectionTitle, { color: theme.colors.text.primary }]}>{t('home.featured.spots')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.destacadosContainer}>
             {featuredSpots.map(renderSpotCard)}
@@ -260,7 +262,7 @@ export default function Inicio() {
 
       {/* About Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('home.about.title')}</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('home.about.title')}</Text>
         <Text style={styles.aboutDescription}>
           {t('home.about.description')}
         </Text>
@@ -314,14 +316,13 @@ export default function Inicio() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   hero: {
-    backgroundColor: theme.colors.card,
-    paddingVertical: theme.spacing.xxl,
-    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: staticTheme.colors.card,
+    paddingVertical: staticTheme.spacing.xxl,
+    paddingHorizontal: staticTheme.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomcolor: staticTheme.colors.border,
   },
   heroContent: {
     alignItems: 'center',
@@ -329,32 +330,32 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: staticTheme.colors.text,
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: staticTheme.spacing.md,
   },
   heroSubtitle: {
     fontSize: 16,
-    color: theme.colors.textSecondary,
+    color: staticTheme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: staticTheme.spacing.xl,
     lineHeight: 24,
   },
   heroButtons: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    gap: staticTheme.spacing.md,
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
   button: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
+    paddingVertical: staticTheme.spacing.md,
+    paddingHorizontal: staticTheme.spacing.lg,
+    borderRadius: staticTheme.borderRadius.md,
     minWidth: 140,
     alignItems: 'center',
   },
   buttonPrimary: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: staticTheme.colors.primary,
   },
   buttonPrimaryText: {
     color: '#fff',
@@ -364,83 +365,83 @@ const styles = StyleSheet.create({
   buttonSecondary: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: theme.colors.primary,
+    bordercolor: staticTheme.colors.primary,
   },
   buttonSecondaryText: {
-    color: theme.colors.primary,
+    color: staticTheme.colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
   section: {
-    padding: theme.spacing.lg,
+    padding: staticTheme.spacing.lg,
   },
   sectionTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.lg,
+    color: staticTheme.colors.text,
+    marginBottom: staticTheme.spacing.lg,
   },
   subsectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.text,
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
+    color: staticTheme.colors.text,
+    marginTop: staticTheme.spacing.lg,
+    marginBottom: staticTheme.spacing.md,
   },
   featuresGrid: {
-    gap: theme.spacing.md,
+    gap: staticTheme.spacing.md,
   },
   featureCard: {
-    backgroundColor: theme.colors.card,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
+    backgroundColor: staticTheme.colors.card,
+    padding: staticTheme.spacing.lg,
+    borderRadius: staticTheme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: theme.spacing.md,
+    bordercolor: staticTheme.colors.border,
+    marginBottom: staticTheme.spacing.md,
   },
   featureIconContainer: {
     width: 60,
     height: 60,
-    backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.borderRadius.full,
+    backgroundColor: staticTheme.colors.primaryLight,
+    borderRadius: staticTheme.borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: staticTheme.spacing.md,
   },
   featureTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
+    color: staticTheme.colors.text,
+    marginBottom: staticTheme.spacing.sm,
   },
   featureDescription: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: staticTheme.colors.textSecondary,
     lineHeight: 20,
   },
   carouselContainer: {
     height: 200,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: staticTheme.borderRadius.lg,
     overflow: 'hidden',
   },
   carouselImage: {
-    width: width - theme.spacing.lg * 2,
+    width: width - staticTheme.spacing.lg * 2,
     height: 200,
     resizeMode: 'cover',
   },
   carouselIndicators: {
     position: 'absolute',
-    bottom: theme.spacing.md,
+    bottom: staticTheme.spacing.md,
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: theme.spacing.sm,
+    gap: staticTheme.spacing.sm,
   },
   indicator: {
     width: 8,
     height: 8,
-    borderRadius: theme.borderRadius.full,
+    borderRadius: staticTheme.borderRadius.full,
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   indicatorActive: {
@@ -449,14 +450,14 @@ const styles = StyleSheet.create({
   },
   destacadosContainer: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    gap: staticTheme.spacing.md,
   },
   destacadoCard: {
     width: 250,
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.lg,
+    backgroundColor: staticTheme.colors.card,
+    borderRadius: staticTheme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    bordercolor: staticTheme.colors.border,
     overflow: 'hidden',
   },
   destacadoImage: {
@@ -465,77 +466,77 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   destacadoContent: {
-    padding: theme.spacing.md,
+    padding: staticTheme.spacing.md,
   },
   destacadoName: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
+    color: staticTheme.colors.text,
+    marginBottom: staticTheme.spacing.sm,
   },
   badgeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
+    gap: staticTheme.spacing.xs,
+    marginBottom: staticTheme.spacing.sm,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: theme.spacing.sm,
+    backgroundColor: staticTheme.colors.primaryLight,
+    paddingHorizontal: staticTheme.spacing.sm,
     paddingVertical: 4,
-    borderRadius: theme.borderRadius.sm,
+    borderRadius: staticTheme.borderRadius.sm,
   },
   badgeText: {
     fontSize: 12,
-    color: theme.colors.primary,
+    color: staticTheme.colors.primary,
     fontWeight: '500',
   },
   badgeLevel: {
-    backgroundColor: theme.colors.success + '20',
+    backgroundColor: staticTheme.colors.success + '20',
   },
   badgeMembers: {
-    backgroundColor: theme.colors.info + '20',
+    backgroundColor: staticTheme.colors.info + '20',
   },
   badgeType: {
-    backgroundColor: theme.colors.warning + '20',
+    backgroundColor: staticTheme.colors.warning + '20',
   },
   badgeDiffEasy: {
-    backgroundColor: theme.colors.success + '20',
+    backgroundColor: staticTheme.colors.success + '20',
   },
   badgeDiffMedium: {
-    backgroundColor: theme.colors.warning + '20',
+    backgroundColor: staticTheme.colors.warning + '20',
   },
   badgeDiffHard: {
-    backgroundColor: theme.colors.error + '20',
+    backgroundColor: staticTheme.colors.error + '20',
   },
   destacadoCity: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: staticTheme.colors.textSecondary,
   },
   aboutDescription: {
     fontSize: 16,
-    color: theme.colors.text,
+    color: staticTheme.colors.text,
     lineHeight: 24,
-    marginBottom: theme.spacing.md,
+    marginBottom: staticTheme.spacing.md,
     fontWeight: '600',
   },
   aboutMission: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: staticTheme.colors.textSecondary,
     lineHeight: 22,
-    marginBottom: theme.spacing.lg,
+    marginBottom: staticTheme.spacing.lg,
   },
   teamTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+    color: staticTheme.colors.text,
+    marginBottom: staticTheme.spacing.md,
   },
   teamContainer: {
     flexDirection: 'row',
-    gap: theme.spacing.lg,
+    gap: staticTheme.spacing.lg,
     flexWrap: 'wrap',
   },
   teamMember: {
@@ -546,48 +547,48 @@ const styles = StyleSheet.create({
   teamAvatar: {
     width: 80,
     height: 80,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.primaryLight,
+    borderRadius: staticTheme.borderRadius.full,
+    backgroundColor: staticTheme.colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: staticTheme.spacing.sm,
   },
   teamName: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
+    color: staticTheme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 16,
   },
   ctaSection: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: staticTheme.colors.card,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    marginTop: theme.spacing.lg,
+    borderTopcolor: staticTheme.colors.border,
+    marginTop: staticTheme.spacing.lg,
   },
   ctaTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: staticTheme.colors.text,
     textAlign: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: staticTheme.spacing.sm,
   },
   ctaSubtitle: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: staticTheme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: staticTheme.spacing.lg,
   },
   ctaForm: {
-    gap: theme.spacing.md,
+    gap: staticTheme.spacing.md,
   },
   ctaInput: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: staticTheme.colors.background,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    bordercolor: staticTheme.colors.border,
+    borderRadius: staticTheme.borderRadius.md,
+    paddingVertical: staticTheme.spacing.md,
+    paddingHorizontal: staticTheme.spacing.lg,
     fontSize: 16,
-    color: theme.colors.text,
+    color: staticTheme.colors.text,
   },
 });

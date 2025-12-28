@@ -19,7 +19,7 @@ import {
   deleteParche,
   getCiudadesParches,
   getDisciplinasParches,
-} from '../utils/parches';
+} from "../services/parches";
 import { useAppStore } from '../store/useAppStore';
 
 export const useParches = () => {

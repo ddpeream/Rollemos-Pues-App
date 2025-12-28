@@ -1,15 +1,15 @@
 /**
- * 📷 Galería Screen - Feed de fotos del club
+ * 📷 Galería Screen - Feed estilo Instagram
  * 
  * Características:
- * - Feed de posts con imágenes
- * - Sistema de likes
+ * - Feed vertical tipo Instagram
+ * - Posts a pantalla completa
+ * - Sistema de likes y comentarios
  * - Subir fotos nuevas
- * - Eliminar/editar propios posts
- * - Grid responsivo tipo masonry
+ * - Diseño moderno con glassmorphism
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -20,39 +20,32 @@ import {
   TouchableOpacity,
   Text,
   ActivityIndicator,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
 import { useGaleria } from '../hooks/useGaleria';
 import { useAppStore } from '../store/useAppStore';
-import CreatePostModal from '../components/CreatePostModal';
-import DeleteConfirmModal from '../components/DeleteConfirmModal';
-import PostOptionsMenu from '../components/PostOptionsMenu';
-import { commonStyles } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 2;
-const SPACING = 8;
-const IMAGE_SIZE = (width - SPACING * (COLUMN_COUNT + 1)) / COLUMN_COUNT;
+const { width, height } = Dimensions.get('window');
 
 export default function Galeria() {
-  const { t } = useTranslation();
-  const { user } = useAppStore();
+  const { user, theme } = useAppStore();
   const {
     posts,
     loading,
     refreshing,
     loadPosts,
     refreshPosts,
-    handleDeletePost,
-    handleToggleLike,
+    toggleLike,
   } = useGaleria();
 
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
-  const [selectedPost, setSelectedPost] = useState(null);
+  const [expandedComments, setExpandedComments] = useState({});
+  const [commentText, setCommentText] = useState({});
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   // Cargar posts al entrar a la pantalla
   useFocusEffect(
@@ -61,188 +54,272 @@ export default function Galeria() {
     }, [])
   );
 
-  // Abrir opciones de post
-  const handleOpenOptions = (post) => {
-    setSelectedPost(post);
-    setOptionsMenuVisible(true);
-  };
-
-  // Eliminar post (abrir confirmación)
-  const handleDeletePress = () => {
-    setOptionsMenuVisible(false);
-    setDeleteModalVisible(true);
-  };
-
-  // Confirmar eliminación
-  const confirmDelete = async () => {
-    if (selectedPost) {
-      const result = await handleDeletePost(selectedPost.id);
-      if (result.success) {
-        setDeleteModalVisible(false);
-        setSelectedPost(null);
-        loadPosts(); // Recargar
-      }
-    }
-  };
-
-  // Like/Unlike
-  const handleLikePress = async (postId) => {
+  // Toggle like
+  const handleLike = async (postId) => {
     if (!user) return;
-    await handleToggleLike(postId, user.id);
-    loadPosts(); // Refrescar para mostrar cambios
+    await toggleLike(postId);
+    await loadPosts(); // Refrescar para ver cambios
   };
 
-  // Renderizar cada post
+  // Toggle mostrar comentarios
+  const toggleComments = (postId) => {
+    setExpandedComments(prev => ({
+      ...prev,
+      [postId]: !prev[postId]
+    }));
+  };
+
+  // Formatear tiempo relativo
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return 'Ahora';
+    if (diffInSeconds < 3600) return `Hace ${Math.floor(diffInSeconds / 60)}m`;
+    if (diffInSeconds < 86400) return `Hace ${Math.floor(diffInSeconds / 3600)}h`;
+    if (diffInSeconds < 604800) return `Hace ${Math.floor(diffInSeconds / 86400)}d`;
+    return date.toLocaleDateString();
+  };
+
+  // Stories data (simulado)
+  const stories = [
+    { id: '1', nombre: 'Tu historia', avatar: user?.avatar || 'https://i.pravatar.cc/150?img=1', isOwn: true },
+    { id: '2', nombre: 'Carlos', avatar: 'https://i.pravatar.cc/150?img=12', hasStory: true },
+    { id: '3', nombre: 'María', avatar: 'https://i.pravatar.cc/150?img=5', hasStory: true },
+    { id: '4', nombre: 'Deimar', avatar: 'https://i.pravatar.cc/150?img=33', hasStory: true },
+    { id: '5', nombre: 'Laura', avatar: 'https://i.pravatar.cc/150?img=9', hasStory: true },
+    { id: '6', nombre: 'Andrés', avatar: 'https://i.pravatar.cc/150?img=68', hasStory: true },
+  ];
+
+  // Renderizar story
+  const renderStory = ({ item }) => (
+    <TouchableOpacity style={styles.storyItem}>
+      <View style={[
+        styles.storyAvatarContainer,
+        item.hasStory && styles.storyAvatarBorder,
+        { borderColor: item.hasStory ? theme.colors.primary : 'transparent' }
+      ]}>
+        <Image source={{ uri: item.avatar }} style={styles.storyAvatar} />
+        {item.isOwn && (
+          <View style={[styles.addStoryButton, { backgroundColor: theme.colors.primary }]}>
+            <Ionicons name="add" size={16} color="#FFFFFF" />
+          </View>
+        )}
+      </View>
+      <Text 
+        style={[styles.storyName, { color: theme.colors.text.primary }]} 
+        numberOfLines={1}
+      >
+        {item.nombre}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  // Renderizar post tipo Instagram
   const renderPost = ({ item }) => {
-    // Validación: Si no tiene datos mínimos, no renderizar
-    if (!item || !item.imagen_url) return null;
-    
-    const isOwner = user && item.usuario_id === user.id;
-    const userLiked = item.likes?.some(like => like.usuario_id === user?.id) || false;
-    const likesCount = item.likes?.length || 0;
+    if (!item || !item.imagen) return null;
+
+    // Simular si el usuario dio like (en producción viene de Supabase)
+    const userLiked = item.likes_usuarios?.includes(user?.id) || false;
+    const likesCount = item.likes || 0;
+    const commentsCount = item.comentarios || 0;
+    const isCommentsExpanded = expandedComments[item.id];
 
     return (
-      <View style={styles.postCard}>
-        {/* Imagen del post */}
+      <View style={[styles.postContainer, { backgroundColor: theme.colors.background.primary }]}>
+        {/* Header del Post */}
+        <View style={styles.postHeader}>
+          <View style={styles.userInfoContainer}>
+            <Image
+              source={{ uri: item.usuario?.avatar || 'https://i.pravatar.cc/150' }}
+              style={styles.userAvatar}
+            />
+            <View style={styles.userDetails}>
+              <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
+                {item.usuario?.nombre || 'Usuario'}
+              </Text>
+              {item.ubicacion && (
+                <View style={styles.locationRow}>
+                  <Ionicons name="location" size={12} color={theme.colors.primary} />
+                  <Text style={[styles.locationText, { color: theme.colors.text.tertiary }]}>
+                    {item.ubicacion}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+          <TouchableOpacity>
+            <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Imagen del Post */}
         <Image
-          source={{ uri: item.imagen_url }}
-          style={styles.postImage}
+          source={{ uri: item.imagen }}
+          style={[styles.postImage, { aspectRatio: item.aspectRatio || 1 }]}
           resizeMode="cover"
         />
 
-        {/* Información del post */}
-        <View style={styles.postInfo}>
-          {/* Usuario */}
-          <View style={styles.postHeader}>
-            <Image
-              source={{ uri: item.usuario?.avatar_url || 'https://via.placeholder.com/40' }}
-              style={styles.userAvatar}
-            />
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{item.usuario?.nombre || 'Usuario'}</Text>
-              {item.usuario?.ciudad && (
-                <Text style={styles.userLocation}>{item.usuario.ciudad}</Text>
-              )}
-            </View>
-
-            {/* Opciones (solo si es el dueño) */}
-            {isOwner && (
-              <TouchableOpacity
-                onPress={() => handleOpenOptions(item)}
-                style={styles.optionsButton}
-              >
-              <Ionicons name="ellipsis-vertical" size={20} color="#E6EEF5" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Descripción */}
-        {item.descripcion && (
-          <Text style={styles.postDescription}>{item.descripcion}</Text>
-        )}          {/* Ubicación */}
-          {item.ubicacion && (
-            <View style={styles.locationContainer}>
-              <Ionicons name="location-outline" size={14} color="#4DD7D0" />
-              <Text style={styles.locationText}>{item.ubicacion}</Text>
-            </View>
-          )}
-
-          {/* Acciones */}
-          <View style={styles.actionsContainer}>
+        {/* Acciones */}
+        <View style={styles.actionsContainer}>
+          <View style={styles.leftActions}>
             <TouchableOpacity
-              onPress={() => handleLikePress(item.id)}
-              style={styles.likeButton}
+              onPress={() => handleLike(item.id)}
+              style={styles.actionButton}
             >
               <Ionicons
                 name={userLiked ? 'heart' : 'heart-outline'}
-                size={24}
-                color={userLiked ? '#FF5252' : '#E6EEF5'}
+                size={28}
+                color={userLiked ? '#FF3B30' : theme.colors.text.primary}
               />
-              <Text style={styles.likesCount}>{likesCount}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => toggleComments(item.id)}
+              style={styles.actionButton}
+            >
+              <Ionicons
+                name="chatbubble-outline"
+                size={26}
+                color={theme.colors.text.primary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <Ionicons name="paper-plane-outline" size={26} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>
+          <TouchableOpacity>
+            <Ionicons name="bookmark-outline" size={26} color={theme.colors.text.primary} />
+          </TouchableOpacity>
         </View>
+
+        {/* Likes */}
+        {likesCount > 0 && (
+          <Text style={[styles.likesText, { color: theme.colors.text.primary }]}>
+            <Text style={styles.boldText}>{likesCount.toLocaleString()}</Text> Me gusta
+          </Text>
+        )}
+
+        {/* Descripción */}
+        {item.descripcion && (
+          <View style={styles.captionContainer}>
+            <Text style={[styles.captionText, { color: theme.colors.text.primary }]}>
+              <Text style={styles.boldText}>{item.usuario?.username || item.usuario?.nombre} </Text>
+              {item.descripcion}
+            </Text>
+          </View>
+        )}
+
+        {/* Ver comentarios */}
+        {commentsCount > 0 && !isCommentsExpanded && (
+          <TouchableOpacity onPress={() => toggleComments(item.id)}>
+            <Text style={[styles.viewCommentsText, { color: theme.colors.text.tertiary }]}>
+              Ver los {commentsCount} comentarios
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Comentarios expandidos */}
+        {isCommentsExpanded && item.comentarios_lista && (
+          <View style={styles.commentsSection}>
+            {item.comentarios_lista.map((comment, index) => (
+              <View key={index} style={styles.commentItem}>
+                <Text style={[styles.commentText, { color: theme.colors.text.primary }]}>
+                  <Text style={styles.boldText}>{comment.usuario} </Text>
+                  {comment.texto}
+                </Text>
+              </View>
+            ))}
+            <TouchableOpacity onPress={() => toggleComments(item.id)}>
+              <Text style={[styles.hideCommentsText, { color: theme.colors.text.tertiary }]}>
+                Ocultar comentarios
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Tiempo */}
+        <Text style={[styles.timeText, { color: theme.colors.text.tertiary }]}>
+          {formatTimeAgo(item.fecha)}
+        </Text>
       </View>
     );
   };
 
   return (
-    <View style={commonStyles.containerLight}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={commonStyles.titleLG}>{t('screens.galeria')}</Text>
-        {user && (
+      <View style={[styles.header, { borderBottomColor: theme.colors.border.primary }]}>
+        <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
+          Rollemos Pues
+        </Text>
+        <View style={styles.headerActions}>
           <TouchableOpacity
-            onPress={() => setCreateModalVisible(true)}
-            style={styles.addButton}
+            onPress={() => setShowUploadModal(true)}
+            style={styles.headerButton}
           >
-            <Ionicons name="add-circle" size={32} color="#4DD7D0" />
+            <Ionicons name="add-circle-outline" size={28} color={theme.colors.primary} />
           </TouchableOpacity>
-        )}
+          <TouchableOpacity style={styles.headerButton}>
+            <Ionicons name="heart-outline" size={28} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerButton}>
+            <Ionicons name="chatbubbles-outline" size={28} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Lista de posts */}
+      {/* Feed */}
       {loading && posts.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4DD7D0" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.text.tertiary }]}>
+            Cargando feed...
+          </Text>
         </View>
       ) : (
         <FlatList
           data={posts}
           renderItem={renderPost}
           keyExtractor={(item) => item.id.toString()}
-          numColumns={COLUMN_COUNT}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={refreshPosts}
-              colors={['#4DD7D0']}
+              tintColor={theme.colors.primary}
             />
+          }
+          ListHeaderComponent={
+            <View style={[styles.storiesContainer, { borderBottomColor: theme.colors.border.primary }]}>
+              <FlatList
+                data={stories}
+                renderItem={renderStory}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.storiesList}
+              />
+            </View>
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="images-outline" size={64} color="#A8B3BE" />
-              <Text style={styles.emptyText}>
-                {t('galeria.empty') || 'No hay publicaciones aún'}
+              <Ionicons name="images-outline" size={80} color={theme.colors.text.tertiary} />
+              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
+                No hay publicaciones
               </Text>
+              <Text style={[styles.emptyText, { color: theme.colors.text.tertiary }]}>
+                Sé el primero en compartir una foto
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowUploadModal(true)}
+                style={[styles.uploadButton, { backgroundColor: theme.colors.primary }]}
+              >
+                <Ionicons name="add" size={24} color="#FFFFFF" />
+                <Text style={styles.uploadButtonText}>Subir foto</Text>
+              </TouchableOpacity>
             </View>
           }
-        />
-      )}
-
-      {/* Modal para crear post */}
-      <CreatePostModal
-        visible={createModalVisible}
-        onClose={() => setCreateModalVisible(false)}
-        onPostCreated={() => {
-          setCreateModalVisible(false);
-          loadPosts();
-        }}
-      />
-
-      {/* Modal de opciones */}
-      {selectedPost && (
-        <PostOptionsMenu
-          visible={optionsMenuVisible}
-          onClose={() => setOptionsMenuVisible(false)}
-          post={selectedPost}
-          onDelete={handleDeletePress}
-          onEdit={() => {
-            setOptionsMenuVisible(false);
-            // Aquí podrías abrir un modal de edición
-          }}
-        />
-      )}
-
-      {/* Modal de confirmación de eliminación */}
-      {selectedPost && (
-        <DeleteConfirmModal
-          visible={deleteModalVisible}
-          onClose={() => setDeleteModalVisible(false)}
-          onConfirm={confirmDelete}
-          itemName={selectedPost.descripcion || 'esta publicación'}
         />
       )}
     </View>
@@ -250,118 +327,235 @@ export default function Galeria() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.15)',
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 0.5,
   },
-  addButton: {
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  headerButton: {
     padding: 4,
   },
-  listContent: {
-    padding: SPACING,
+
+  // Stories
+  storiesContainer: {
+    paddingVertical: 16,
+    borderBottomWidth: 0.5,
   },
-  row: {
-    justifyContent: 'space-between',
-    marginBottom: SPACING,
+  storiesList: {
+    paddingHorizontal: 12,
+    gap: 12,
   },
-  postCard: {
-    width: IMAGE_SIZE,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  storyItem: {
+    alignItems: 'center',
+    width: 80,
   },
-  postImage: {
-    width: IMAGE_SIZE,
-    height: IMAGE_SIZE,
+  storyAvatarContainer: {
+    position: 'relative',
+    padding: 3,
+    borderRadius: 40,
+    borderWidth: 2,
+  },
+  storyAvatarBorder: {
+    borderWidth: 2.5,
+  },
+  storyAvatar: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  postInfo: {
-    padding: 12,
+  addStoryButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  storyName: {
+    fontSize: 12,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+
+  // Post Container
+  postContainer: {
+    marginBottom: 16,
   },
   postHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  userAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  userInfo: {
-    flex: 1,
-    marginLeft: 8,
-  },
-  userName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#E6EEF5',
-  },
-  userLocation: {
-    fontSize: 12,
-    color: '#A8B3BE',
-  },
-  optionsButton: {
-    padding: 4,
-  },
-  postDescription: {
-    fontSize: 14,
-    color: '#E6EEF5',
-    marginBottom: 8,
-  },
-  locationContainer: {
+  userInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    flex: 1,
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  userDetails: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  userName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   locationText: {
     fontSize: 12,
-    color: '#4DD7D0',
-    marginLeft: 4,
   },
+
+  // Post Image
+  postImage: {
+    width: width,
+    minHeight: 300,
+    maxHeight: 600,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+
+  // Actions
   actionsContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
-  likeButton: {
+  leftActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 16,
   },
-  likesCount: {
-    marginLeft: 6,
+  actionButton: {
+    padding: 4,
+  },
+
+  // Likes
+  likesText: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#E6EEF5',
   },
+  boldText: {
+    fontWeight: '600',
+  },
+
+  // Caption
+  captionContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  captionText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // Comments
+  viewCommentsText: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    fontSize: 14,
+  },
+  commentsSection: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 8,
+  },
+  commentItem: {
+    paddingVertical: 4,
+  },
+  commentText: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  hideCommentsText: {
+    fontSize: 14,
+    paddingTop: 4,
+  },
+
+  // Time
+  timeText: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    fontSize: 12,
+  },
+
+  // Loading
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
   },
+  loadingText: {
+    fontSize: 14,
+  },
+
+  // Empty State
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptyText: {
-    marginTop: 16,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  uploadButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    color: '#A8B3BE',
+    fontWeight: '600',
   },
 });

@@ -17,9 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme, useAppStore } from '../store/useAppStore';
-import { uploadAvatarImage } from '../utils/usuarios';
+import { uploadAvatarImage } from '../services/usuarios';
 import { spacing, typography, borderRadius } from '../theme';
-import { supabase } from '../utils/supabase';
+import { supabase } from '../config/supabase';
 
 const { height, width } = Dimensions.get('window');
 

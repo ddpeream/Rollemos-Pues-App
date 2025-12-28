@@ -14,7 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rollemos.pues"
+      "bundleIdentifier": "com.rollemos.pues",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para rastrear tus rutas de patinaje y mostrarte spots cercanos.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para grabar tus rutas completas mientras patinas.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +27,18 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.rollemos.pues"
+      "package": "com.rollemos.pues",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "ACCESS_BACKGROUND_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAp3esnudg_4QNvVOUBONnxpY06TVXC2Ck"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,6 +48,10 @@
         "projectId": "a5a8c678-8e55-45bf-80ec-f90edd49b7f7"
       }
     },
-    "owner": "ddpeream"
+    "owner": "ddpeream",
+    "plugins": [
+      "expo-localization",
+      "expo-sqlite"
+    ]
   }
 }

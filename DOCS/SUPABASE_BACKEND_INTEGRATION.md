@@ -1,3 +1,89 @@
+---
+
+### SQL: Tabla `galeria`
+```sql
+
+CREATE TABLE galeria (
+   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+   usuario_id UUID REFERENCES usuarios(id),
+   imagen TEXT NOT NULL,
+   descripcion TEXT,
+   likes INTEGER DEFAULT 0,
+   comentarios INTEGER DEFAULT 0,
+   fecha TIMESTAMP DEFAULT NOW(),
+   ubicacion TEXT,
+   aspect_ratio FLOAT,
+   created_at TIMESTAMP DEFAULT NOW(),
+   updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### SQL: Tabla `spots`
+```sql
+
+CREATE TABLE spots (
+   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+   nombre TEXT NOT NULL,
+   lat FLOAT,
+   lng FLOAT,
+   tipo TEXT,
+   ciudad TEXT,
+   dificultad TEXT,
+   foto TEXT,
+   descripcion TEXT,
+   created_at TIMESTAMP DEFAULT NOW(),
+   updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### SQL: Tabla `patinadores`
+```sql
+
+CREATE TABLE patinadores (
+   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+   nombre TEXT NOT NULL,
+   ciudad TEXT,
+   disciplinas TEXT[],
+   nivel TEXT,
+   foto TEXT,
+   bio_corta TEXT,
+   redes JSONB,
+   destacado BOOLEAN DEFAULT FALSE,
+   created_at TIMESTAMP DEFAULT NOW(),
+   updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### SQL: Tabla `favoritos`
+```sql
+
+CREATE TABLE favoritos (
+   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+   usuario_id UUID REFERENCES usuarios(id),
+   galeria_id UUID REFERENCES galeria(id),
+   created_at TIMESTAMP DEFAULT NOW()
+);
+```
+- favoritos
+
+---
+
+### SQL: Tabla `parches`
+```sql
+CREATE TABLE parches (
+   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+   nombre TEXT NOT NULL,
+   descripcion TEXT,
+   ciudad TEXT,
+   disciplinas TEXT[],
+   foto TEXT,
+   miembros_aprox INTEGER,
+   contacto JSONB,
+   created_by UUID REFERENCES usuarios(id),
+   created_at TIMESTAMP DEFAULT NOW(),
+   updated_at TIMESTAMP DEFAULT NOW()
+);
+```
 # 🗄️ Integración de Backend Supabase
 
 ## 📋 Plan de Integración
@@ -71,3 +157,13 @@ CREATE TABLE usuarios (
 - 4-5 archivos **editados**
 - 5-6 tablas en Supabase
 - Todo lo demás sigue igual
+
+---
+
+## Tablas SQL faltantes
+
+- galeria
+- parches
+- spots
+- patinadores
+- favoritos

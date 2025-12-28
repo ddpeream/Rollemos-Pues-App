@@ -534,5 +534,49 @@ export const theme = {
   commonStyles,
 };
 
+// ============================================
+// FUNCIÓN PARA OBTENER TEMA DINÁMICO
+// ============================================
+/**
+ * Retorna el objeto de tema según el modo (claro/oscuro)
+ * @param {boolean} isDark - Si el tema es oscuro
+ * @returns {object} Objeto de tema completo
+ */
+export const getTheme = (isDark = true) => {
+  // Colores dinámicos según el tema
+  const dynamicColors = {
+    ...colors,
+    background: {
+      ...colors.background,
+      primary: isDark ? '#0B0F14' : '#F7F9FB',
+      surface: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
+      surface2: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    },
+    text: {
+      ...colors.text,
+      primary: isDark ? '#E6EEF5' : '#101418',
+      secondary: isDark ? '#A8B3BE' : '#495469',
+      muted: isDark ? '#A8B3BE' : '#495469',
+    },
+    glass: {
+      background: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
+      border: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+      backdrop: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+    },
+    card: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
+    border: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.1)',
+  };
+
+  return {
+    colors: dynamicColors,
+    spacing,
+    typography,
+    borderRadius,
+    shadows,
+    animations,
+    commonStyles,
+  };
+};
+
 // Exportación por defecto
 export default theme;

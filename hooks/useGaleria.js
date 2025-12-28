@@ -26,7 +26,7 @@ import {
   getComentarios,
   deleteComentario,
   uploadPostImage,
-} from '../utils/galeria';
+} from '../services/galeria';
 import { useAppStore } from '../store/useAppStore';
 
 export const useGaleria = () => {
@@ -46,12 +46,15 @@ export const useGaleria = () => {
 
     try {
       console.log('📋 Cargando posts...');
-      const data = await getGaleria(filters);
+      
+      // Por ahora cargamos del JSON local
+      // TODO: Migrar a Supabase cuando esté listo
+      const galeriaData = require('../data/galeria.json');
+      
+      setPosts(galeriaData || []);
+      console.log(`✅ ${galeriaData?.length || 0} posts cargados`);
 
-      setPosts(data || []);
-      console.log(`✅ ${data?.length || 0} posts cargados`);
-
-      return { success: true, data };
+      return { success: true, data: galeriaData };
     } catch (err) {
       console.error('❌ Error cargando posts:', err);
       setError(err.message || 'Error al cargar posts');
@@ -230,12 +233,25 @@ export const useGaleria = () => {
 
     try {
       console.log('❤️ Toggling like en post:', postId);
-      const result = await toggleLike(postId, user.id);
-
-      if (!result) {
-        setError('Error al dar like');
-        return { success: false, error: 'Error al dar like' };
-      }
+      
+      // Actualizar localmente (en producción sería con Supabase)
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            const currentLikes = post.likes || 0;
+            const liked = post.likes_usuarios?.includes(user.id) || false;
+            
+            return {
+              ...post,
+              likes: liked ? currentLikes - 1 : currentLikes + 1,
+              likes_usuarios: liked 
+                ? (post.likes_usuarios || []).filter(id => id !== user.id)
+                : [...(post.likes_usuarios || []), user.id]
+            };
+          }
+          return post;
+        })
+      );
 
       console.log('✅ Like actualizado');
       return { success: true };
