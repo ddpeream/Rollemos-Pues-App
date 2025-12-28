@@ -144,27 +144,39 @@ export const useRouteTracker = () => {
       console.log('✅ Permisos verificados');
 
       // Obtener ubicación inicial con timeout
-      console.log('📍 Obteniendo ubicación inicial...');
+      // Obtener ubicaci¢n inicial con timeout y fallback
+      console.log('?? Obteniendo ubicaci¢n inicial...');
       let location;
       try {
         location = await Promise.race([
           Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.BestForNavigation,
-            timeoutMillis: 5000,
+            timeoutMillis: 8000,
           }),
           new Promise((_, reject) =>
             setTimeout(
-              () => reject(new Error('Timeout obteniendo ubicación')),
-              10000
+              () => reject(new Error('Timeout obteniendo ubicaci¢n')),
+              12000
             )
           ),
         ]);
       } catch (locError) {
-        console.error('❌ Error obteniendo ubicación:', locError.message);
-        setError(`Error de ubicación: ${locError.message}`);
-        return;
+        console.warn('? Ubicaci¢n inicial fall¢, intentando fallback:', locError.message);
+        try {
+          location = await Location.getLastKnownPositionAsync({
+            maxAge: 60000,
+            requiredAccuracy: 100,
+          });
+        } catch (fallbackError) {
+          console.error('? Error obteniendo ubicaci¢n (fallback):', fallbackError.message);
+        }
+      
+        if (!location) {
+          console.error('? Error obteniendo ubicaci¢n:', locError.message);
+          setError(`Error de ubicaci¢n: ${locError.message}`);
+          return;
+        }
       }
-
       if (!location || !location.coords) {
         setError('No se pudo obtener la ubicación. Verifica que el GPS esté habilitado.');
         console.error('❌ Ubicación inválida');

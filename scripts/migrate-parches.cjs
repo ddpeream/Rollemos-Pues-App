@@ -19,8 +19,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuración de Supabase
-const supabaseUrl = 'https://zehzpbeytopyryyiptgn.supabase.co';
-const supabaseKey = 'sb_publishable_7jmFLoP24BnyYiWa76TabA_eS54r5nv';
+const supabasreUrl = "https://fmkwqfnvtpuqtpgkengs.supabase.co";
+const supabaseKey = "sb_publishable_pK4Vx0JEvu_py1atk8Skjw_SbH00xLr";
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 

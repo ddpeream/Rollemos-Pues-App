@@ -16,10 +16,13 @@ import Patinadores from './screens/Patinadores';
 import Parches from './screens/Parches';
 import Spots from './screens/Spots';
 import Galeria from './screens/Galeria';
+import TestScreen from './screens/TestScreen';
 import Tracking from './screens/Tracking';
 import RoutesHistory from './screens/RoutesHistory';
 import ThemeToggle from './components/ThemeToggle';
 import useAppStore from './store/useAppStore';
+
+import { useDiagnostics } from './hooks/useDiagnostics';
 
 const Tab = createBottomTabNavigator();
 const RutasStack = createNativeStackNavigator();
@@ -148,7 +151,14 @@ function Navigation() {
             borderTopColor: theme.colors.border,
           },
           headerRight: () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 10 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginRight: 10,
+              }}
+            >
               <ThemeToggle />
               <LanguageSelector />
             </View>
@@ -157,22 +167,28 @@ function Navigation() {
             let iconName;
             let IconComponent = Ionicons;
 
-            if (route.name === 'Inicio') {
-              iconName = focused ? 'home' : 'home-outline';
-            } else if (route.name === 'Patinadores') {
+            if (route.name === "Inicio") {
+              iconName = focused ? "home" : "home-outline";
+            } else if (route.name === "Patinadores") {
               IconComponent = MaterialCommunityIcons;
-              iconName = focused ? 'skate' : 'skate';
-              return <IconComponent name={iconName} size={size} color={color} />;
-            } else if (route.name === 'Parches') {
+              iconName = focused ? "skate" : "skate";
+              return (
+                <IconComponent name={iconName} size={size} color={color} />
+              );
+            } else if (route.name === "Parches") {
               IconComponent = FontAwesome5;
-              iconName = 'users';
-              return <IconComponent name={iconName} size={size - 2} color={color} />;
-            } else if (route.name === 'Spots') {
-              iconName = focused ? 'location' : 'location-outline';
-            } else if (route.name === 'Rutas') {
-              iconName = focused ? 'navigate-circle' : 'navigate-circle-outline';
-            } else if (route.name === 'Galería') {
-              iconName = focused ? 'images' : 'images-outline';
+              iconName = "users";
+              return (
+                <IconComponent name={iconName} size={size - 2} color={color} />
+              );
+            } else if (route.name === "Spots") {
+              iconName = focused ? "location" : "location-outline";
+            } else if (route.name === "Rutas") {
+              iconName = focused
+                ? "navigate-circle"
+                : "navigate-circle-outline";
+            } else if (route.name === "Galería") {
+              iconName = focused ? "images" : "images-outline";
             }
 
             return <IconComponent name={iconName} size={size} color={color} />;
@@ -185,21 +201,23 @@ function Navigation() {
         <Tab.Screen name="Patinadores" component={Patinadores} />
         <Tab.Screen name="Parches" component={Parches} />
         <Tab.Screen name="Spots" component={Spots} />
-        <Tab.Screen 
-          name="Rutas" 
+        <Tab.Screen
+          name="Rutas"
           component={RutasStackScreen}
           options={{
             headerShown: false,
           }}
         />
         <Tab.Screen name="Galería" component={Galeria} />
+        <Tab.Screen name="Test" component={TestScreen} />
       </Tab.Navigator>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? "light" : "dark"} />
     </NavigationContainer>
   );
 }
 
 export default function App() {
+  const diagnostics = useDiagnostics();
   return (
     <ErrorBoundary>
       <PaperProvider>

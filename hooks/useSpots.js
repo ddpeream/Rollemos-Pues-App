@@ -10,7 +10,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { supabase } from "../config/supabase";
+import { supabase, pingSupabase } from "../config/supabase";
 
 export const useSpots = () => {
   const [spots, setSpots] = useState([]);
@@ -42,6 +42,12 @@ export const useSpots = () => {
     } catch (err) {
       console.error('❌ Error cargando spots (raw):', err);
       console.error('❌ Error cargando spots (string):', JSON.stringify(err));
+
+      if (err?.message?.includes('Network request failed')) {
+        const ping = await pingSupabase();
+        console.error('❌ Supabase ping:', ping);
+      }
+
       setError(err?.message || 'Error al cargar spots');
       return { success: false, error: err?.message };
     } finally {
