@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
-import { getUsuarioById } from '../utils/usuarios';
+import { getUsuarioById } from '../services/usuarios';
 
 export default function Perfil() {
   const { t } = useTranslation();
@@ -34,7 +34,7 @@ export default function Perfil() {
       const loadFreshUserData = async () => {
         if (!user?.id) {
           console.warn('⚠️ Perfil: No hay usuario autenticado');
-          setError('No hay usuario autenticado');
+          setError(t('screens.perfil.noAuth'));
           return;
         }
 
@@ -101,7 +101,7 @@ export default function Perfil() {
 
   useEffect(() => {
     if (!user) {
-      setError('No hay usuario autenticado');
+      setError(t('screens.perfil.noAuth'));
     } else {
       console.log('👤 Usuario cargado en Perfil:', user?.nombre);
     }

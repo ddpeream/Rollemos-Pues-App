@@ -45,8 +45,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "a5a8c678-8e55-45bf-80ec-f90edd49b7f7"
-      }
+        "projectId": "b55511a7-c9c5-4ace-9194-b40fd8d47801"
+      },
+      "EXPO_PUBLIC_SUPABASE_URL": "https://fmkwqfnvtpuqtpgkengs.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_pK4Vx0JEvu_py1atk8Skjw_SbH00xLr"
     },
     "owner": "ddpeream",
     "plugins": [

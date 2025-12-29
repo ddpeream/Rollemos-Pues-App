@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme, useAppStore } from '../store/useAppStore';
+import { useTranslation } from 'react-i18next';
 import { uploadAvatarImage } from '../services/usuarios';
 import { spacing, typography, borderRadius } from '../theme';
 import { supabase } from '../config/supabase';
@@ -24,23 +25,24 @@ import { supabase } from '../config/supabase';
 const { height, width } = Dimensions.get('window');
 
 const NIVELES = [
-  { id: 'principiante', label: 'Principiante', icon: '🛹' },
-  { id: 'intermedio', label: 'Intermedio', icon: '⭐' },
-  { id: 'avanzado', label: 'Avanzado', icon: '🏆' },
-  { id: 'profesional', label: 'Profesional', icon: '👑' },
+  { id: 'principiante', icon: '🛹' },
+  { id: 'intermedio', icon: '⭐' },
+  { id: 'avanzado', icon: '🏆' },
+  { id: 'profesional', icon: '👑' },
 ];
 
 const DISCIPLINAS = [
-  { id: 'street', label: 'Street', icon: '🛣️' },
-  { id: 'park', label: 'Park', icon: '🎡' },
-  { id: 'freestyle', label: 'Freestyle', icon: '🎪' },
-  { id: 'speed', label: 'Speed', icon: '⚡' },
-  { id: 'downhill', label: 'Downhill', icon: '⬇️' },
-  { id: 'cruising', label: 'Cruising', icon: '🌊' },
+  { id: 'street', icon: '🛣️' },
+  { id: 'park', icon: '🎡' },
+  { id: 'freestyle', icon: '🎪' },
+  { id: 'speed', icon: '⚡' },
+  { id: 'downhill', icon: '⬇️' },
+  { id: 'cruising', icon: '🌊' },
 ];
 
 export default function Signup({ navigation }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const setUser = useAppStore((state) => state.setUser);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -58,6 +60,20 @@ export default function Signup({ navigation }) {
   const [showDisciplinaModal, setShowDisciplinaModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [avatarUri, setAvatarUri] = useState(null);
+  const levelLabels = {
+    principiante: t('screens.shared.levels.principiante'),
+    intermedio: t('screens.shared.levels.intermedio'),
+    avanzado: t('screens.shared.levels.avanzado'),
+    profesional: t('screens.shared.levels.profesional'),
+  };
+  const disciplineLabels = {
+    street: t('screens.shared.disciplines.street'),
+    park: t('screens.shared.disciplines.park'),
+    freestyle: t('screens.shared.disciplines.freestyle'),
+    speed: t('screens.shared.disciplines.speed'),
+    downhill: t('screens.shared.disciplines.downhill'),
+    cruising: t('screens.signup.cruising'),
+  };
 
   // Función para seleccionar imagen
   const handlePickImage = async () => {
@@ -66,7 +82,10 @@ export default function Signup({ navigation }) {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'Necesitas permitir acceso a la galería para seleccionar una imagen');
+        Alert.alert(
+          t('screens.signup.permissionDeniedTitle'),
+          t('screens.signup.permissionDeniedMessage')
+        );
         return;
       }
 
@@ -85,7 +104,7 @@ export default function Signup({ navigation }) {
       }
     } catch (error) {
       console.error('❌ Error al seleccionar imagen:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      Alert.alert(t('common.error'), t('screens.signup.pickImageError'));
     }
   };
 
@@ -93,39 +112,39 @@ export default function Signup({ navigation }) {
   const handleSignup = async () => {
     // Validaciones
     if (!formData.nombre.trim()) {
-      Alert.alert('Error', 'El nombre es requerido');
+      Alert.alert(t('common.error'), t('screens.signup.nameRequired'));
       return;
     }
 
     if (!formData.email.trim()) {
-      Alert.alert('Error', 'El email es requerido');
+      Alert.alert(t('common.error'), t('screens.signup.emailRequired'));
       return;
     }
 
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      Alert.alert('Error', 'El email no es válido');
+      Alert.alert(t('common.error'), t('screens.signup.emailInvalid'));
       return;
     }
 
     if (!formData.password) {
-      Alert.alert('Error', 'La contraseña es requerida');
+      Alert.alert(t('common.error'), t('screens.signup.passwordRequired'));
       return;
     }
 
     if (formData.password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      Alert.alert(t('common.error'), t('screens.signup.passwordTooShort'));
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      Alert.alert(t('common.error'), t('screens.signup.passwordsMismatch'));
       return;
     }
 
     if (!formData.ciudad.trim()) {
-      Alert.alert('Error', 'La ciudad es requerida');
+      Alert.alert(t('common.error'), t('screens.signup.cityRequired'));
       return;
     }
 
@@ -150,10 +169,10 @@ export default function Signup({ navigation }) {
 
         let errorMessage = authError.message;
         if (authError.message.includes('already registered')) {
-          errorMessage = 'Este email ya está registrado';
+          errorMessage = t('screens.signup.emailAlreadyRegistered');
         }
 
-        Alert.alert('Error', errorMessage);
+        Alert.alert(t('common.error'), errorMessage);
         setLoading(false);
         return;
       }
@@ -182,7 +201,7 @@ export default function Signup({ navigation }) {
 
       if (usuarioError) {
         console.error('❌ Error creando registro de usuario:', usuarioError.message);
-        Alert.alert('Error', 'No se pudo completar el registro');
+        Alert.alert(t('common.error'), t('screens.signup.registerError'));
         setLoading(false);
         return;
       }
@@ -213,9 +232,9 @@ export default function Signup({ navigation }) {
 
       // 4. Usuario creado exitosamente
       Alert.alert(
-        '¡Éxito!',
-        'Cuenta creada correctamente. Has iniciado sesión automáticamente.',
-        [{ text: 'Continuar', style: 'default' }]
+        t('screens.signup.signupSuccessTitle'),
+        t('screens.signup.signupSuccessMessage'),
+        [{ text: t('screens.auth.continue'), style: 'default' }]
       );
 
       // 5. Establecer el usuario en el store (ya está autenticado)
@@ -225,7 +244,7 @@ export default function Signup({ navigation }) {
 
     } catch (error) {
       console.error('❌ Error en signup:', error);
-      Alert.alert('Error', 'Ocurrió un error al crear la cuenta');
+      Alert.alert(t('common.error'), t('screens.signup.signupError'));
     } finally {
       setLoading(false);
     }
@@ -463,9 +482,9 @@ export default function Signup({ navigation }) {
               color={theme.colors.primary} 
             />
           </View>
-          <Text style={styles.title}>Crear Cuenta</Text>
+          <Text style={styles.title}>{t('screens.signup.title')}</Text>
           <Text style={styles.subtitle}>
-            Únete a la comunidad de patinadores
+            {t('screens.signup.subtitle')}
           </Text>
         </View>
 
@@ -489,7 +508,7 @@ export default function Signup({ navigation }) {
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Ionicons name="camera" size={40} color={theme.colors.primary} />
-                <Text style={styles.avatarPlaceholderText}>Agregar foto</Text>
+                <Text style={styles.avatarPlaceholderText}>{t('screens.signup.addPhoto')}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -499,10 +518,10 @@ export default function Signup({ navigation }) {
         <View style={styles.formContainer}>
           {/* Nombre */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Nombre Completo *</Text>
+            <Text style={styles.label}>{t('screens.signup.name')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Tu nombre"
+              placeholder={t('screens.signup.namePlaceholder')}
               placeholderTextColor={theme.colors.text.muted}
               value={formData.nombre}
               onChangeText={(value) => handleChange('nombre', value)}
@@ -511,10 +530,10 @@ export default function Signup({ navigation }) {
 
           {/* Email */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email *</Text>
+            <Text style={styles.label}>{t('screens.signup.email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="tu@email.com"
+              placeholder={t('screens.signup.emailPlaceholder')}
               placeholderTextColor={theme.colors.text.muted}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -525,10 +544,10 @@ export default function Signup({ navigation }) {
 
           {/* Password */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Contraseña *</Text>
+            <Text style={styles.label}>{t('screens.signup.password')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="••••••••"
+              placeholder={t('screens.signup.passwordPlaceholder')}
               placeholderTextColor={theme.colors.text.muted}
               secureTextEntry={!showPassword}
               value={formData.password}
@@ -548,10 +567,10 @@ export default function Signup({ navigation }) {
 
           {/* Confirm Password */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirmar Contraseña *</Text>
+            <Text style={styles.label}>{t('screens.signup.confirmPassword')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="••••••••"
+              placeholder={t('screens.signup.passwordPlaceholder')}
               placeholderTextColor={theme.colors.text.muted}
               secureTextEntry={!showConfirmPassword}
               value={formData.confirmPassword}
@@ -571,10 +590,10 @@ export default function Signup({ navigation }) {
 
           {/* Ciudad */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Ciudad</Text>
+            <Text style={styles.label}>{t('screens.signup.city')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Tu ciudad"
+              placeholder={t('screens.signup.cityPlaceholder')}
               placeholderTextColor={theme.colors.text.muted}
               value={formData.ciudad}
               onChangeText={(value) => handleChange('ciudad', value)}
@@ -583,14 +602,14 @@ export default function Signup({ navigation }) {
 
           {/* Nivel */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Nivel</Text>
+            <Text style={styles.label}>{t('screens.signup.level')}</Text>
             <TouchableOpacity 
               style={styles.pickerContainer}
               onPress={() => setShowNivelModal(true)}
             >
               <View style={styles.pickerButton}>
                 <Text style={styles.pickerButtonText}>
-                  {NIVELES.find(n => n.id === formData.nivel)?.label || formData.nivel}
+                  {levelLabels[formData.nivel] || formData.nivel}
                 </Text>
               </View>
               <View style={styles.divider} />
@@ -602,14 +621,14 @@ export default function Signup({ navigation }) {
 
           {/* Disciplina */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Disciplina</Text>
+            <Text style={styles.label}>{t('screens.signup.discipline')}</Text>
             <TouchableOpacity 
               style={styles.pickerContainer}
               onPress={() => setShowDisciplinaModal(true)}
             >
               <View style={styles.pickerButton}>
                 <Text style={styles.pickerButtonText}>
-                  {DISCIPLINAS.find(d => d.id === formData.disciplina)?.label || formData.disciplina}
+                  {disciplineLabels[formData.disciplina] || formData.disciplina}
                 </Text>
               </View>
               <View style={styles.divider} />
@@ -621,10 +640,10 @@ export default function Signup({ navigation }) {
 
           {/* Bio */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Biografía (Opcional)</Text>
+            <Text style={styles.label}>{t('screens.signup.bio')}</Text>
             <TextInput
               style={[styles.input, styles.textAreaInput]}
-              placeholder="Cuéntanos sobre ti..."
+              placeholder={t('screens.signup.bioPlaceholder')}
               placeholderTextColor={theme.colors.text.muted}
               multiline
               value={formData.bio}
@@ -642,7 +661,7 @@ export default function Signup({ navigation }) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Crear Cuenta</Text>
+          <Text style={styles.buttonText}>{t('screens.signup.submit')}</Text>
           )}
         </TouchableOpacity>
 
@@ -653,7 +672,7 @@ export default function Signup({ navigation }) {
           disabled={loading}
         >
           <Ionicons name="arrow-back" size={18} color={theme.colors.primary} />
-          <Text style={styles.backButtonText}>Volver al Login</Text>
+          <Text style={styles.backButtonText}>{t('screens.signup.backToLogin')}</Text>
         </TouchableOpacity>
 
         {/* Modal Nivel */}
@@ -665,7 +684,7 @@ export default function Signup({ navigation }) {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalHeader}>Selecciona tu nivel</Text>
+              <Text style={styles.modalHeader}>{t('screens.signup.selectLevel')}</Text>
               <FlatList
                 data={NIVELES}
                 keyExtractor={(item) => item.id}
@@ -688,7 +707,7 @@ export default function Signup({ navigation }) {
                         formData.nivel === item.id && styles.optionTextSelected,
                       ]}
                     >
-                      {item.label}
+                      {levelLabels[item.id] || item.id}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -706,7 +725,7 @@ export default function Signup({ navigation }) {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalHeader}>Selecciona tu disciplina</Text>
+              <Text style={styles.modalHeader}>{t('screens.signup.selectDiscipline')}</Text>
               <FlatList
                 data={DISCIPLINAS}
                 keyExtractor={(item) => item.id}
@@ -729,7 +748,7 @@ export default function Signup({ navigation }) {
                         formData.disciplina === item.id && styles.optionTextSelected,
                       ]}
                     >
-                      {item.label}
+                      {disciplineLabels[item.id] || item.id}
                     </Text>
                   </TouchableOpacity>
                 )}

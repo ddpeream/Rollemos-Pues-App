@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Appearance } from 'react-native';
 import { supabase } from '../config/supabase';
 import { getTheme } from '../theme';
+import i18n from '../i18n';
 
 // ============================================
 // STORE PRINCIPAL
@@ -105,8 +106,12 @@ export const useAppStore = create(
               language: savedLanguage,
               isLanguageLoading: false,
             });
+            i18n.changeLanguage(savedLanguage);
           } else {
-            set({ isLanguageLoading: false });
+            set({
+              language: i18n.language || 'es',
+              isLanguageLoading: false,
+            });
           }
         } catch (error) {
           console.error('Error initializing language:', error);
@@ -117,6 +122,7 @@ export const useAppStore = create(
       // Cambiar idioma
       setLanguage: async (newLanguage) => {
         set({ language: newLanguage });
+        i18n.changeLanguage(newLanguage);
 
         try {
           await AsyncStorage.setItem('@language', newLanguage);

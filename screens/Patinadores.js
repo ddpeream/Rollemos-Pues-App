@@ -40,6 +40,16 @@ export default function Patinadores() {
   const [selectedDiscipline, setSelectedDiscipline] = useState('Todas');
   const [activeFilter, setActiveFilter] = useState(null);
 
+  const translateOption = (option) => {
+    if (option === 'Todos') return t('filters.all');
+    if (option === 'Todas') return t('filters.allFeminine');
+    if (option === 'principiante') return t('screens.shared.levels.principiante');
+    if (option === 'intermedio') return t('screens.shared.levels.intermedio');
+    if (option === 'avanzado') return t('screens.shared.levels.avanzado');
+    if (option === 'profesional') return t('screens.shared.levels.profesional');
+    return option;
+  };
+
   // Cargar patinadores al entrar a la pantalla
   useFocusEffect(
     React.useCallback(() => {
@@ -99,12 +109,12 @@ export default function Patinadores() {
     setSelectedDiscipline('Todas');
   };
 
-  const FilterButton = ({ label, value, options, onSelect, icon }) => {
-    const isActive = activeFilter === label;
+  const FilterButton = ({ id, label, value, options, onSelect, icon }) => {
+    const isActive = activeFilter === id;
     const hasSelection = value !== 'Todos' && value !== 'Todas';
     
     // Mostrar el nombre del filtro cuando no hay selección
-    const displayText = hasSelection ? value : label;
+    const displayText = hasSelection ? translateOption(value) : label;
 
     return (
       <View style={styles.filterButtonContainer}>
@@ -116,7 +126,7 @@ export default function Patinadores() {
               borderColor: hasSelection ? theme.colors.primary : theme.colors.glass.border,
             }
           ]}
-          onPress={() => setActiveFilter(isActive ? null : label)}
+          onPress={() => setActiveFilter(isActive ? null : id)}
         >
           <Ionicons 
             name={icon} 
@@ -161,7 +171,7 @@ export default function Patinadores() {
                     styles.filterOptionText,
                     { color: option === value ? theme.colors.primary : theme.colors.text.primary }
                   ]}>
-                    {option}
+                    {translateOption(option)}
                   </Text>
                   {option === value && (
                     <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
@@ -263,7 +273,7 @@ export default function Patinadores() {
               </TouchableOpacity>
             )}
             <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.viewButtonText}>Ver perfil</Text>
+              <Text style={styles.viewButtonText}>{t('screens.patinadores.viewProfile')}</Text>
               <Ionicons name="arrow-forward" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -299,10 +309,10 @@ export default function Patinadores() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-          Patinadores
+          {t('nav.patinadores')}
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-          {filteredSkaters.length} {filteredSkaters.length === 1 ? 'patinador' : 'patinadores'}
+          {t('screens.patinadores.count', { count: filteredSkaters.length })}
         </Text>
       </View>
 
@@ -315,7 +325,7 @@ export default function Patinadores() {
           <Ionicons name="search" size={20} color={theme.colors.text.secondary} />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.text.primary }]}
-            placeholder="Buscar patinador..."
+            placeholder={t('screens.patinadores.searchPlaceholder')}
             placeholderTextColor={theme.colors.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -332,21 +342,24 @@ export default function Patinadores() {
       <View style={styles.filtersSection}>
         <View style={styles.filterRow}>
           <FilterButton
-            label="Ciudad"
+            id="city"
+            label={t('filters.city')}
             value={selectedCity}
             options={cities}
             onSelect={setSelectedCity}
             icon="location-outline"
           />
           <FilterButton
-            label="Nivel"
+            id="level"
+            label={t('filters.level')}
             value={selectedLevel}
             options={levels}
             onSelect={setSelectedLevel}
             icon="stats-chart-outline"
           />
           <FilterButton
-            label="Disciplina"
+            id="discipline"
+            label={t('filters.discipline')}
             value={selectedDiscipline}
             options={disciplines}
             onSelect={setSelectedDiscipline}
@@ -362,7 +375,7 @@ export default function Patinadores() {
           >
             <Ionicons name="close-circle" size={16} color={theme.colors.error} />
             <Text style={[styles.clearFiltersText, { color: theme.colors.error }]}>
-              Limpiar filtros
+              {t('filters.clear')}
             </Text>
           </TouchableOpacity>
         )}
@@ -388,19 +401,19 @@ export default function Patinadores() {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-                Cargando patinadores...
+                {t('screens.patinadores.loading')}
               </Text>
             </View>
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color={theme.colors.text.secondary} />
               <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-                No hay patinadores
+                {t('screens.patinadores.empty')}
               </Text>
               <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
                 {hasActiveFilters 
-                  ? 'Intenta cambiar los filtros de búsqueda'
-                  : 'Aún no hay patinadores registrados'
+                  ? t('screens.patinadores.emptyHintFiltered')
+                  : t('screens.patinadores.emptyHint')
                 }
               </Text>
             </View>

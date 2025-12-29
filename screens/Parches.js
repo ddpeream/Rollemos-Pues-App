@@ -38,6 +38,12 @@ export default function Parches() {
   const [selectedDiscipline, setSelectedDiscipline] = useState('Todas');
   const [activeFilter, setActiveFilter] = useState(null);
 
+  const translateOption = (option) => {
+    if (option === 'Todos') return t('filters.all');
+    if (option === 'Todas') return t('filters.allFeminine');
+    return option;
+  };
+
   // Cargar parches al entrar a la pantalla
   useFocusEffect(
     React.useCallback(() => {
@@ -93,12 +99,12 @@ export default function Parches() {
     setSelectedDiscipline('Todas');
   };
 
-  const FilterButton = ({ label, value, options, onSelect, icon }) => {
-    const isActive = activeFilter === label;
+  const FilterButton = ({ id, label, value, options, onSelect, icon }) => {
+    const isActive = activeFilter === id;
     const hasSelection = value !== 'Todos' && value !== 'Todas';
     
     // Mostrar el nombre del filtro cuando no hay selección
-    const displayText = hasSelection ? value : label;
+    const displayText = hasSelection ? translateOption(value) : label;
 
     return (
       <View style={styles.filterButtonContainer}>
@@ -110,7 +116,7 @@ export default function Parches() {
               borderColor: hasSelection ? theme.colors.primary : theme.colors.glass.border,
             }
           ]}
-          onPress={() => setActiveFilter(isActive ? null : label)}
+          onPress={() => setActiveFilter(isActive ? null : id)}
         >
           <Ionicons 
             name={icon} 
@@ -155,7 +161,7 @@ export default function Parches() {
                     styles.filterOptionText,
                     { color: option === value ? theme.colors.primary : theme.colors.text.primary }
                   ]}>
-                    {option}
+                    {translateOption(option)}
                   </Text>
                   {option === value && (
                     <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
@@ -231,14 +237,14 @@ export default function Parches() {
             <View style={styles.statItem}>
               <Ionicons name="people-outline" size={16} color={theme.colors.text.secondary} />
               <Text style={[styles.statText, { color: theme.colors.text.secondary }]}>
-                {item.miembros || 0} miembros
+                {t('screens.parches.members', { count: item.miembros || 0 })}
               </Text>
             </View>
             {item.fundado && (
               <View style={styles.statItem}>
                 <Ionicons name="calendar-outline" size={16} color={theme.colors.text.secondary} />
                 <Text style={[styles.statText, { color: theme.colors.text.secondary }]}>
-                  Desde {item.fundado}
+                  {t('screens.parches.since', { year: item.fundado })}
                 </Text>
               </View>
             )}
@@ -268,7 +274,7 @@ export default function Parches() {
               </TouchableOpacity>
             )}
             <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.viewButtonText}>Ver parche</Text>
+              <Text style={styles.viewButtonText}>{t('screens.parches.view')}</Text>
               <Ionicons name="arrow-forward" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -282,10 +288,10 @@ export default function Parches() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-          Parches
+          {t('nav.parches')}
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-          {filteredParches.length} {filteredParches.length === 1 ? 'parche' : 'parches'}
+          {t('screens.parches.count', { count: filteredParches.length })}
         </Text>
       </View>
 
@@ -298,7 +304,7 @@ export default function Parches() {
           <Ionicons name="search" size={20} color={theme.colors.text.secondary} />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.text.primary }]}
-            placeholder="Buscar parche..."
+            placeholder={t('screens.parches.searchPlaceholder')}
             placeholderTextColor={theme.colors.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -315,14 +321,16 @@ export default function Parches() {
       <View style={styles.filtersSection}>
         <View style={styles.filterRow}>
           <FilterButton
-            label="Ciudad"
+            id="city"
+            label={t('filters.city')}
             value={selectedCity}
             options={cities}
             onSelect={setSelectedCity}
             icon="location-outline"
           />
           <FilterButton
-            label="Disciplina"
+            id="discipline"
+            label={t('filters.discipline')}
             value={selectedDiscipline}
             options={disciplines}
             onSelect={setSelectedDiscipline}
@@ -338,7 +346,7 @@ export default function Parches() {
           >
             <Ionicons name="close-circle" size={16} color={theme.colors.error} />
             <Text style={[styles.clearFiltersText, { color: theme.colors.error }]}>
-              Limpiar filtros
+              {t('filters.clear')}
             </Text>
           </TouchableOpacity>
         )}
@@ -364,19 +372,19 @@ export default function Parches() {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-                Cargando parches...
+                {t('screens.parches.loading')}
               </Text>
             </View>
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color={theme.colors.text.secondary} />
               <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-                {hasActiveFilters ? 'No hay parches con estos filtros' : 'No hay parches disponibles'}
+                {hasActiveFilters ? t('screens.parches.emptyFiltered') : t('screens.parches.empty')}
               </Text>
               <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
                 {hasActiveFilters 
-                  ? 'Intenta ajustar los filtros de búsqueda'
-                  : 'Aún no hay parches registrados'
+                  ? t('screens.parches.emptyHintFiltered')
+                  : t('screens.parches.emptyHint')
                 }
               </Text>
             </View>

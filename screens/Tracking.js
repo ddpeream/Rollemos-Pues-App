@@ -26,6 +26,7 @@ import {
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
 import { useRouteTracker, TRACKER_STATUS } from '../hooks/useRouteTracker';
 
@@ -34,6 +35,7 @@ const { width, height } = Dimensions.get('window');
 export default function Tracking() {
   const navigation = useNavigation();
   const { theme } = useAppStore();
+  const { t } = useTranslation();
   const {
     status,
     currentLocation,
@@ -136,9 +138,9 @@ export default function Tracking() {
         const granted = await requestLocationPermission();
         if (!granted) {
           Alert.alert(
-            'Permisos requeridos',
-            'Necesitamos acceso a tu ubicación para rastrear tu ruta.',
-            [{ text: 'OK' }]
+            t('screens.tracking.permissionsTitle'),
+            t('screens.tracking.permissionsMessage'),
+            [{ text: t('common.ok') }]
           );
           return;
         }
@@ -155,24 +157,27 @@ export default function Tracking() {
   const handleStopTracking = () => {
     if (routeCoordinates.length < 10) {
       Alert.alert(
-        '¿Descartar ruta?',
-        'La ruta es muy corta. ¿Deseas descartarla?',
+        t('screens.tracking.discardTitle'),
+        t('screens.tracking.discardMessage'),
         [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Descartar', style: 'destructive', onPress: stopTracking },
+          { text: t('screens.tracking.cancel'), style: 'cancel' },
+          { text: t('screens.tracking.discard'), style: 'destructive', onPress: stopTracking },
         ]
       );
     } else {
       Alert.alert(
-        '¿Finalizar ruta?',
-        `Has recorrido ${formatDistance(distance)} en ${formatDuration(duration)}. ¿Deseas guardar esta ruta?`,
+        t('screens.tracking.finishTitle'),
+        t('screens.tracking.finishMessage', {
+          distance: formatDistance(distance),
+          duration: formatDuration(duration),
+        }),
         [
-          { text: 'Cancelar', style: 'cancel' },
+          { text: t('screens.tracking.cancel'), style: 'cancel' },
           {
-            text: 'Guardar',
+            text: t('screens.tracking.save'),
             onPress: async () => {
               await stopTracking();
-              Alert.alert('✅ Ruta guardada', 'Tu ruta se ha guardado exitosamente');
+              Alert.alert(t('screens.tracking.savedTitle'), t('screens.tracking.savedMessage'));
             },
           },
         ]
@@ -198,19 +203,19 @@ export default function Tracking() {
         return {
           icon: 'pause',
           color: '#FF9500',
-          label: 'Pausar',
+          label: t('screens.tracking.pause'),
         };
       case TRACKER_STATUS.PAUSED:
         return {
           icon: 'play',
           color: '#4DD7D0',
-          label: 'Reanudar',
+          label: t('screens.tracking.resume'),
         };
       default:
         return {
           icon: 'play',
           color: '#34C759',
-          label: 'Iniciar',
+          label: t('screens.tracking.start'),
         };
     }
   };
@@ -238,7 +243,7 @@ export default function Tracking() {
         }}
         onError={(err) => {
           console.error('❌ Error en MapView:', err);
-          Alert.alert('Error del Mapa', 'Hubo un problema al cargar el mapa. Intenta reiniciar la app.');
+          Alert.alert(t('screens.tracking.mapErrorTitle'), t('screens.tracking.mapErrorMessage'));
         }}
       >
         {/* Polyline de la ruta */}
@@ -274,9 +279,9 @@ export default function Tracking() {
           <Ionicons name="list-outline" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-          {status === TRACKER_STATUS.IDLE && 'Listo para grabar'}
-          {status === TRACKER_STATUS.TRACKING && '🔴 Grabando...'}
-          {status === TRACKER_STATUS.PAUSED && '⏸️ Pausado'}
+          {status === TRACKER_STATUS.IDLE && t('screens.tracking.statusIdle')}
+          {status === TRACKER_STATUS.TRACKING && t('screens.tracking.statusTracking')}
+          {status === TRACKER_STATUS.PAUSED && t('screens.tracking.statusPaused')}
         </Text>
         <TouchableOpacity
           onPress={() => {
@@ -310,7 +315,7 @@ export default function Tracking() {
               {speed.toFixed(1)}
             </Text>
             <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
-              km/h
+              {t('screens.tracking.speedUnit')}
             </Text>
           </View>
 
@@ -322,7 +327,7 @@ export default function Tracking() {
               {formatDistance(distance)}
             </Text>
             <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
-              Distancia
+              {t('screens.tracking.distance')}
             </Text>
           </View>
 
@@ -334,7 +339,7 @@ export default function Tracking() {
               {formatDuration(duration)}
             </Text>
             <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
-              Tiempo
+              {t('screens.tracking.time')}
             </Text>
           </View>
         </View>
@@ -342,7 +347,7 @@ export default function Tracking() {
         <View style={[styles.secondaryStatsRow, { marginTop: 16 }]}>
           <View style={styles.secondaryStatItem}>
             <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
-              Velocidad promedio
+              {t('screens.tracking.avgSpeed')}
             </Text>
             <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
               {avgSpeed.toFixed(1)} km/h
@@ -351,7 +356,7 @@ export default function Tracking() {
 
           <View style={styles.secondaryStatItem}>
             <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
-              Velocidad máxima
+              {t('screens.tracking.maxSpeed')}
             </Text>
             <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
               {maxSpeed.toFixed(1)} km/h
@@ -360,7 +365,7 @@ export default function Tracking() {
 
           <View style={styles.secondaryStatItem}>
             <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
-              Calorías
+              {t('screens.tracking.calories')}
             </Text>
             <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
               {calories} kcal
