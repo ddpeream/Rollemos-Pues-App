@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useAppStore } from '../store/useAppStore';
+import { useTranslation } from 'react-i18next';
 import { spacing, typography, borderRadius } from '../theme';
 import { supabase } from '../config/supabase';
 import { getUsuarioByEmail } from '../services/usuarios';
@@ -21,6 +22,7 @@ const { height, width } = Dimensions.get('window');
 
 export default function Auth({ navigation }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const setUser = useAppStore((state) => state.setUser);
   const [email, setEmail] = useState('dedapemo@gmail.com');
   const [password, setPassword] = useState('12345678');
@@ -31,9 +33,9 @@ export default function Auth({ navigation }) {
     // Validar que los campos no estén vacíos
     if (!email.trim() || !password.trim()) {
       Alert.alert(
-        '⚠️ Campos Incompletos',
-        'Por favor completa email y contraseña',
-        [{ text: 'OK', style: 'default' }]
+        t('screens.auth.missingFieldsTitle'),
+        t('screens.auth.missingFieldsMessage'),
+        [{ text: t('common.ok'), style: 'default' }]
       );
       return;
     }
@@ -53,17 +55,17 @@ export default function Auth({ navigation }) {
         console.error('❌ Error de autenticación:', authError.message);
 
         // Mensajes más amigables
-        let errorMessage = 'Credenciales inválidas';
+        let errorMessage = t('screens.auth.invalidCredentials');
         if (authError.message.includes('Invalid login credentials')) {
-          errorMessage = 'Email o contraseña incorrectos';
+          errorMessage = t('screens.auth.invalidLogin');
         } else if (authError.message.includes('Email not confirmed')) {
-          errorMessage = 'Por favor confirma tu email antes de iniciar sesión';
+          errorMessage = t('screens.auth.emailNotConfirmed');
         }
 
         Alert.alert(
-          '❌ Error de Autenticación',
+          t('screens.auth.errorTitle'),
           errorMessage,
-          [{ text: 'Intentar de Nuevo', style: 'cancel' }]
+          [{ text: t('screens.auth.tryAgain'), style: 'cancel' }]
         );
         return;
       }
@@ -76,9 +78,9 @@ export default function Auth({ navigation }) {
       if (!usuario) {
         console.error('❌ Usuario no encontrado en la tabla usuarios');
         Alert.alert(
-          '❌ Error',
-          'No se encontraron los datos del usuario',
-          [{ text: 'OK', style: 'default' }]
+          t('common.error'),
+          t('screens.auth.userNotFound'),
+          [{ text: t('common.ok'), style: 'default' }]
         );
         return;
       }
@@ -91,17 +93,17 @@ export default function Auth({ navigation }) {
 
       // Mostrar modal de éxito
       Alert.alert(
-        '✅ ¡Bienvenido!',
-        `Hola ${usuario.nombre}, has iniciado sesión correctamente`,
-        [{ text: 'Continuar', style: 'default' }]
+        t('screens.auth.welcomeTitle'),
+        t('screens.auth.welcomeMessage', { name: usuario.nombre }),
+        [{ text: t('screens.auth.continue'), style: 'default' }]
       );
 
     } catch (err) {
       console.error('❌ Error en handleLogin:', err);
       Alert.alert(
-        '❌ Error del Servidor',
-        'Error al iniciar sesión. Intenta nuevamente.',
-        [{ text: 'OK', style: 'default' }]
+        t('screens.auth.serverErrorTitle'),
+        t('screens.auth.serverErrorMessage'),
+        [{ text: t('common.ok'), style: 'default' }]
       );
     } finally {
       setLoading(false);
@@ -252,9 +254,9 @@ export default function Auth({ navigation }) {
                 color={theme.colors.primary} 
               />
             </View>
-            <Text style={styles.title}>Bienvenido</Text>
+            <Text style={styles.title}>{t('screens.auth.title')}</Text>
             <Text style={styles.subtitle}>
-              Inicia sesión para conectar con patinadores
+              {t('screens.auth.subtitle')}
             </Text>
           </View>
 
@@ -262,10 +264,10 @@ export default function Auth({ navigation }) {
           <View style={styles.formContainer}>
             {/* Email */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('screens.auth.email')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="tu@email.com"
+                placeholder={t('screens.auth.emailPlaceholder')}
                 placeholderTextColor={theme.colors.text.muted}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -276,10 +278,10 @@ export default function Auth({ navigation }) {
 
             {/* Password */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Contraseña</Text>
+              <Text style={styles.label}>{t('screens.auth.password')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="••••••••"
+                placeholder={t('screens.auth.passwordPlaceholder')}
                 placeholderTextColor={theme.colors.text.muted}
                 secureTextEntry={!showPassword}
                 value={password}
@@ -307,14 +309,14 @@ export default function Auth({ navigation }) {
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Iniciar Sesión</Text>
+              <Text style={styles.buttonText}>{t('screens.auth.login')}</Text>
             )}
           </TouchableOpacity>
 
           {/* Divider */}
           <View style={styles.dividerContainer}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>o continúa</Text>
+            <Text style={styles.dividerText}>{t('screens.auth.orContinue')}</Text>
             <View style={styles.divider} />
           </View>
 
@@ -322,23 +324,23 @@ export default function Auth({ navigation }) {
           <View style={styles.socialButtonsContainer}>
             <TouchableOpacity style={styles.socialButton}>
               <Ionicons name="logo-google" size={16} color="#DB4437" />
-              <Text style={styles.socialButtonText}>Google</Text>
+              <Text style={styles.socialButtonText}>{t('screens.auth.google')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.socialButton}>
               <Ionicons name="logo-apple" size={16} color={theme.colors.text.primary} />
-              <Text style={styles.socialButtonText}>Apple</Text>
+              <Text style={styles.socialButtonText}>{t('screens.auth.apple')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Footer */}
           <Text style={styles.footerText}>
-            ¿No tienes cuenta?{' '}
+            {t('screens.auth.noAccount')}{' '}
             <Text 
               style={styles.footerLink}
               onPress={() => navigation?.navigate('SignupScreen')}
             >
-              Registrate
+              {t('screens.auth.signUp')}
             </Text>
           </Text>
       </ScrollView>

@@ -79,7 +79,7 @@ export default function EditarPerfil() {
     React.useCallback(() => {
       const loadFreshUserData = async () => {
         if (!user?.id) {
-          setError('No hay usuario autenticado');
+          setError(t('screens.editarPerfil.noAuth'));
           return;
         }
 

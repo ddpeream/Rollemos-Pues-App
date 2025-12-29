@@ -26,6 +26,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useGaleria } from '../hooks/useGaleria';
 import { useAppStore } from '../store/useAppStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +35,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function Galeria() {
   const { user, theme } = useAppStore();
+  const { t } = useTranslation();
   const {
     posts,
     loading,
@@ -75,16 +77,16 @@ export default function Galeria() {
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
 
-    if (diffInSeconds < 60) return 'Ahora';
-    if (diffInSeconds < 3600) return `Hace ${Math.floor(diffInSeconds / 60)}m`;
-    if (diffInSeconds < 86400) return `Hace ${Math.floor(diffInSeconds / 3600)}h`;
-    if (diffInSeconds < 604800) return `Hace ${Math.floor(diffInSeconds / 86400)}d`;
+    if (diffInSeconds < 60) return t('screens.galeria.time.now');
+    if (diffInSeconds < 3600) return t('screens.galeria.time.minutes', { count: Math.floor(diffInSeconds / 60) });
+    if (diffInSeconds < 86400) return t('screens.galeria.time.hours', { count: Math.floor(diffInSeconds / 3600) });
+    if (diffInSeconds < 604800) return t('screens.galeria.time.days', { count: Math.floor(diffInSeconds / 86400) });
     return date.toLocaleDateString();
   };
 
   // Stories data (simulado)
   const stories = [
-    { id: '1', nombre: 'Tu historia', avatar: user?.avatar || 'https://i.pravatar.cc/150?img=1', isOwn: true },
+    { id: '1', nombre: t('screens.galeria.storyYour'), avatar: user?.avatar || 'https://i.pravatar.cc/150?img=1', isOwn: true },
     { id: '2', nombre: 'Carlos', avatar: 'https://i.pravatar.cc/150?img=12', hasStory: true },
     { id: '3', nombre: 'María', avatar: 'https://i.pravatar.cc/150?img=5', hasStory: true },
     { id: '4', nombre: 'Deimar', avatar: 'https://i.pravatar.cc/150?img=33', hasStory: true },
@@ -137,7 +139,7 @@ export default function Galeria() {
             />
             <View style={styles.userDetails}>
               <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
-                {item.usuario?.nombre || 'Usuario'}
+                {item.usuario?.nombre || t('screens.galeria.user')}
               </Text>
               {item.ubicacion && (
                 <View style={styles.locationRow}>
@@ -195,9 +197,9 @@ export default function Galeria() {
 
         {/* Likes */}
         {likesCount > 0 && (
-          <Text style={[styles.likesText, { color: theme.colors.text.primary }]}>
-            <Text style={styles.boldText}>{likesCount.toLocaleString()}</Text> Me gusta
-          </Text>
+            <Text style={[styles.likesText, { color: theme.colors.text.primary }]}>
+              <Text style={styles.boldText}>{likesCount.toLocaleString()}</Text> {t('screens.galeria.likes')}
+            </Text>
         )}
 
         {/* Descripción */}
@@ -213,9 +215,9 @@ export default function Galeria() {
         {/* Ver comentarios */}
         {commentsCount > 0 && !isCommentsExpanded && (
           <TouchableOpacity onPress={() => toggleComments(item.id)}>
-            <Text style={[styles.viewCommentsText, { color: theme.colors.text.tertiary }]}>
-              Ver los {commentsCount} comentarios
-            </Text>
+              <Text style={[styles.viewCommentsText, { color: theme.colors.text.tertiary }]}>
+                {t('screens.galeria.viewComments', { count: commentsCount })}
+              </Text>
           </TouchableOpacity>
         )}
 
@@ -232,7 +234,7 @@ export default function Galeria() {
             ))}
             <TouchableOpacity onPress={() => toggleComments(item.id)}>
               <Text style={[styles.hideCommentsText, { color: theme.colors.text.tertiary }]}>
-                Ocultar comentarios
+                {t('screens.galeria.hideComments')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -274,7 +276,7 @@ export default function Galeria() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.text.tertiary }]}>
-            Cargando feed...
+            {t('screens.galeria.loading')}
           </Text>
         </View>
       ) : (
@@ -306,17 +308,17 @@ export default function Galeria() {
             <View style={styles.emptyContainer}>
               <Ionicons name="images-outline" size={80} color={theme.colors.text.tertiary} />
               <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-                No hay publicaciones
+                {t('screens.galeria.empty')}
               </Text>
               <Text style={[styles.emptyText, { color: theme.colors.text.tertiary }]}>
-                Sé el primero en compartir una foto
+                {t('screens.galeria.emptyHint')}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowUploadModal(true)}
                 style={[styles.uploadButton, { backgroundColor: theme.colors.primary }]}
               >
                 <Ionicons name="add" size={24} color="#FFFFFF" />
-                <Text style={styles.uploadButtonText}>Subir foto</Text>
+                <Text style={styles.uploadButtonText}>{t('screens.galeria.upload')}</Text>
               </TouchableOpacity>
             </View>
           }

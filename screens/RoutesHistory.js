@@ -24,6 +24,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { useRouteTracker } from '../hooks/useRouteTracker';
@@ -33,6 +34,7 @@ const { width } = Dimensions.get('window');
 export default function RoutesHistory() {
   const navigation = useNavigation();
   const { theme } = useAppStore();
+  const { t } = useTranslation();
   const { loadRoutes, deleteRoute } = useRouteTracker();
 
   const [routes, setRoutes] = useState([]);
@@ -61,12 +63,12 @@ export default function RoutesHistory() {
 
   const handleDeleteRoute = (route) => {
     Alert.alert(
-      'Eliminar ruta',
-      `¿Estás seguro de eliminar esta ruta de ${formatDistance(route.distance)}?`,
+      t('screens.routesHistory.deleteTitle'),
+      t('screens.routesHistory.deleteMessage', { distance: formatDistance(route.distance) }),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('screens.routesHistory.cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('screens.routesHistory.delete'),
           style: 'destructive',
           onPress: async () => {
             const success = await deleteRoute(route.id);
@@ -87,11 +89,15 @@ export default function RoutesHistory() {
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) {
-      return `Hoy, ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`;
+      return t('screens.routesHistory.today', {
+        time: date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+      });
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return `Ayer, ${date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`;
+      return t('screens.routesHistory.yesterday', {
+        time: date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+      });
     } else {
-      return date.toLocaleDateString('es-CO', {
+      return date.toLocaleDateString(undefined, {
         day: '2-digit',
         month: 'short',
         hour: '2-digit',
@@ -185,7 +191,7 @@ export default function RoutesHistory() {
         <View style={[styles.secondaryStats, { borderTopColor: theme.colors.border.primary }]}>
           <View style={styles.secondaryStatItem}>
             <Text style={[styles.secondaryLabel, { color: theme.colors.text.tertiary }]}>
-              Vel. máx
+              {t('screens.routesHistory.maxSpeed')}
             </Text>
             <Text style={[styles.secondaryValue, { color: theme.colors.text.primary }]}>
               {item.maxSpeed.toFixed(1)} km/h
@@ -194,7 +200,7 @@ export default function RoutesHistory() {
 
           <View style={styles.secondaryStatItem}>
             <Text style={[styles.secondaryLabel, { color: theme.colors.text.tertiary }]}>
-              Calorías
+              {t('screens.routesHistory.calories')}
             </Text>
             <Text style={[styles.secondaryValue, { color: theme.colors.text.primary }]}>
               {item.calories} kcal
@@ -203,7 +209,7 @@ export default function RoutesHistory() {
 
           <View style={styles.secondaryStatItem}>
             <Text style={[styles.secondaryLabel, { color: theme.colors.text.tertiary }]}>
-              Puntos
+              {t('screens.routesHistory.points')}
             </Text>
             <Text style={[styles.secondaryValue, { color: theme.colors.text.primary }]}>
               {item.coordinates.length}
@@ -217,14 +223,14 @@ export default function RoutesHistory() {
             style={[styles.actionButton, { backgroundColor: theme.colors.background.tertiary }]}
           >
             <Ionicons name="eye-outline" size={20} color={theme.colors.primary} />
-            <Text style={[styles.actionText, { color: theme.colors.primary }]}>Ver</Text>
+            <Text style={[styles.actionText, { color: theme.colors.primary }]}>{t('screens.routesHistory.view')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.colors.background.tertiary }]}
           >
             <Ionicons name="share-social-outline" size={20} color={theme.colors.primary} />
-            <Text style={[styles.actionText, { color: theme.colors.primary }]}>Compartir</Text>
+            <Text style={[styles.actionText, { color: theme.colors.primary }]}>{t('screens.routesHistory.share')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -232,7 +238,7 @@ export default function RoutesHistory() {
             style={[styles.actionButton, { backgroundColor: theme.colors.background.tertiary }]}
           >
             <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-            <Text style={[styles.actionText, { color: '#FF3B30' }]}>Eliminar</Text>
+            <Text style={[styles.actionText, { color: '#FF3B30' }]}>{t('screens.routesHistory.delete')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -251,10 +257,10 @@ export default function RoutesHistory() {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-            Mis Rutas
+            {t('screens.routesHistory.title')}
           </Text>
           <Text style={[styles.headerSubtitle, { color: theme.colors.text.tertiary }]}>
-            {routes.length} {routes.length === 1 ? 'ruta grabada' : 'rutas grabadas'}
+            {t('screens.routesHistory.count', { count: routes.length })}
           </Text>
         </View>
       </View>
@@ -263,17 +269,17 @@ export default function RoutesHistory() {
       {loading ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.colors.text.tertiary }]}>
-            Cargando rutas...
+            {t('screens.routesHistory.loading')}
           </Text>
         </View>
       ) : routes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="map-outline" size={80} color={theme.colors.text.tertiary} />
           <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-            No hay rutas grabadas
+            {t('screens.routesHistory.empty')}
           </Text>
           <Text style={[styles.emptyText, { color: theme.colors.text.tertiary }]}>
-            Comienza a grabar tus recorridos en patines
+            {t('screens.routesHistory.emptyHint')}
           </Text>
         </View>
       ) : (

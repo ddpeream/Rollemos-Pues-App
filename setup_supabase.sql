@@ -420,3 +420,54 @@ ORDER BY tablename, policyname;
 -- ✅ LISTO! 
 -- Ejecuta este archivo completo en Supabase SQL Editor
 -- =============================================
+
+-- =============================================
+-- 7. TABLA: TRACKING_LIVE (Ubicaciones en tiempo real)
+-- =============================================
+
+-- Tabla para ubicar patinadores activos en el mapa (1 fila por usuario)
+CREATE TABLE IF NOT EXISTS tracking_live (
+  user_id UUID PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+  lat NUMERIC NOT NULL,
+  lng NUMERIC NOT NULL,
+  speed NUMERIC,
+  heading NUMERIC,
+  is_active BOOLEAN DEFAULT true,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indices para consultas r‡pidas
+CREATE INDEX IF NOT EXISTS idx_tracking_live_active ON tracking_live(is_active);
+CREATE INDEX IF NOT EXISTS idx_tracking_live_updated ON tracking_live(updated_at DESC);
+
+-- Habilitar RLS
+ALTER TABLE tracking_live ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Todos pueden ver tracking live" ON tracking_live;
+DROP POLICY IF EXISTS "Usuario crea tracking live" ON tracking_live;
+DROP POLICY IF EXISTS "Usuario actualiza tracking live" ON tracking_live;
+DROP POLICY IF EXISTS "Usuario elimina tracking live" ON tracking_live;
+
+CREATE POLICY "Todos pueden ver tracking live" ON tracking_live
+  FOR SELECT USING (true);
+
+CREATE POLICY "Usuario crea tracking live" ON tracking_live
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Usuario actualiza tracking live" ON tracking_live
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Usuario elimina tracking live" ON tracking_live
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Verificaci¾n tracking_live
+SELECT
+  schemaname,
+  tablename,
+  tableowner
+FROM pg_tables
+WHERE schemaname = 'public'
+  AND tablename = 'tracking_live';
+

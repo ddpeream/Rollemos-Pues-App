@@ -42,6 +42,11 @@ export default function Spots() {
   const [selectedCity, setSelectedCity] = useState('Todos');
   const [selectedType, setSelectedType] = useState('Todos');
   const [activeFilter, setActiveFilter] = useState(null);
+
+  const translateOption = (option) => {
+    if (option === 'Todos') return t('filters.all');
+    return option;
+  };
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [selectedSpot, setSelectedSpot] = useState(null);
   const mapRef = useRef(null);
@@ -106,12 +111,12 @@ export default function Spots() {
     setSelectedType('Todos');
   };
 
-  const FilterButton = ({ label, value, options, onSelect, icon }) => {
-    const isActive = activeFilter === label;
+  const FilterButton = ({ id, label, value, options, onSelect, icon }) => {
+    const isActive = activeFilter === id;
     const hasSelection = value !== 'Todos';
     
     // Mostrar el nombre del filtro cuando no hay selección
-    const displayText = hasSelection ? value : label;
+    const displayText = hasSelection ? translateOption(value) : label;
 
     return (
       <View style={styles.filterButtonContainer}>
@@ -123,7 +128,7 @@ export default function Spots() {
               borderColor: hasSelection ? theme.colors.primary : theme.colors.glass.border,
             }
           ]}
-          onPress={() => setActiveFilter(isActive ? null : label)}
+          onPress={() => setActiveFilter(isActive ? null : id)}
         >
           <Ionicons 
             name={icon} 
@@ -168,7 +173,7 @@ export default function Spots() {
                     styles.filterOptionText,
                     { color: option === value ? theme.colors.primary : theme.colors.text.primary }
                   ]}>
-                    {option}
+                    {translateOption(option)}
                   </Text>
                   {option === value && (
                     <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
@@ -358,12 +363,12 @@ export default function Spots() {
             >
               <Ionicons name="map-outline" size={18} color={theme.colors.primary} />
               <Text style={[styles.mapButtonText, { color: theme.colors.primary }]}>
-                Mapa
+                {t('screens.spots.map')}
               </Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.viewButtonText}>Ver spot</Text>
+              <Text style={styles.viewButtonText}>{t('screens.spots.view')}</Text>
               <Ionicons name="arrow-forward" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -378,10 +383,10 @@ export default function Spots() {
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <View style={styles.headerLeft}>
           <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-            Spots
+            {t('nav.spots')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-            {filteredSpots.length} {filteredSpots.length === 1 ? 'spot' : 'spots'}
+            {t('screens.spots.count', { count: filteredSpots.length })}
           </Text>
         </View>
         
@@ -425,7 +430,7 @@ export default function Spots() {
           <Ionicons name="search" size={20} color={theme.colors.text.secondary} />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.text.primary }]}
-            placeholder="Buscar spot..."
+            placeholder={t('screens.spots.searchPlaceholder')}
             placeholderTextColor={theme.colors.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -442,14 +447,16 @@ export default function Spots() {
       <View style={styles.filtersSection}>
         <View style={styles.filterRow}>
           <FilterButton
-            label="Ciudad"
+            id="city"
+            label={t('filters.city')}
             value={selectedCity}
             options={cities}
             onSelect={setSelectedCity}
             icon="location-outline"
           />
           <FilterButton
-            label="Tipo"
+            id="type"
+            label={t('filters.type')}
             value={selectedType}
             options={types}
             onSelect={setSelectedType}
@@ -465,7 +472,7 @@ export default function Spots() {
           >
             <Ionicons name="close-circle" size={16} color={theme.colors.error} />
             <Text style={[styles.clearFiltersText, { color: theme.colors.error }]}>
-              Limpiar filtros
+              {t('filters.clear')}
             </Text>
           </TouchableOpacity>
         )}
@@ -486,7 +493,7 @@ export default function Spots() {
             toolbarEnabled={false}
             onError={(err) => {
               console.error('❌ Error en MapView (Spots):', err);
-              Alert.alert('Error del Mapa', 'Hubo un problema al cargar el mapa. Intenta reiniciar la app.');
+              Alert.alert(t('screens.spots.mapErrorTitle'), t('screens.spots.mapErrorMessage'));
             }}
           >
             {filteredSpots
@@ -560,7 +567,7 @@ export default function Spots() {
                       setSelectedSpot(null);
                     }}
                   >
-                    <Text style={styles.overlayButtonText}>Ver detalles</Text>
+                    <Text style={styles.overlayButtonText}>{t('screens.spots.viewDetails')}</Text>
                     <Ionicons name="arrow-forward" size={16} color="#fff" />
                   </TouchableOpacity>
                 </View>
@@ -602,19 +609,19 @@ export default function Spots() {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-                Cargando spots...
+                {t('screens.spots.loading')}
               </Text>
             </View>
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="map-outline" size={64} color={theme.colors.text.secondary} />
               <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-                {hasActiveFilters ? 'No hay spots con estos filtros' : 'No hay spots disponibles'}
+                {hasActiveFilters ? t('screens.spots.emptyFiltered') : t('screens.spots.empty')}
               </Text>
               <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
                 {hasActiveFilters 
-                  ? 'Intenta ajustar los filtros de búsqueda'
-                  : 'Aún no hay spots registrados'
+                  ? t('screens.spots.emptyHintFiltered')
+                  : t('screens.spots.emptyHint')
                 }
               </Text>
             </View>
