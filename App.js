@@ -16,7 +16,6 @@ import Patinadores from './screens/Patinadores';
 import Parches from './screens/Parches';
 import Spots from './screens/Spots';
 import Galeria from './screens/Galeria';
-import TestScreen from './screens/TestScreen';
 import Tracking from './screens/Tracking';
 import RoutesHistory from './screens/RoutesHistory';
 import ThemeToggle from './components/ThemeToggle';
@@ -209,7 +208,6 @@ function Navigation() {
           }}
         />
         <Tab.Screen name="Galería" component={Galeria} />
-        <Tab.Screen name="Test" component={TestScreen} />
       </Tab.Navigator>
       <StatusBar style={isDark ? "light" : "dark"} />
     </NavigationContainer>
