@@ -15,6 +15,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '../store/useAppStore';
+import { supabase } from '../config/supabase';
+import { upsertTrackingLive } from '../services/tracking';
 
 const STORAGE_KEY = '@rollemos_routes';
 
@@ -40,12 +42,90 @@ export const useRouteTracker = () => {
   const [calories, setCalories] = useState(0); // kcal estimadas
   const [hasPermission, setHasPermission] = useState(false);
   const [error, setError] = useState(null);
+  const [authUid, setAuthUid] = useState(null);
 
   // Refs para tracking
   const locationSubscription = useRef(null);
   const startTime = useRef(null);
   const timerInterval = useRef(null);
   const speedHistory = useRef([]);
+  const lastLiveUpdateRef = useRef(0);
+  const authUserIdRef = useRef(null);
+
+  const sendLiveUpdate = useCallback(
+    async (coord, isActive = true) => {
+      if (!coord) {
+        return;
+      }
+
+      try {
+        const userId = authUserIdRef.current;
+        if (!userId) {
+          console.log('?? tracking_live skip: no auth user id');
+          return;
+        }
+
+        console.log('?? tracking_live upsert:', {
+          userId,
+          authUid: authUserIdRef.current,
+          profileId: user?.id || null,
+          lat: coord.latitude,
+          lng: coord.longitude,
+          isActive,
+        });
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log('?? tracking_live session uid:', sessionData?.session?.user?.id || null);
+
+        const result = await upsertTrackingLive({
+          userId,
+          latitude: coord.latitude,
+          longitude: coord.longitude,
+          speed: coord.speed ?? null,
+          heading: coord.heading ?? null,
+          isActive,
+        });
+
+        if (!result.ok) {
+          console.error('❌ tracking_live upsert error:', result.error);
+        } else {
+          console.log('✅ tracking_live upsert ok');
+        }
+      } catch (err) {
+        console.error('❌ Error updating tracking_live:', err);
+      }
+    },
+    [user]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAuthUserId = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (isMounted) {
+          authUserIdRef.current = data?.user?.id || null;
+          setAuthUid(authUserIdRef.current);
+          console.log('?? tracking_live auth uid:', authUserIdRef.current);
+        }
+      } catch (err) {
+        console.error('Error loading auth user for tracking:', err);
+      }
+    };
+
+    loadAuthUserId();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authUid && status === TRACKER_STATUS.TRACKING && currentLocation) {
+      sendLiveUpdate(currentLocation, true);
+    }
+  }, [authUid, status, currentLocation, sendLiveUpdate]);
 
   /**
    * 📍 Solicitar permisos de ubicación
@@ -130,6 +210,12 @@ export const useRouteTracker = () => {
     console.log('▶️ Iniciando tracking...');
 
     try {
+      if (!authUserIdRef.current) {
+        console.log('?? tracking_live: sin sesion activa, no se puede iniciar tracking');
+        setError('Debes iniciar sesion para compartir tu ubicacion.');
+        return;
+      }
+
       // Verificar permisos
       const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
       if (foregroundStatus !== 'granted') {
@@ -195,6 +281,8 @@ export const useRouteTracker = () => {
       setRouteCoordinates([initialCoord]);
       setStatus(TRACKER_STATUS.TRACKING);
       startTime.current = Date.now();
+      lastLiveUpdateRef.current = Date.now();
+      sendLiveUpdate(initialCoord, true);
 
       // Iniciar contador de tiempo
       timerInterval.current = setInterval(() => {
@@ -258,6 +346,12 @@ export const useRouteTracker = () => {
                   const durationMinutes = (Date.now() - startTime.current) / 60000;
                   setCalories(calculateCalories(durationMinutes, avgSpd));
 
+                  const now = Date.now();
+                  if (now - lastLiveUpdateRef.current > 5000) {
+                    lastLiveUpdateRef.current = now;
+                    sendLiveUpdate(newCoord, true);
+                  }
+
                   return [...prev, newCoord];
                 }
 
@@ -284,7 +378,7 @@ export const useRouteTracker = () => {
       setError(`Error: ${err.message}`);
       setStatus(TRACKER_STATUS.IDLE);
     }
-  }, [requestLocationPermission, calculateDistance, calculateCalories, maxSpeed]);
+  }, [requestLocationPermission, calculateDistance, calculateCalories, maxSpeed, sendLiveUpdate]);
 
   /**
    * ⏸️ Pausar tracking
@@ -317,6 +411,10 @@ export const useRouteTracker = () => {
    * ⏹️ Detener tracking y guardar ruta
    */
   const stopTracking = useCallback(async () => {
+    const lastCoord = currentLocation || routeCoordinates[routeCoordinates.length - 1];
+    if (lastCoord) {
+      await sendLiveUpdate(lastCoord, false);
+    }
     console.log('⏹️ Deteniendo tracking...');
 
     // Limpiar suscripción de ubicación
@@ -349,7 +447,7 @@ export const useRouteTracker = () => {
     startTime.current = null;
 
     console.log('✅ Tracking detenido');
-  }, [routeCoordinates, distance]);
+  }, [currentLocation, routeCoordinates, distance, sendLiveUpdate]);
 
   /**
    * 💾 Guardar ruta en AsyncStorage
@@ -460,3 +558,4 @@ export const useRouteTracker = () => {
 };
 
 export default useRouteTracker;
+

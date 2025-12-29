@@ -454,13 +454,17 @@ CREATE POLICY "Todos pueden ver tracking live" ON tracking_live
   FOR SELECT USING (true);
 
 CREATE POLICY "Usuario crea tracking live" ON tracking_live
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Usuario actualiza tracking live" ON tracking_live
-  FOR UPDATE USING (auth.uid() = user_id);
+  FOR UPDATE TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Usuario elimina tracking live" ON tracking_live
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE TO authenticated
+  USING (user_id = auth.uid());
 
 -- Verificaci¾n tracking_live
 SELECT
@@ -470,4 +474,25 @@ SELECT
 FROM pg_tables
 WHERE schemaname = 'public'
   AND tablename = 'tracking_live';
+
+
+-- =============================================
+-- REALTIME: PUBLICATION PARA tracking_live
+-- =============================================
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_publication
+    WHERE pubname = 'supabase_realtime'
+  ) THEN
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.tracking_live;
+    EXCEPTION
+      WHEN duplicate_object THEN
+        NULL;
+    END;
+  END IF;
+END
+$$;
 

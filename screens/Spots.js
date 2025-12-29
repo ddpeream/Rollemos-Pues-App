@@ -23,12 +23,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { useSpots } from '../hooks/useSpots';
 import { theme as staticTheme } from '../theme';
+import { fetchTrackingLive, subscribeTrackingLive, unsubscribeTrackingLive } from '../services/tracking';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Spots() {
   const { t } = useTranslation();
-  const { theme } = useAppStore();
+  const { theme, user } = useAppStore();
   
   const {
     spots,
@@ -42,6 +43,7 @@ export default function Spots() {
   const [selectedCity, setSelectedCity] = useState('Todos');
   const [selectedType, setSelectedType] = useState('Todos');
   const [activeFilter, setActiveFilter] = useState(null);
+  const [liveSkaters, setLiveSkaters] = useState([]);
 
   const translateOption = (option) => {
     if (option === 'Todos') return t('filters.all');
@@ -75,6 +77,60 @@ export default function Spots() {
       loadSpots();
     }, [])
   );
+
+  const normalizeLiveRecord = (record) => {
+    if (!record) return null;
+    return {
+      userId: record.user_id,
+      lat: Number(record.lat),
+      lng: Number(record.lng),
+      speed: record.speed,
+      heading: record.heading,
+      isActive: record.is_active,
+      updatedAt: record.updated_at,
+      usuario: record.usuarios || null,
+    };
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadLiveSkaters = async () => {
+      const { data } = await fetchTrackingLive();
+      if (!isMounted) return;
+      const normalized = (data || []).map(normalizeLiveRecord).filter(Boolean);
+      setLiveSkaters(normalized);
+    };
+
+    loadLiveSkaters();
+
+    const channel = subscribeTrackingLive((payload) => {
+      if (!isMounted) return;
+      const record = payload.new || payload.old;
+      const normalized = normalizeLiveRecord(record);
+      if (!normalized) return;
+
+      if (payload.eventType === 'DELETE' || normalized.isActive === false) {
+        setLiveSkaters((prev) => prev.filter((item) => item.userId !== normalized.userId));
+        return;
+      }
+
+      setLiveSkaters((prev) => {
+        const index = prev.findIndex((item) => item.userId === normalized.userId);
+        if (index === -1) {
+          return [...prev, normalized];
+        }
+        const next = [...prev];
+        next[index] = { ...next[index], ...normalized };
+        return next;
+      });
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribeTrackingLive(channel);
+    };
+  }, []);
 
   // Extract unique values for filters
   const cities = useMemo(() => {
@@ -223,6 +279,15 @@ export default function Spots() {
       longitudeDelta: Math.max(deltaLng, 0.1),
     };
   }, [filteredSpots]);
+
+  const visibleLiveSkaters = useMemo(() => {
+    return liveSkaters.filter((skater) => {
+      if (!skater.isActive) return false;
+      if (!Number.isFinite(skater.lat) || !Number.isFinite(skater.lng)) return false;
+      if (user?.id && skater.userId === user.id) return false;
+      return true;
+    });
+  }, [liveSkaters, user]);
 
   // Focus on specific spot in map
   const focusSpotOnMap = (spot) => {
@@ -522,6 +587,20 @@ export default function Spots() {
                   </View>
                 </Marker>
               ))}
+            {visibleLiveSkaters.map((skater) => (
+              <Marker
+                key={`live-${skater.userId}`}
+                coordinate={{
+                  latitude: skater.lat,
+                  longitude: skater.lng,
+                }}
+                title={skater.usuario?.nombre || 'Skater'}
+              >
+                <View style={[styles.liveMarker, { borderColor: theme.colors.primary }]}>
+                  <View style={[styles.liveDot, { backgroundColor: theme.colors.primary }]} />
+                </View>
+              </Marker>
+            ))}
           </MapView>
 
           {/* Selected Spot Card Overlay */}
@@ -1045,6 +1124,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  liveMarker: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  liveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   mapOverlayCard: {
     position: 'absolute',
