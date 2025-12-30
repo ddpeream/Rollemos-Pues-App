@@ -15,10 +15,10 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { useSpots } from '../hooks/useSpots';
@@ -44,6 +44,7 @@ export default function Spots() {
   const [selectedType, setSelectedType] = useState('Todos');
   const [activeFilter, setActiveFilter] = useState(null);
   const [liveSkaters, setLiveSkaters] = useState([]);
+  const [livePaths, setLivePaths] = useState({});
 
   const translateOption = (option) => {
     if (option === 'Todos') return t('filters.all');
@@ -92,6 +93,56 @@ export default function Spots() {
     };
   };
 
+  const getSkaterGender = (skater) => {
+    const raw =
+      skater?.usuario?.genero ||
+      skater?.usuario?.gender ||
+      skater?.usuario?.sexo ||
+      '';
+    const value = String(raw).toLowerCase();
+    if (value.startsWith('f') || value.includes('mujer')) return 'female';
+    if (value.startsWith('m') || value.includes('hombre')) return 'male';
+    return 'male';
+  };
+
+  const getSkaterColor = (skater) => {
+    return getSkaterGender(skater) === 'female' ? '#FF4FA3' : '#19C37D';
+  };
+
+  const appendLivePath = (userId, lat, lng) => {
+    setLivePaths((prev) => {
+      const current = prev[userId];
+      const nextPoint = { latitude: lat, longitude: lng };
+
+      if (!current) {
+        return {
+          ...prev,
+          [userId]: {
+            start: nextPoint,
+            points: [nextPoint],
+          },
+        };
+      }
+
+      const last = current.points[current.points.length - 1];
+      const moved =
+        Math.abs(last.latitude - lat) > 0.00001 ||
+        Math.abs(last.longitude - lng) > 0.00001;
+
+      if (!moved) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [userId]: {
+          ...current,
+          points: [...current.points, nextPoint],
+        },
+      };
+    });
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -100,6 +151,11 @@ export default function Spots() {
       if (!isMounted) return;
       const normalized = (data || []).map(normalizeLiveRecord).filter(Boolean);
       setLiveSkaters(normalized);
+      normalized.forEach((item) => {
+        if (item.isActive && Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
+          appendLivePath(item.userId, item.lat, item.lng);
+        }
+      });
     };
 
     loadLiveSkaters();
@@ -112,6 +168,11 @@ export default function Spots() {
 
       if (payload.eventType === 'DELETE' || normalized.isActive === false) {
         setLiveSkaters((prev) => prev.filter((item) => item.userId !== normalized.userId));
+        setLivePaths((prev) => {
+          const next = { ...prev };
+          delete next[normalized.userId];
+          return next;
+        });
         return;
       }
 
@@ -124,6 +185,8 @@ export default function Spots() {
         next[index] = { ...next[index], ...normalized };
         return next;
       });
+
+      appendLivePath(normalized.userId, normalized.lat, normalized.lng);
     });
 
     return () => {
@@ -587,20 +650,44 @@ export default function Spots() {
                   </View>
                 </Marker>
               ))}
-            {visibleLiveSkaters.map((skater) => (
-              <Marker
-                key={`live-${skater.userId}`}
-                coordinate={{
-                  latitude: skater.lat,
-                  longitude: skater.lng,
-                }}
-                title={skater.usuario?.nombre || 'Skater'}
-              >
-                <View style={[styles.liveMarker, { borderColor: theme.colors.primary }]}>
-                  <View style={[styles.liveDot, { backgroundColor: theme.colors.primary }]} />
-                </View>
-              </Marker>
-            ))}
+            {visibleLiveSkaters.map((skater) => {
+              const path = livePaths[skater.userId];
+              const skaterColor = getSkaterColor(skater);
+
+              return (
+                <React.Fragment key={`live-${skater.userId}`}>
+                  {path?.points?.length > 1 && (
+                    <Polyline
+                      coordinates={path.points}
+                      strokeColor={skaterColor}
+                      strokeWidth={3}
+                    />
+                  )}
+                  {path?.start && (
+                    <Marker
+                      key={`live-start-${skater.userId}`}
+                      coordinate={path.start}
+                      title="Inicio"
+                    >
+                      <View style={styles.startFlagMarker}>
+                        <Ionicons name="flag" size={16} color="#FF3B30" />
+                      </View>
+                    </Marker>
+                  )}
+                  <Marker
+                    coordinate={{
+                      latitude: skater.lat,
+                      longitude: skater.lng,
+                    }}
+                    title={skater.usuario?.nombre || 'Skater'}
+                  >
+                    <View style={[styles.liveMarker, { borderColor: skaterColor }]}>
+                      <MaterialCommunityIcons name="roller-skate" size={18} color={skaterColor} />
+                    </View>
+                  </Marker>
+                </React.Fragment>
+              );
+            })}
           </MapView>
 
           {/* Selected Spot Card Overlay */}
@@ -1134,10 +1221,15 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     backgroundColor: '#FFFFFF',
   },
-  liveDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  startFlagMarker: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#FF3B30',
   },
   mapOverlayCard: {
     position: 'absolute',

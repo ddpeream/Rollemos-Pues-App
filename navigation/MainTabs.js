@@ -52,10 +52,10 @@ export default function MainTabs() {
   const closeUserMenu = () => setUserMenuVisible(false);
 
   const getFlag = () => {
-    if (currentLang === 'es') return '🇪🇸';
-    if (currentLang === 'en') return '🇺🇸';
-    if (currentLang === 'fr') return '🇫🇷';
-    return '🇪🇸';
+    if (currentLang === 'es') return '\uD83C\uDDE8\uD83C\uDDF4';
+    if (currentLang === 'en') return '\uD83C\uDDFA\uD83C\uDDF8';
+    if (currentLang === 'fr') return '\uD83C\uDDEB\uD83C\uDDF7';
+    return '\uD83C\uDFF3\uFE0F';
   };
 
   const handleNavigate = (routeName) => {
@@ -226,9 +226,9 @@ export default function MainTabs() {
             }}
           >
             {[
-              { id: 'es', label: '🇪🇸 Español' },
-              { id: 'en', label: '🇺🇸 English' },
-              { id: 'fr', label: '🇫🇷 Français' },
+              { id: 'es', label: '\uD83C\uDDE8\uD83C\uDDF4 Espanol' },
+              { id: 'en', label: '\uD83C\uDDFA\uD83C\uDDF8 English' },
+              { id: 'fr', label: '\uD83C\uDDEB\uD83C\uDDF7 Francais' },
             ].map((item) => (
               <TouchableOpacity
                 key={item.id}
@@ -302,3 +302,5 @@ export default function MainTabs() {
     </>
   );
 }
+
+

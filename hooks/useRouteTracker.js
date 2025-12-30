@@ -347,7 +347,7 @@ export const useRouteTracker = () => {
                   setCalories(calculateCalories(durationMinutes, avgSpd));
 
                   const now = Date.now();
-                  if (now - lastLiveUpdateRef.current > 5000) {
+                  if (now - lastLiveUpdateRef.current > 2000) {
                     lastLiveUpdateRef.current = now;
                     sendLiveUpdate(newCoord, true);
                   }

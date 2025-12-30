@@ -36,7 +36,7 @@ export const upsertTrackingLive = async ({
 export const fetchTrackingLive = async () => {
   const { data, error } = await supabase
     .from('tracking_live')
-    .select('user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( id, nombre, avatar_url )')
+    .select('user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( * )')
     .eq('is_active', true);
 
   if (error) {

@@ -34,7 +34,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function Tracking() {
   const navigation = useNavigation();
-  const { theme } = useAppStore();
+  const { theme, isDark } = useAppStore();
   const { t } = useTranslation();
   const {
     status,
@@ -221,6 +221,16 @@ export default function Tracking() {
   };
 
   const buttonConfig = getButtonConfig();
+  const statsCardStyle = {
+    backgroundColor: isDark ? 'rgba(77, 215, 208, 0.08)' : 'rgba(15, 23, 42, 0.04)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
+  };
+  const statsContainerStyle = {
+    backgroundColor: isDark ? 'rgba(12, 16, 24, 0.7)' : 'rgba(255, 255, 255, 0.75)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+  };
+  const statsTextPrimary = isDark ? '#F8FAFC' : '#0F172A';
+  const statsTextSecondary = isDark ? '#E2E8F0' : '#1E293B';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -304,70 +314,71 @@ export default function Tracking() {
       <Animated.View
         style={[
           styles.statsContainer,
-          { backgroundColor: theme.colors.background.overlay, opacity: statsOpacity },
+          statsContainerStyle,
+          { opacity: statsOpacity },
         ]}
         pointerEvents={showStats ? 'auto' : 'none'}
       >
         <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Ionicons name="speedometer-outline" size={24} color={theme.colors.primary} />
-            <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>
+          <View style={[styles.statItem, statsCardStyle]}>
+            <Ionicons name="speedometer-outline" size={18} color={theme.colors.primary} />
+            <Text style={[styles.statValue, { color: statsTextPrimary }]}>
               {speed.toFixed(1)}
             </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
+            <Text style={[styles.statLabel, { color: statsTextSecondary }]}>
               {t('screens.tracking.speedUnit')}
             </Text>
           </View>
 
           <View style={[styles.statDivider, { backgroundColor: theme.colors.border.primary }]} />
 
-          <View style={styles.statItem}>
-            <Ionicons name="navigate-outline" size={24} color={theme.colors.primary} />
-            <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>
+          <View style={[styles.statItem, statsCardStyle]}>
+            <Ionicons name="navigate-outline" size={18} color={theme.colors.primary} />
+            <Text style={[styles.statValue, { color: statsTextPrimary }]}>
               {formatDistance(distance)}
             </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
+            <Text style={[styles.statLabel, { color: statsTextSecondary }]}>
               {t('screens.tracking.distance')}
             </Text>
           </View>
 
           <View style={[styles.statDivider, { backgroundColor: theme.colors.border.primary }]} />
 
-          <View style={styles.statItem}>
-            <Ionicons name="time-outline" size={24} color={theme.colors.primary} />
-            <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>
+          <View style={[styles.statItem, statsCardStyle]}>
+            <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
+            <Text style={[styles.statValue, { color: statsTextPrimary }]}>
               {formatDuration(duration)}
             </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
+            <Text style={[styles.statLabel, { color: statsTextSecondary }]}>
               {t('screens.tracking.time')}
             </Text>
           </View>
         </View>
 
         <View style={[styles.secondaryStatsRow, { marginTop: 16 }]}>
-          <View style={styles.secondaryStatItem}>
-            <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
+          <View style={[styles.secondaryStatItem, statsCardStyle]}>
+            <Text style={[styles.secondaryStatLabel, { color: statsTextSecondary }]}>
               {t('screens.tracking.avgSpeed')}
             </Text>
-            <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
+            <Text style={[styles.secondaryStatValue, { color: statsTextPrimary }]}>
               {avgSpeed.toFixed(1)} km/h
             </Text>
           </View>
 
-          <View style={styles.secondaryStatItem}>
-            <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
+          <View style={[styles.secondaryStatItem, statsCardStyle]}>
+            <Text style={[styles.secondaryStatLabel, { color: statsTextSecondary }]}>
               {t('screens.tracking.maxSpeed')}
             </Text>
-            <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
+            <Text style={[styles.secondaryStatValue, { color: statsTextPrimary }]}>
               {maxSpeed.toFixed(1)} km/h
             </Text>
           </View>
 
-          <View style={styles.secondaryStatItem}>
-            <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
+          <View style={[styles.secondaryStatItem, statsCardStyle]}>
+            <Text style={[styles.secondaryStatLabel, { color: statsTextSecondary }]}>
               {t('screens.tracking.calories')}
             </Text>
-            <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
+            <Text style={[styles.secondaryStatValue, { color: statsTextPrimary }]}>
               {calories} kcal
             </Text>
           </View>
@@ -540,11 +551,12 @@ const styles = StyleSheet.create({
   // Stats Overlay
   statsContainer: {
     position: 'absolute',
-    top: 140,
-    left: 16,
-    right: 16,
-    borderRadius: 20,
-    padding: 20,
+    top: 100,
+    left: 10,
+    width: 130,
+    borderRadius: 14,
+    padding: 8,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -552,47 +564,55 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 14,
     fontWeight: '700',
   },
   statLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 10,
+    fontWeight: '600',
   },
   statDivider: {
-    width: 1,
-    height: 60,
-    marginHorizontal: 12,
+    width: '100%',
+    height: 1,
+    marginVertical: 6,
   },
   secondaryStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 16,
+    flexDirection: 'column',
+    gap: 6,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(255, 255, 255, 0.12)',
   },
   secondaryStatItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   secondaryStatLabel: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 9,
+    fontWeight: '600',
   },
   secondaryStatValue: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   // Controls
