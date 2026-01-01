@@ -230,9 +230,9 @@ const CreatePostModal = ({
             disabled={!imagen || !descripcion.trim() || loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={theme.colors.onPrimary} size="small" />
             ) : (
-              <Text style={[styles.submitText, { color: (!imagen || !descripcion.trim() || loading) ? '#666' : '#fff' }]}>
+              <Text style={[styles.submitText, { color: (!imagen || !descripcion.trim() || loading) ? '#666' : theme.colors.onPrimary }]}>
                 Publicar
               </Text>
             )}
@@ -261,7 +261,7 @@ const CreatePostModal = ({
                   onPress={showImageOptions}
                   disabled={loading}
                 >
-                  <Ionicons name="camera" size={20} color="#fff" />
+                  <Ionicons name="camera" size={20} color={theme.colors.onSecondary} />
                 </TouchableOpacity>
               </View>
             ) : (
@@ -383,7 +383,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },

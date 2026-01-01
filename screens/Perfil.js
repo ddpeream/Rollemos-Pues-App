@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
 import { getUsuarioById } from '../services/usuarios';
+import BackButton from '../components/common/BackButton';
 
 export default function Perfil() {
   const { t } = useTranslation();
@@ -232,7 +233,7 @@ export default function Perfil() {
       gap: spacing.md,
     },
     buttonText: {
-      color: '#000',
+      color: theme.colors.onPrimary,
       fontSize: typography.fontSize.md,
       fontWeight: typography.fontWeight.bold,
     },
@@ -288,6 +289,9 @@ export default function Perfil() {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Back Button */}
+      <BackButton title="Mi Perfil" />
+      
       {/* Header con avatar */}
       <View style={styles.header}>
         <View style={styles.avatar}>
@@ -362,7 +366,7 @@ export default function Perfil() {
           style={styles.button}
           onPress={() => navigation.navigate('EditarPerfil')}
         >
-          <Ionicons name="create" size={20} color="#000" />
+          <Ionicons name="create" size={20} color={theme.colors.onPrimary} />
           <Text style={styles.buttonText}>{strings.editProfile}</Text>
         </TouchableOpacity>
       </View>

@@ -65,7 +65,7 @@ const Button = ({
       fontSize: size === 'small' ? typography.fontSize.sm : size === 'large' ? typography.fontSize.md : typography.fontSize.sm,
       fontWeight: typography.fontWeight.bold,
       ...(variant === 'primary' && {
-        color: '#000',
+        color: theme.colors.onPrimary,
       }),
       ...(variant === 'secondary' && {
         color: theme.colors.text.primary,
@@ -74,12 +74,12 @@ const Button = ({
         color: theme.colors.primary,
       }),
       ...(variant === 'danger' && {
-        color: '#fff',
+        color: theme.colors.onSecondary,
       }),
     },
   }), [theme, variant, size, disabled, fullWidth]);
 
-  const iconColor = variant === 'primary' || variant === 'danger' ? '#fff' : theme.colors.primary;
+  const iconColor = variant === 'primary' ? theme.colors.onPrimary : variant === 'danger' ? theme.colors.onSecondary : theme.colors.primary;
   const iconSize = size === 'small' ? 16 : size === 'large' ? 24 : 20;
 
   return (
@@ -92,7 +92,7 @@ const Button = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' || variant === 'danger' ? '#fff' : theme.colors.primary}
+          color={variant === 'primary' ? theme.colors.onPrimary : variant === 'danger' ? theme.colors.onSecondary : theme.colors.primary}
         />
       ) : (
         <>

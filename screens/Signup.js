@@ -401,7 +401,7 @@ export default function Signup({ navigation }) {
     buttonText: {
       fontSize: typography.fontSize.sm,
       fontWeight: '700',
-      color: '#fff',
+      color: theme.colors.onPrimary,
     },
     backButton: {
       flexDirection: 'row',
@@ -502,7 +502,7 @@ export default function Signup({ navigation }) {
                   style={styles.avatarImage}
                 />
                 <View style={styles.avatarOverlay}>
-                  <Ionicons name="camera" size={24} color="#fff" />
+                  <Ionicons name="camera" size={24} color={theme.colors.onSecondary} />
                 </View>
               </>
             ) : (
@@ -659,7 +659,7 @@ export default function Signup({ navigation }) {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.colors.onPrimary} />
           ) : (
           <Text style={styles.buttonText}>{t('screens.signup.submit')}</Text>
           )}

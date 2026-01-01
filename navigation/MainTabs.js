@@ -93,7 +93,7 @@ export default function MainTabs() {
           onPress={openLanguage}
           style={{
             padding: 8,
-            backgroundColor: 'rgba(0,0,0,0.05)',
+            backgroundColor: theme.colors.glass.background,
             borderRadius: 20,
             minWidth: 40,
             alignItems: 'center',
@@ -108,7 +108,7 @@ export default function MainTabs() {
           onPress={openUserMenu}
           style={{
             padding: 8,
-            backgroundColor: 'rgba(0,0,0,0.05)',
+            backgroundColor: theme.colors.glass.background,
             borderRadius: 20,
             minWidth: 40,
             alignItems: 'center',
@@ -116,7 +116,7 @@ export default function MainTabs() {
           }}
           hitSlop={8}
         >
-          <Ionicons name="ellipsis-horizontal" size={20} color="#333" />
+          <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.text.primary} />
         </Pressable>
       </View>
     ),

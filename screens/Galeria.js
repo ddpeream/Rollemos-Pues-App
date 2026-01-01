@@ -105,7 +105,7 @@ export default function Galeria() {
         <Image source={{ uri: item.avatar }} style={styles.storyAvatar} />
         {item.isOwn && (
           <View style={[styles.addStoryButton, { backgroundColor: theme.colors.primary }]}>
-            <Ionicons name="add" size={16} color="#FFFFFF" />
+            <Ionicons name="add" size={16} color={theme.colors.onPrimary} />
           </View>
         )}
       </View>
@@ -317,8 +317,8 @@ export default function Galeria() {
                 onPress={() => setShowUploadModal(true)}
                 style={[styles.uploadButton, { backgroundColor: theme.colors.primary }]}
               >
-                <Ionicons name="add" size={24} color="#FFFFFF" />
-                <Text style={styles.uploadButtonText}>{t('screens.galeria.upload')}</Text>
+                <Ionicons name="add" size={24} color={theme.colors.onPrimary} />
+                <Text style={[styles.uploadButtonText, { color: theme.colors.onPrimary }]}>{t('screens.galeria.upload')}</Text>
               </TouchableOpacity>
             </View>
           }
@@ -556,7 +556,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   uploadButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },

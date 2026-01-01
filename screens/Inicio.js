@@ -102,7 +102,7 @@ export default function Inicio() {
         <Text style={styles.destacadoName}>{parche.nombre}</Text>
         <View style={styles.badgeContainer}>
           <View style={[styles.badge, styles.badgeMembers]}>
-            <Ionicons name="people" size={12} color="#fff" />
+            <Ionicons name="people" size={12} color={theme.colors.onPrimary} />
             <Text style={styles.badgeText}> {parche.miembrosAprox}</Text>
           </View>
           {parche.disciplinas.slice(0, 2).map((disc, idx) => (
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     backgroundColor: staticTheme.colors.primary,
   },
   buttonPrimaryText: {
-    color: '#fff',
+    color: staticTheme.colors.onPrimary,
     fontSize: 14,
     fontWeight: '600',
   },

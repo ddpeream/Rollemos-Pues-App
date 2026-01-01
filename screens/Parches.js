@@ -121,18 +121,18 @@ export default function Parches() {
           <Ionicons 
             name={icon} 
             size={16} 
-            color={hasSelection ? '#FFFFFF' : theme.colors.text.primary} 
+            color={hasSelection ? theme.colors.onPrimary : theme.colors.text.primary} 
           />
           <Text style={[
             styles.filterButtonText,
-            { color: hasSelection ? '#FFFFFF' : theme.colors.text.primary }
+            { color: hasSelection ? theme.colors.onPrimary : theme.colors.text.primary }
           ]}>
             {displayText}
           </Text>
           <Ionicons 
             name={isActive ? "chevron-up" : "chevron-down"} 
             size={16} 
-            color={hasSelection ? '#FFFFFF' : theme.colors.text.secondary} 
+            color={hasSelection ? theme.colors.onPrimary : theme.colors.text.secondary} 
           />
         </TouchableOpacity>
 
@@ -274,8 +274,8 @@ export default function Parches() {
               </TouchableOpacity>
             )}
             <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.viewButtonText}>{t('screens.parches.view')}</Text>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
+              <Text style={[styles.viewButtonText, { color: theme.colors.onPrimary }]}>{t('screens.parches.view')}</Text>
+              <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -611,7 +611,6 @@ const styles = StyleSheet.create({
     gap: staticTheme.spacing.xs,
   },
   viewButtonText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },

@@ -147,9 +147,12 @@ export default function Spots() {
     let isMounted = true;
 
     const loadLiveSkaters = async () => {
-      const { data } = await fetchTrackingLive();
+      console.log('🔍 Cargando skaters en vivo...');
+      const { data, error, ok } = await fetchTrackingLive();
+      console.log('📍 fetchTrackingLive result:', { ok, error, count: data?.length, data });
       if (!isMounted) return;
       const normalized = (data || []).map(normalizeLiveRecord).filter(Boolean);
+      console.log('📍 Skaters normalizados:', normalized);
       setLiveSkaters(normalized);
       normalized.forEach((item) => {
         if (item.isActive && Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
@@ -252,18 +255,18 @@ export default function Spots() {
           <Ionicons 
             name={icon} 
             size={16} 
-            color={hasSelection ? '#FFFFFF' : theme.colors.text.primary} 
+            color={hasSelection ? theme.colors.onPrimary : theme.colors.text.primary} 
           />
           <Text style={[
             styles.filterButtonText,
-            { color: hasSelection ? '#FFFFFF' : theme.colors.text.primary }
+            { color: hasSelection ? theme.colors.onPrimary : theme.colors.text.primary }
           ]}>
             {displayText}
           </Text>
           <Ionicons 
             name={isActive ? "chevron-up" : "chevron-down"} 
             size={16} 
-            color={hasSelection ? '#FFFFFF' : theme.colors.text.secondary} 
+            color={hasSelection ? theme.colors.onPrimary : theme.colors.text.secondary} 
           />
         </TouchableOpacity>
 
@@ -344,12 +347,14 @@ export default function Spots() {
   }, [filteredSpots]);
 
   const visibleLiveSkaters = useMemo(() => {
-    return liveSkaters.filter((skater) => {
+    const visible = liveSkaters.filter((skater) => {
       if (!skater.isActive) return false;
       if (!Number.isFinite(skater.lat) || !Number.isFinite(skater.lng)) return false;
       if (user?.id && skater.userId === user.id) return false;
       return true;
     });
+    console.log('👀 visibleLiveSkaters:', { total: liveSkaters.length, visible: visible.length, userId: user?.id, visible });
+    return visible;
   }, [liveSkaters, user]);
 
   // Focus on specific spot in map
@@ -412,8 +417,8 @@ export default function Spots() {
         
         {/* Type Badge */}
         <View style={[styles.typeBadge, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name={getTypeIcon(item.tipo)} size={14} color="#FFFFFF" />
-          <Text style={styles.typeText}>{item.tipo}</Text>
+          <Ionicons name={getTypeIcon(item.tipo)} size={14} color={theme.colors.onPrimary} />
+          <Text style={[styles.typeText, { color: theme.colors.onPrimary }]}>{item.tipo}</Text>
         </View>
         
         {/* Content */}
@@ -496,8 +501,8 @@ export default function Spots() {
             </TouchableOpacity>
             
             <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.viewButtonText}>{t('screens.spots.view')}</Text>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
+              <Text style={[styles.viewButtonText, { color: theme.colors.onPrimary }]}>{t('screens.spots.view')}</Text>
+              <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -530,7 +535,7 @@ export default function Spots() {
             <Ionicons 
               name="list" 
               size={20} 
-              color={viewMode === 'list' ? '#FFFFFF' : theme.colors.text.secondary} 
+              color={viewMode === 'list' ? theme.colors.onPrimary : theme.colors.text.secondary} 
             />
           </TouchableOpacity>
           <TouchableOpacity
@@ -543,7 +548,7 @@ export default function Spots() {
             <Ionicons 
               name="map" 
               size={20} 
-              color={viewMode === 'map' ? '#FFFFFF' : theme.colors.text.secondary} 
+              color={viewMode === 'map' ? theme.colors.onPrimary : theme.colors.text.secondary} 
             />
           </TouchableOpacity>
         </View>
@@ -645,7 +650,7 @@ export default function Spots() {
                     <Ionicons 
                       name={getTypeIcon(spot.tipo)} 
                       size={20} 
-                      color={selectedSpot?.id === spot.id ? '#FFFFFF' : theme.colors.primary} 
+                      color={selectedSpot?.id === spot.id ? theme.colors.onPrimary : theme.colors.primary} 
                     />
                   </View>
                 </Marker>
@@ -708,8 +713,8 @@ export default function Spots() {
                 
                 <View style={styles.overlayInfo}>
                   <View style={[styles.overlayTypeBadge, { backgroundColor: theme.colors.primary }]}>
-                    <Ionicons name={getTypeIcon(selectedSpot.tipo)} size={12} color="#FFFFFF" />
-                    <Text style={styles.overlayTypeText}>{selectedSpot.tipo}</Text>
+                    <Ionicons name={getTypeIcon(selectedSpot.tipo)} size={12} color={theme.colors.onPrimary} />
+                    <Text style={[styles.overlayTypeText, { color: theme.colors.onPrimary }]}>{selectedSpot.tipo}</Text>
                   </View>
                   
                   <Text style={[styles.overlayTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
@@ -733,8 +738,8 @@ export default function Spots() {
                       setSelectedSpot(null);
                     }}
                   >
-                    <Text style={styles.overlayButtonText}>{t('screens.spots.viewDetails')}</Text>
-                    <Ionicons name="arrow-forward" size={16} color="#fff" />
+                    <Text style={[styles.overlayButtonText, { color: theme.colors.onPrimary }]}>{t('screens.spots.viewDetails')}</Text>
+                    <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1070,7 +1075,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   typeText: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -1163,7 +1167,6 @@ const styles = StyleSheet.create({
     gap: staticTheme.spacing.xs,
   },
   viewButtonText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1278,7 +1281,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   overlayTypeText: {
-    color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -1306,7 +1308,6 @@ const styles = StyleSheet.create({
     gap: staticTheme.spacing.xs,
   },
   overlayButtonText: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
   },
