@@ -17,6 +17,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../config/supabase';
 import { upsertTrackingLive } from '../services/tracking';
+import {
+  startBackgroundTracking,
+  stopBackgroundTracking,
+} from "../services/backgroundTracking";
 
 const STORAGE_KEY = '@rollemos_routes';
 
@@ -215,6 +219,8 @@ export const useRouteTracker = () => {
         setError('Debes iniciar sesion para compartir tu ubicacion.');
         return;
       }
+
+      await startBackgroundTracking(authUserIdRef.current);
 
       // Verificar permisos
       const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
@@ -433,6 +439,8 @@ export const useRouteTracker = () => {
     if (routeCoordinates.length > 10 && distance > 100) {
       await saveRoute();
     }
+
+    await stopBackgroundTracking()
 
     // Resetear estados
     setStatus(TRACKER_STATUS.IDLE);

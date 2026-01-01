@@ -12,6 +12,7 @@ import MainTabs from './navigation/MainTabs';
 import Perfil from './screens/Perfil';
 import Configuracion from './screens/Configuracion';
 import useAppStore from './store/useAppStore';
+import "./tasks/trackingLiveTask";
 
 const RootStack = createNativeStackNavigator();
 

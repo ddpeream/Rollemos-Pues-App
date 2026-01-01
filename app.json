@@ -32,8 +32,13 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION"
       ],
+      "foregroundService": {
+        "notificationTitle": "Rollemos Pues",
+        "notificationBody": "Grabando tu ruta en segundo plano"
+      },
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyAp3esnudg_4QNvVOUBONnxpY06TVXC2Ck"
@@ -53,7 +58,17 @@
     "owner": "ddpeream",
     "plugins": [
       "expo-localization",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Rollemos Pues necesita tu ubicación para grabar tus rutas completas mientras patinas.",
+          "locationAlwaysPermission": "Rollemos Pues necesita tu ubicación en segundo plano para grabar tus rutas de patinaje.",
+          "locationWhenInUsePermission": "Rollemos Pues necesita tu ubicación para rastrear tus rutas de patinaje y mostrarte spots cercanos.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ]
   }
 }
