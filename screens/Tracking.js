@@ -56,6 +56,7 @@ export default function Tracking() {
     unirseARodada,
     salirDeRodada,
     eliminarRodada,
+    verificarParticipacion,
   } = useRodadas();
   const [deletingRodada, setDeletingRodada] = useState(false);
   const [showCreateRodadaModal, setShowCreateRodadaModal] = useState(false);
@@ -63,6 +64,8 @@ export default function Tracking() {
   const [showRodadaDetail, setShowRodadaDetail] = useState(false);
   const [selectedRodada, setSelectedRodada] = useState(null);
   const [joiningRodada, setJoiningRodada] = useState(null); // ID de rodada que se está uniendo
+  const [isUserJoined, setIsUserJoined] = useState(false); // Si el usuario está unido a la rodada seleccionada
+  const [checkingJoin, setCheckingJoin] = useState(false); // Verificando participación
 
   // 📜 Ruta histórica recibida desde RoutesHistory
   const [historicalRoute, setHistoricalRoute] = useState(null);
@@ -134,7 +137,11 @@ export default function Tracking() {
     try {
       const result = await unirseARodada(rodada.id, user.id);
       if (result.success) {
-        Alert.alert('¡Te uniste!', `Te has unido a "${rodada.nombre}"`);
+        if (result.alreadyJoined) {
+          Alert.alert('Ya estás unido', `Ya eres parte de "${rodada.nombre}"`);
+        } else {
+          Alert.alert('¡Te uniste!', `Te has unido a "${rodada.nombre}"`);
+        }
         fetchRodadas({ soloProximas: false }); // Refrescar lista
       } else {
         Alert.alert('Error', result.error || 'No se pudo unir a la rodada');
@@ -146,11 +153,55 @@ export default function Tracking() {
     }
   };
 
+  // 🛼 Función para salir de una rodada
+  const handleLeaveRodada = async (rodada) => {
+    if (!user?.id) return;
+
+    Alert.alert(
+      'Abandonar rodada',
+      `¿Seguro que quieres abandonar "${rodada.nombre}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Abandonar',
+          style: 'destructive',
+          onPress: async () => {
+            setJoiningRodada(rodada.id);
+            try {
+              const result = await salirDeRodada(rodada.id, user.id);
+              if (result.success) {
+                setIsUserJoined(false);
+                Alert.alert('👋', `Has abandonado "${rodada.nombre}"`);
+                fetchRodadas({ soloProximas: false });
+              } else {
+                Alert.alert('Error', result.error || 'No se pudo abandonar la rodada');
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Ocurrió un error al abandonar');
+            } finally {
+              setJoiningRodada(null);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   // 🛼 Abrir detalle de rodada
-  const handleOpenRodadaDetail = (rodada) => {
+  const handleOpenRodadaDetail = async (rodada) => {
     setSelectedRodada(rodada);
     setShowRodadasList(false);
     setShowRodadaDetail(true);
+    
+    // Verificar si el usuario está unido
+    if (user?.id && rodada.organizador_id !== user.id) {
+      setCheckingJoin(true);
+      const joined = await verificarParticipacion(rodada.id, user.id);
+      setIsUserJoined(joined);
+      setCheckingJoin(false);
+    } else {
+      setIsUserJoined(false);
+    }
   };
 
   // Función para cerrar/ocultar la ruta histórica
@@ -727,31 +778,13 @@ export default function Tracking() {
                       </View>
                     </TouchableOpacity>
                     
-                    {/* Botones de acción */}
-                    <View style={styles.rodadaListItemActions}>
-                      {/* Botón ver detalle */}
-                      <TouchableOpacity 
-                        style={[styles.rodadaActionButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}
-                        onPress={() => handleOpenRodadaDetail(rodada)}
-                      >
-                        <Ionicons name="eye" size={18} color={theme.colors.text.secondary} />
-                      </TouchableOpacity>
-                      
-                      {/* Botón unirse (solo si no es el organizador) */}
-                      {!isOrganizer && (
-                        <TouchableOpacity 
-                          style={[styles.rodadaActionButton, { backgroundColor: theme.colors.primary }]}
-                          onPress={() => handleJoinRodada(rodada)}
-                          disabled={isJoining}
-                        >
-                          {isJoining ? (
-                            <Text style={{ color: '#FFF', fontSize: 12 }}>...</Text>
-                          ) : (
-                            <Ionicons name="add" size={18} color="#FFFFFF" />
-                          )}
-                        </TouchableOpacity>
-                      )}
-                    </View>
+                    {/* Botón de acción - Ver detalle */}
+                    <TouchableOpacity 
+                      style={[styles.rodadaActionButton, { backgroundColor: theme.colors.primary }]}
+                      onPress={() => handleOpenRodadaDetail(rodada)}
+                    >
+                      <Ionicons name="eye" size={18} color="#FFFFFF" />
+                    </TouchableOpacity>
                   </View>
                 );
               })}
@@ -1072,22 +1105,46 @@ export default function Tracking() {
                 <Text style={[styles.rodadaDetailButtonText, { color: theme.colors.text.primary }]}>Ver en mapa</Text>
               </TouchableOpacity>
 
-              {/* Botón de unirse (solo si no es organizador) */}
+              {/* Botón de unirse/abandonar (solo si no es organizador) */}
               {user && selectedRodada?.organizador_id !== user.id && (
-                <TouchableOpacity 
-                  style={[styles.rodadaDetailButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={() => handleJoinRodada(selectedRodada)}
-                  disabled={joiningRodada === selectedRodada?.id}
-                >
-                  {joiningRodada === selectedRodada?.id ? (
-                    <Text style={styles.rodadaDetailButtonText}>Uniéndote...</Text>
-                  ) : (
-                    <>
-                      <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                      <Text style={styles.rodadaDetailButtonText}>Unirme</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                checkingJoin ? (
+                  <View style={[styles.rodadaDetailButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}>
+                    <Text style={[styles.rodadaDetailButtonText, { color: theme.colors.text.secondary }]}>Verificando...</Text>
+                  </View>
+                ) : isUserJoined ? (
+                  <TouchableOpacity 
+                    style={[styles.rodadaDetailButton, { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#FF3B30' }]}
+                    onPress={() => handleLeaveRodada(selectedRodada)}
+                    disabled={joiningRodada === selectedRodada?.id}
+                  >
+                    {joiningRodada === selectedRodada?.id ? (
+                      <Text style={[styles.rodadaDetailButtonText, { color: '#FF3B30' }]}>Abandonando...</Text>
+                    ) : (
+                      <>
+                        <Ionicons name="exit-outline" size={20} color="#FF3B30" />
+                        <Text style={[styles.rodadaDetailButtonText, { color: '#FF3B30' }]}>Abandonar</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity 
+                    style={[styles.rodadaDetailButton, { backgroundColor: theme.colors.primary }]}
+                    onPress={async () => {
+                      await handleJoinRodada(selectedRodada);
+                      setIsUserJoined(true);
+                    }}
+                    disabled={joiningRodada === selectedRodada?.id}
+                  >
+                    {joiningRodada === selectedRodada?.id ? (
+                      <Text style={styles.rodadaDetailButtonText}>Uniéndote...</Text>
+                    ) : (
+                      <>
+                        <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                        <Text style={styles.rodadaDetailButtonText}>Unirme</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )
               )}
 
               {/* Si es organizador, mostrar botón eliminar */}

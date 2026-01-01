@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,17 +9,16 @@ import {
   TextInput,
   Alert,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
 import { theme as staticTheme } from '../theme';
-
-// Import data
-import skatersData from '../data/skaters.json';
-import parchesData from '../data/parches.json';
-import spotsData from '../data/spots.json';
+import { usePatinadores } from '../hooks/usePatinadores';
+import { useParches } from '../hooks/useParches';
+import { useSpots } from '../hooks/useSpots';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +29,20 @@ export default function Inicio() {
   const [email, setEmail] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollViewRef = useRef(null);
+  
+  // Hooks de datos de Supabase
+  const { patinadores, loadPatinadores, loading: loadingPatinadores } = usePatinadores();
+  const { parches, loadParches, loading: loadingParches } = useParches();
+  const { spots, loadSpots, loading: loadingSpots } = useSpots();
+
+  // Cargar datos al entrar a la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      loadPatinadores();
+      loadParches();
+      loadSpots();
+    }, [])
+  );
 
   // Carousel images (usando placeholders de Unsplash)
   const carouselImages = [
@@ -38,10 +51,10 @@ export default function Inicio() {
     'https://images.unsplash.com/photo-1512070679279-8988d32161be?w=800',
   ];
 
-  // Get featured data
-  const featuredSkaters = skatersData.filter(s => s.destacado).slice(0, 3);
-  const featuredParches = parchesData.slice(0, 3);
-  const featuredSpots = spotsData.slice(0, 3);
+  // Get featured data (primeros 3 de cada categoría)
+  const featuredSkaters = patinadores.slice(0, 3);
+  const featuredParches = parches.slice(0, 3);
+  const featuredSpots = spots.slice(0, 3);
 
   // Auto-play carousel
   useEffect(() => {
@@ -77,18 +90,21 @@ export default function Inicio() {
 
   const renderSkaterCard = (skater) => (
     <View key={skater.id} style={styles.destacadoCard}>
-      <Image source={{ uri: skater.foto }} style={styles.destacadoImage} />
+      <Image 
+        source={{ uri: skater.avatar_url || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400' }} 
+        style={styles.destacadoImage} 
+      />
       <View style={styles.destacadoContent}>
         <Text style={styles.destacadoName}>{skater.nombre}</Text>
         <View style={styles.badgeContainer}>
           <View style={[styles.badge, styles.badgeLevel]}>
-            <Text style={styles.badgeText}>{skater.nivel}</Text>
+            <Text style={styles.badgeText}>{skater.nivel || 'Principiante'}</Text>
           </View>
-          {skater.disciplinas.slice(0, 2).map((disc, idx) => (
-            <View key={idx} style={styles.badge}>
-              <Text style={styles.badgeText}>{disc}</Text>
+          {skater.disciplina && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{skater.disciplina}</Text>
             </View>
-          ))}
+          )}
         </View>
         <Text style={styles.destacadoCity}>{skater.ciudad}</Text>
       </View>
@@ -97,15 +113,18 @@ export default function Inicio() {
 
   const renderParcheCard = (parche) => (
     <View key={parche.id} style={styles.destacadoCard}>
-      <Image source={{ uri: parche.foto }} style={styles.destacadoImage} />
+      <Image 
+        source={{ uri: parche.foto || 'https://images.unsplash.com/photo-1526676037777-05a232554f77?w=400' }} 
+        style={styles.destacadoImage} 
+      />
       <View style={styles.destacadoContent}>
         <Text style={styles.destacadoName}>{parche.nombre}</Text>
         <View style={styles.badgeContainer}>
           <View style={[styles.badge, styles.badgeMembers]}>
             <Ionicons name="people" size={12} color={theme.colors.onPrimary} />
-            <Text style={styles.badgeText}> {parche.miembrosAprox}</Text>
+            <Text style={styles.badgeText}> {parche.miembros || parche.miembros_aprox || 0}</Text>
           </View>
-          {parche.disciplinas.slice(0, 2).map((disc, idx) => (
+          {(parche.disciplinas || []).slice(0, 2).map((disc, idx) => (
             <View key={idx} style={styles.badge}>
               <Text style={styles.badgeText}>{disc}</Text>
             </View>
@@ -118,25 +137,30 @@ export default function Inicio() {
 
   const renderSpotCard = (spot) => (
     <View key={spot.id} style={styles.destacadoCard}>
-      <Image source={{ uri: spot.foto }} style={styles.destacadoImage} />
+      <Image 
+        source={{ uri: spot.foto || 'https://images.unsplash.com/photo-1564982752979-3f7bc974d29a?w=400' }} 
+        style={styles.destacadoImage} 
+      />
       <View style={styles.destacadoContent}>
         <Text style={styles.destacadoName}>{spot.nombre}</Text>
         <View style={styles.badgeContainer}>
           <View style={[styles.badge, styles.badgeType]}>
             <Text style={styles.badgeText}>{spot.tipo}</Text>
           </View>
-          <View
-            style={[
-              styles.badge,
-              spot.dificultad === 'baja'
-                ? styles.badgeDiffEasy
-                : spot.dificultad === 'alta'
-                ? styles.badgeDiffHard
-                : styles.badgeDiffMedium,
-            ]}
-          >
-            <Text style={styles.badgeText}>{spot.dificultad}</Text>
-          </View>
+          {spot.dificultad && (
+            <View
+              style={[
+                styles.badge,
+                spot.dificultad === 'baja'
+                  ? styles.badgeDiffEasy
+                  : spot.dificultad === 'alta'
+                  ? styles.badgeDiffHard
+                  : styles.badgeDiffMedium,
+              ]}
+            >
+              <Text style={styles.badgeText}>{spot.dificultad}</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.destacadoCity}>{spot.ciudad}</Text>
       </View>
@@ -237,27 +261,45 @@ export default function Inicio() {
 
         {/* Featured Skaters */}
         <Text style={[styles.subsectionTitle, { color: theme.colors.text.primary }]}>{t('home.featured.skaters')}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.destacadosContainer}>
-            {featuredSkaters.map(renderSkaterCard)}
-          </View>
-        </ScrollView>
+        {loadingPatinadores ? (
+          <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
+        ) : featuredSkaters.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.destacadosContainer}>
+              {featuredSkaters.map(renderSkaterCard)}
+            </View>
+          </ScrollView>
+        ) : (
+          <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>{t('common.noResults')}</Text>
+        )}
 
         {/* Featured Parches */}
         <Text style={[styles.subsectionTitle, { color: theme.colors.text.primary }]}>{t('home.featured.parches')}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.destacadosContainer}>
-            {featuredParches.map(renderParcheCard)}
-          </View>
-        </ScrollView>
+        {loadingParches ? (
+          <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
+        ) : featuredParches.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.destacadosContainer}>
+              {featuredParches.map(renderParcheCard)}
+            </View>
+          </ScrollView>
+        ) : (
+          <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>{t('common.noResults')}</Text>
+        )}
 
         {/* Featured Spots */}
         <Text style={[styles.subsectionTitle, { color: theme.colors.text.primary }]}>{t('home.featured.spots')}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.destacadosContainer}>
-            {featuredSpots.map(renderSpotCard)}
-          </View>
-        </ScrollView>
+        {loadingSpots ? (
+          <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginVertical: 20 }} />
+        ) : featuredSpots.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.destacadosContainer}>
+              {featuredSpots.map(renderSpotCard)}
+            </View>
+          </ScrollView>
+        ) : (
+          <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>{t('common.noResults')}</Text>
+        )}
       </View>
 
       {/* About Section */}
@@ -590,5 +632,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: staticTheme.spacing.lg,
     fontSize: 16,
     color: staticTheme.colors.text,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 14,
+    paddingVertical: staticTheme.spacing.lg,
+    fontStyle: 'italic',
   },
 });

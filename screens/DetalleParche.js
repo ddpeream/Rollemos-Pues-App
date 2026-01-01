@@ -34,6 +34,8 @@ import { useParches } from '../hooks/useParches';
 import { useRodadas } from '../hooks/useRodadas';
 import { spacing, typography, borderRadius } from '../theme';
 import CreateRodadaModal from '../components/CreateRodadaModal';
+import FollowersModal from '../components/FollowersModal';
+import RodadasModal from '../components/RodadasModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = 280;
@@ -69,6 +71,8 @@ export default function DetalleParche() {
   const [showCreateRodadaModal, setShowCreateRodadaModal] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [viewerImageIndex, setViewerImageIndex] = useState(0);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showRodadasModal, setShowRodadasModal] = useState(false);
   
   const carouselRef = useRef(null);
   const imageViewerRef = useRef(null);
@@ -411,13 +415,31 @@ export default function DetalleParche() {
               )}
             </View>
             
-            {/* Badge de miembros */}
-            <View style={[styles.membersBadge, { backgroundColor: theme.colors.alpha.primary15 }]}>
-              <Ionicons name="people" size={18} color={theme.colors.primary} />
-              <Text style={[styles.membersCount, { color: theme.colors.primary }]}>
+          </View>
+
+          {/* Contadores: Seguidores y Rodadas */}
+          <View style={styles.countersRow}>
+            <TouchableOpacity 
+              style={[styles.counterButton, { backgroundColor: theme.colors.alpha.primary15 }]}
+              onPress={() => setShowFollowersModal(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="people" size={20} color={theme.colors.primary} />
+              <Text style={[styles.counterNumber, { color: theme.colors.primary }]}>
                 {parche.miembros?.length || parche.miembros_aprox || 0}
               </Text>
-            </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.counterButton, { backgroundColor: theme.colors.alpha.primary15 }]}
+              onPress={() => setShowRodadasModal(true)}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="rollerblade" size={20} color={theme.colors.primary} />
+              <Text style={[styles.counterNumber, { color: theme.colors.primary }]}>
+                {parcheRodadas.length}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Disciplinas */}
@@ -775,6 +797,30 @@ export default function DetalleParche() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de seguidores */}
+      <FollowersModal
+        visible={showFollowersModal}
+        onClose={() => setShowFollowersModal(false)}
+        parcheId={parcheId}
+        parcheName={parche?.nombre}
+        totalFollowers={parche?.miembros?.length || 0}
+        onNavigateToProfile={(userId) => {
+          navigation.navigate('PerfilUsuario', { userId });
+        }}
+      />
+
+      {/* Modal de rodadas */}
+      <RodadasModal
+        visible={showRodadasModal}
+        onClose={() => setShowRodadasModal(false)}
+        rodadas={parcheRodadas}
+        parcheName={parche?.nombre}
+        loading={loadingRodadas}
+        onNavigateToRodada={(rodadaId) => {
+          navigation.navigate('Tracking', { rodadaId });
+        }}
+      />
     </View>
   );
 }
@@ -908,6 +954,24 @@ const styles = StyleSheet.create({
   },
   membersCount: {
     fontSize: typography.fontSize.md,
+    fontWeight: 'bold',
+  },
+  // Contadores (seguidores y rodadas)
+  countersRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  counterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+  },
+  counterNumber: {
+    fontSize: typography.fontSize.lg,
     fontWeight: 'bold',
   },
   disciplinasContainer: {

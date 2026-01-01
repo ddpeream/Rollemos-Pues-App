@@ -20,7 +20,8 @@
     "goBack": "Retour",
     "logout": "Se déconnecter",
     "ok": "OK",
-    "error": "Erreur"
+    "error": "Erreur",
+    "you": "Vous"
   },
   "screens": {
     "inicio": "Accueil",
@@ -329,7 +330,20 @@
     "cancel": "Annuler",
     "members": "Membres",
     "description": "Description",
-    "addPhotos": "Ajouter des photos"
+    "addPhotos": "Ajouter des photos",
+    "followers": "Abonnés",
+    "followersCount": "abonnés",
+    "searchFollowers": "Rechercher un abonné...",
+    "noFollowersFound": "Aucun abonné trouvé",
+    "noFollowersYet": "Pas encore d'abonnés",
+    "rodadas": "Sorties",
+    "rodadasTotal": "sorties",
+    "allRodadas": "Toutes",
+    "upcomingRodadas": "À venir",
+    "pastRodadas": "Passées",
+    "noUpcomingRodadas": "Pas de sorties à venir",
+    "noPastRodadas": "Pas de sorties passées",
+    "noRodadasYet": "Pas encore de sorties"
   },
   "createPost": {
     "title": "Nouvelle publication",

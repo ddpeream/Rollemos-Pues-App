@@ -114,7 +114,8 @@ export const getParches = async (filters = {}) => {
           nombre,
           email,
           avatar_url
-        )
+        ),
+        parches_seguidores(count)
       `)
       .order('created_at', { ascending: false });
 
@@ -143,8 +144,14 @@ export const getParches = async (filters = {}) => {
       throw error;
     }
 
-    console.log(`✅ ${data?.length || 0} parches cargados`);
-    return data || [];
+    // Mapear para extraer el conteo de seguidores
+    const parchesMapped = (data || []).map(parche => ({
+      ...parche,
+      miembros: parche.parches_seguidores?.[0]?.count || 0,
+    }));
+
+    console.log(`✅ ${parchesMapped.length} parches cargados`);
+    return parchesMapped;
 
   } catch (error) {
     console.error('💥 Error en getParches:', error);

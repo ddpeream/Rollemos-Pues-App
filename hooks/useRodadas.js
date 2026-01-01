@@ -240,8 +240,8 @@ const useRodadasStore = create((set, get) => ({
   unirseARodada: async (rodadaId, usuarioId) => {
     try {
       const result = await joinRodada(rodadaId, usuarioId);
-      if (result.success) {
-        // Actualizar contador en la lista
+      if (result.success && !result.alreadyJoined) {
+        // Solo actualizar contador si realmente se unió (no si ya estaba)
         set(state => ({
           rodadas: state.rodadas.map(r => 
             r.id === rodadaId 

@@ -20,7 +20,8 @@
     "goBack": "Volver",
     "logout": "Cerrar sesión",
     "ok": "OK",
-    "error": "Error"
+    "error": "Error",
+    "you": "Tú"
   },
   "screens": {
     "inicio": "Inicio",
@@ -329,7 +330,20 @@
     "cancel": "Cancelar",
     "members": "Miembros",
     "description": "Descripción",
-    "addPhotos": "Agregar fotos"
+    "addPhotos": "Agregar fotos",
+    "followers": "Seguidores",
+    "followersCount": "seguidores",
+    "searchFollowers": "Buscar seguidor...",
+    "noFollowersFound": "No se encontraron seguidores",
+    "noFollowersYet": "Aún no hay seguidores",
+    "rodadas": "Rodadas",
+    "rodadasTotal": "rodadas",
+    "allRodadas": "Todas",
+    "upcomingRodadas": "Próximas",
+    "pastRodadas": "Pasadas",
+    "noUpcomingRodadas": "No hay rodadas próximas",
+    "noPastRodadas": "No hay rodadas pasadas",
+    "noRodadasYet": "Aún no hay rodadas"
   },
   "createPost": {
     "title": "Nuevo Post",

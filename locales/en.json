@@ -20,7 +20,8 @@
     "goBack": "Go back",
     "logout": "Log out",
     "ok": "OK",
-    "error": "Error"
+    "error": "Error",
+    "you": "You"
   },
   "screens": {
     "inicio": "Home",
@@ -329,7 +330,20 @@
     "cancel": "Cancel",
     "members": "Members",
     "description": "Description",
-    "addPhotos": "Add photos"
+    "addPhotos": "Add photos",
+    "followers": "Followers",
+    "followersCount": "followers",
+    "searchFollowers": "Search follower...",
+    "noFollowersFound": "No followers found",
+    "noFollowersYet": "No followers yet",
+    "rodadas": "Rides",
+    "rodadasTotal": "rides",
+    "allRodadas": "All",
+    "upcomingRodadas": "Upcoming",
+    "pastRodadas": "Past",
+    "noUpcomingRodadas": "No upcoming rides",
+    "noPastRodadas": "No past rides",
+    "noRodadasYet": "No rides yet"
   },
   "createPost": {
     "title": "New Post",

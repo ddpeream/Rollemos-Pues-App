@@ -30,7 +30,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '../store/useAppStore';
 import { useRouteTracker } from '../hooks/useRouteTracker';
 import BackButton from '../components/common/BackButton';
-import { injectMockRoutes } from '../data/mockRoutesMedellin';
 
 const { width } = Dimensions.get('window');
 
@@ -54,9 +53,7 @@ export default function RoutesHistory() {
   const fetchRoutes = async () => {
     setLoading(true);
     
-    // 🧪 Inyectar rutas mock para testing (ELIMINAR EN PRODUCCIÓN)
-    await injectMockRoutes(AsyncStorage);
-    
+    // Cargar rutas guardadas en AsyncStorage
     const data = await loadRoutes();
     setRoutes(data);
     setLoading(false);
