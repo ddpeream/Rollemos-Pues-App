@@ -27,8 +27,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
 import { validatePatchData } from '../utils/parches';
@@ -65,6 +67,7 @@ export default function CreateParcheModal({
     ciudad: '',
     disciplinas: [],
     foto: '',
+    fotoLocal: false,
     miembros_aprox: '',
     contacto: {
       correo: '',
@@ -86,6 +89,7 @@ export default function CreateParcheModal({
         ciudad: editData.ciudad || '',
         disciplinas: editData.disciplinas || [],
         foto: editData.foto || '',
+        fotoLocal: false, // Foto existente no es local
         miembros_aprox: editData.miembros_aprox?.toString() || '',
         contacto: {
           correo: editData.contacto?.correo || '',
@@ -101,6 +105,7 @@ export default function CreateParcheModal({
         ciudad: '',
         disciplinas: [],
         foto: '',
+        fotoLocal: false,
         miembros_aprox: '',
         contacto: {
           correo: '',
@@ -338,6 +343,71 @@ export default function CreateParcheModal({
     setShowCiudadesSugeridas(false);
   };
 
+  // Seleccionar imagen de galería
+  const selectImage = async () => {
+    try {
+      // Pedir permisos
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permisos requeridos',
+          'Necesitamos acceso a tu galería para seleccionar fotos.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Seleccionar imagen
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        updateFormData('foto', asset.uri);
+        updateFormData('fotoLocal', true); // Marcar que es imagen local
+        console.log('✅ Imagen seleccionada para parche:', asset.uri);
+      }
+    } catch (error) {
+      console.error('❌ Error seleccionando imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+    }
+  };
+
+  // Tomar foto con cámara
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permisos requeridos',
+          'Necesitamos acceso a tu cámara para tomar fotos.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        updateFormData('foto', asset.uri);
+        updateFormData('fotoLocal', true);
+        console.log('✅ Foto tomada para parche:', asset.uri);
+      }
+    } catch (error) {
+      console.error('❌ Error tomando foto:', error);
+      Alert.alert('Error', 'No se pudo tomar la foto');
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       setLoading(true);
@@ -415,7 +485,12 @@ export default function CreateParcheModal({
           ) : (
             <>
               {/* Contenido del formulario */}
-              <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+              <ScrollView 
+                style={styles.scrollContent} 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+              >
                 {/* Errores */}
                 {errors.length > 0 && (
                   <View style={styles.errorContainer}>
@@ -454,18 +529,39 @@ export default function CreateParcheModal({
                       placeholder="Ciudad"
                       placeholderTextColor={theme.colors.text.secondary}
                       value={formData.ciudad}
-                      onChangeText={(value) => updateFormData('ciudad', value)}
+                      onChangeText={(value) => {
+                        updateFormData('ciudad', value);
+                        setShowCiudadesSugeridas(true);
+                      }}
                       onFocus={() => setShowCiudadesSugeridas(true)}
-                      onBlur={() => setTimeout(() => setShowCiudadesSugeridas(false), 200)}
                     />
                     
-                    {showCiudadesSugeridas && (
-                      <ScrollView style={styles.ciudadesSugeridas}>
-                        {CIUDADES_SUGERIDAS
-                          .filter(ciudad => 
-                            ciudad.toLowerCase().includes(formData.ciudad.toLowerCase())
-                          )
-                          .map((ciudad) => (
+                    {showCiudadesSugeridas && formData.ciudad.length > 0 && (
+                      <View style={styles.ciudadesSugeridas}>
+                        <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                          {CIUDADES_SUGERIDAS
+                            .filter(ciudad => 
+                              ciudad.toLowerCase().includes(formData.ciudad.toLowerCase())
+                            )
+                            .map((ciudad) => (
+                              <TouchableOpacity
+                                key={ciudad}
+                                style={styles.ciudadSugerida}
+                                onPress={() => selectCiudadSugerida(ciudad)}
+                              >
+                                <Text style={styles.ciudadSugeridaText}>{ciudad}</Text>
+                              </TouchableOpacity>
+                            ))
+                          }
+                        </ScrollView>
+                      </View>
+                    )}
+                    
+                    {/* Mostrar todas las ciudades cuando el campo está vacío y enfocado */}
+                    {showCiudadesSugeridas && formData.ciudad.length === 0 && (
+                      <View style={styles.ciudadesSugeridas}>
+                        <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                          {CIUDADES_SUGERIDAS.map((ciudad) => (
                             <TouchableOpacity
                               key={ciudad}
                               style={styles.ciudadSugerida}
@@ -473,9 +569,9 @@ export default function CreateParcheModal({
                             >
                               <Text style={styles.ciudadSugeridaText}>{ciudad}</Text>
                             </TouchableOpacity>
-                          ))
-                        }
-                      </ScrollView>
+                          ))}
+                        </ScrollView>
+                      </View>
                     )}
                   </View>
                 </View>
@@ -529,15 +625,81 @@ export default function CreateParcheModal({
                     keyboardType="numeric"
                     maxLength={4}
                   />
+                </View>
+
+                {/* Foto del parche */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Foto del parche (opcional)</Text>
                   
-                  <TextInput
-                    style={[styles.input, { marginTop: spacing.sm }]}
-                    placeholder="URL de foto del parche (opcional)"
-                    placeholderTextColor={theme.colors.text.secondary}
-                    value={formData.foto}
-                    onChangeText={(value) => updateFormData('foto', value)}
-                    keyboardType="url"
-                  />
+                  {formData.foto ? (
+                    <View style={{ marginTop: spacing.sm }}>
+                      <Image
+                        source={{ uri: formData.foto }}
+                        style={{
+                          width: '100%',
+                          height: 180,
+                          borderRadius: borderRadius.lg,
+                        }}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          borderRadius: 20,
+                          padding: 8,
+                        }}
+                        onPress={() => {
+                          updateFormData('foto', '');
+                          updateFormData('fotoLocal', false);
+                        }}
+                      >
+                        <Ionicons name="close" size={20} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          backgroundColor: theme.colors.background.surface,
+                          borderRadius: borderRadius.md,
+                          padding: spacing.lg,
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: theme.colors.glass.border,
+                          borderStyle: 'dashed',
+                        }}
+                        onPress={selectImage}
+                      >
+                        <Ionicons name="images-outline" size={32} color={theme.colors.primary} />
+                        <Text style={{ color: theme.colors.text.secondary, marginTop: spacing.xs }}>
+                          Galería
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          backgroundColor: theme.colors.background.surface,
+                          borderRadius: borderRadius.md,
+                          padding: spacing.lg,
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: theme.colors.glass.border,
+                          borderStyle: 'dashed',
+                        }}
+                        onPress={takePhoto}
+                      >
+                        <Ionicons name="camera-outline" size={32} color={theme.colors.primary} />
+                        <Text style={{ color: theme.colors.text.secondary, marginTop: spacing.xs }}>
+                          Cámara
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
 
                 {/* Contacto */}

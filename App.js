@@ -10,6 +10,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
 import Perfil from './screens/Perfil';
+import PerfilUsuario from './screens/PerfilUsuario';
+import DetalleParche from './screens/DetalleParche';
 import EditarPerfil from './screens/EditarPerfil';
 import Configuracion from './screens/Configuracion';
 import useAppStore from './store/useAppStore';
@@ -64,6 +66,8 @@ export default function App() {
               <>
                 <RootStack.Screen name="MainTabs" component={MainTabs} />
                 <RootStack.Screen name="Perfil" component={Perfil} />
+                <RootStack.Screen name="PerfilUsuario" component={PerfilUsuario} />
+                <RootStack.Screen name="DetalleParche" component={DetalleParche} />
                 <RootStack.Screen name="EditarPerfil" component={EditarPerfil} />
                 <RootStack.Screen name="Configuracion" component={Configuracion} />
               </>

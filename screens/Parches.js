@@ -11,19 +11,22 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { useParches } from '../hooks/useParches';
 import { theme as staticTheme } from '../theme';
+import CreateParcheModal from '../components/CreateParcheModal';
 
 const { width } = Dimensions.get('window');
 
 export default function Parches() {
   const { t } = useTranslation();
-  const { theme } = useAppStore();
+  const { theme, user } = useAppStore();
+  const navigation = useNavigation();
   
   const {
     parches,
@@ -31,12 +34,14 @@ export default function Parches() {
     refreshing,
     loadParches,
     refreshParches,
+    createParche,
   } = useParches();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('Todos');
   const [selectedDiscipline, setSelectedDiscipline] = useState('Todas');
   const [activeFilter, setActiveFilter] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const translateOption = (option) => {
     if (option === 'Todos') return t('filters.all');
@@ -186,6 +191,8 @@ export default function Parches() {
       ? item.disciplinas 
       : [];
 
+    console.log('🎴 Renderizando card:', item.id, item.nombre);
+    
     return (
       <TouchableOpacity 
         style={[styles.parcheCard, { 
@@ -193,6 +200,12 @@ export default function Parches() {
           borderColor: theme.colors.border 
         }]}
         activeOpacity={0.7}
+        onPress={() => {
+          console.log('👆 CLICK en parche:', item.id, item.nombre);
+          console.log('📍 Navigation object:', navigation);
+          navigation.navigate('DetalleParche', { parcheId: item.id });
+          console.log('✅ navigate() llamado');
+        }}
       >
         {/* Image */}
         <Image 
@@ -273,7 +286,13 @@ export default function Parches() {
                 <Ionicons name="logo-instagram" size={18} color={theme.colors.primary} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
+            <TouchableOpacity 
+              style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => {
+                console.log('👁️ CLICK en botón Ver:', item.id);
+                navigation.navigate('DetalleParche', { parcheId: item.id });
+              }}
+            >
               <Text style={[styles.viewButtonText, { color: theme.colors.onPrimary }]}>{t('screens.parches.view')}</Text>
               <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
             </TouchableOpacity>
@@ -287,12 +306,21 @@ export default function Parches() {
     <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-          {t('nav.parches')}
-        </Text>
-        <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-          {t('screens.parches.count', { count: filteredParches.length })}
-        </Text>
+        <View style={styles.headerLeft}>
+          <Text style={[styles.title, { color: theme.colors.text.primary }]}>
+            {t('nav.parches')}
+          </Text>
+          <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
+            {t('screens.parches.count', { count: filteredParches.length })}
+          </Text>
+        </View>
+        <TouchableOpacity 
+          style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
+          onPress={() => setShowCreateModal(true)}
+        >
+          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Text style={styles.createButtonText}>Crear</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
@@ -391,6 +419,27 @@ export default function Parches() {
           )
         }
       />
+
+      {/* Modal para crear parche */}
+      <CreateParcheModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        usuario={user}
+        onSubmit={async (parcheData) => {
+          const result = await createParche(parcheData);
+          if (result.success) {
+            console.log('✅ Parche creado:', result.data);
+            Alert.alert(
+              '🛹 ¡Parche creado!',
+              `"${result.data.nombre}" ha sido creado exitosamente.`,
+              [{ text: 'Genial!' }]
+            );
+          } else {
+            Alert.alert('Error', result.error || 'No se pudo crear el parche');
+            throw new Error(result.error); // Para que el modal no se cierre
+          }
+        }}
+      />
     </View>
   );
 }
@@ -400,10 +449,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: staticTheme.spacing.lg,
     paddingTop: staticTheme.spacing.md,
     paddingBottom: staticTheme.spacing.md,
     borderBottomWidth: 1,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 4,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   title: {
     fontSize: 28,

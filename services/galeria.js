@@ -4,6 +4,8 @@
  */
 
 import { supabase } from "../config/supabase";
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
 
 // =============================================
 // 🔍 FUNCIONES DE LECTURA
@@ -132,21 +134,29 @@ export const uploadPostImage = async (imageUri, userId) => {
       throw new Error('No image URI provided');
     }
 
-    // Crear nombre único para la imagen
+    // Crear nombre único para la imagen (organizando por usuario)
     const timestamp = new Date().getTime();
     const randomId = Math.random().toString(36).substring(7);
-    const fileName = `post_${userId}_${timestamp}_${randomId}.jpg`;
+    const fileName = `${userId}/post_${timestamp}_${randomId}.jpg`;
 
-    // Leer el archivo
-    const response = await fetch(imageUri);
-    const blob = await response.blob();
+    console.log(`📤 Subiendo imagen de post: ${fileName}`);
+
+    // Leer el archivo como base64 (funciona en iOS y Android)
+    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: 'base64',
+    });
+
+    console.log(`📦 Base64 creado: ${base64.length} caracteres`);
+
+    // Convertir base64 a ArrayBuffer para Supabase
+    const arrayBuffer = decode(base64);
 
     // Subir a Storage
     const { data, error } = await supabase.storage
       .from('posts')
-      .upload(fileName, blob, {
+      .upload(fileName, arrayBuffer, {
         contentType: 'image/jpeg',
-        upsert: false
+        upsert: true
       });
 
     if (error) {

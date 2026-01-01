@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 import { useGaleria } from '../hooks/useGaleria';
 import { useAppStore } from '../store/useAppStore';
 import { Ionicons } from '@expo/vector-icons';
+import CreatePostModal from '../components/CreatePostModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -42,12 +43,17 @@ export default function Galeria() {
     refreshing,
     loadPosts,
     refreshPosts,
-    toggleLike,
+    handleToggleLike,
+    createNewPost,
+    addComment,
+    loadComments,
   } = useGaleria();
 
   const [expandedComments, setExpandedComments] = useState({});
+  const [loadedComments, setLoadedComments] = useState({});
   const [commentText, setCommentText] = useState({});
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [sendingComment, setSendingComment] = useState({});
 
   // Cargar posts al entrar a la pantalla
   useFocusEffect(
@@ -59,16 +65,65 @@ export default function Galeria() {
   // Toggle like
   const handleLike = async (postId) => {
     if (!user) return;
-    await toggleLike(postId);
-    await loadPosts(); // Refrescar para ver cambios
+    await handleToggleLike(postId);
   };
 
-  // Toggle mostrar comentarios
-  const toggleComments = (postId) => {
+  // Crear nuevo post
+  const handleCreatePost = async (postData) => {
+    // postData viene del modal con: imagen, descripcion, ubicacion, aspect_ratio
+    const result = await createNewPost(postData.imagen, postData.descripcion, postData.ubicacion);
+    if (result.success) {
+      setShowUploadModal(false);
+      loadPosts();
+    }
+    return result;
+  };
+
+  // Toggle mostrar comentarios y cargar desde Supabase
+  const toggleComments = async (postId) => {
+    const isExpanding = !expandedComments[postId];
+    
     setExpandedComments(prev => ({
       ...prev,
-      [postId]: !prev[postId]
+      [postId]: isExpanding
     }));
+
+    // Si estamos expandiendo y no tenemos comentarios cargados, cargarlos
+    if (isExpanding && !loadedComments[postId]) {
+      const result = await loadComments(postId);
+      if (result.success) {
+        setLoadedComments(prev => ({
+          ...prev,
+          [postId]: result.data
+        }));
+      }
+    }
+  };
+
+  // Enviar comentario
+  const handleSendComment = async (postId) => {
+    const texto = commentText[postId]?.trim();
+    if (!texto || !user) return;
+
+    setSendingComment(prev => ({ ...prev, [postId]: true }));
+    
+    const result = await addComment(postId, texto);
+    
+    if (result.success) {
+      // Limpiar el texto
+      setCommentText(prev => ({ ...prev, [postId]: '' }));
+      
+      // Agregar el nuevo comentario a la lista local
+      setLoadedComments(prev => ({
+        ...prev,
+        [postId]: [...(prev[postId] || []), result.data]
+      }));
+      
+      // Recargar posts para actualizar el contador
+      loadPosts();
+    }
+    
+    setSendingComment(prev => ({ ...prev, [postId]: false }));
   };
 
   // Formatear tiempo relativo
@@ -122,11 +177,12 @@ export default function Galeria() {
   const renderPost = ({ item }) => {
     if (!item || !item.imagen) return null;
 
-    // Simular si el usuario dio like (en producción viene de Supabase)
-    const userLiked = item.likes_usuarios?.includes(user?.id) || false;
-    const likesCount = item.likes || 0;
-    const commentsCount = item.comentarios || 0;
+    // Usar datos de Supabase
+    const userLiked = item.userLiked || false;
+    const likesCount = item.likes_count || 0;
+    const commentsCount = item.comentarios_count || 0;
     const isCommentsExpanded = expandedComments[item.id];
+    const postComments = loadedComments[item.id] || [];
 
     return (
       <View style={[styles.postContainer, { backgroundColor: theme.colors.background.primary }]}>
@@ -134,7 +190,7 @@ export default function Galeria() {
         <View style={styles.postHeader}>
           <View style={styles.userInfoContainer}>
             <Image
-              source={{ uri: item.usuario?.avatar || 'https://i.pravatar.cc/150' }}
+              source={{ uri: item.usuario?.avatar_url || 'https://i.pravatar.cc/150' }}
               style={styles.userAvatar}
             />
             <View style={styles.userDetails}>
@@ -159,7 +215,7 @@ export default function Galeria() {
         {/* Imagen del Post */}
         <Image
           source={{ uri: item.imagen }}
-          style={[styles.postImage, { aspectRatio: item.aspectRatio || 1 }]}
+          style={[styles.postImage, { aspectRatio: item.aspect_ratio || 1 }]}
           resizeMode="cover"
         />
 
@@ -222,16 +278,52 @@ export default function Galeria() {
         )}
 
         {/* Comentarios expandidos */}
-        {isCommentsExpanded && item.comentarios_lista && (
+        {isCommentsExpanded && (
           <View style={styles.commentsSection}>
-            {item.comentarios_lista.map((comment, index) => (
-              <View key={index} style={styles.commentItem}>
-                <Text style={[styles.commentText, { color: theme.colors.text.primary }]}>
-                  <Text style={styles.boldText}>{comment.usuario} </Text>
-                  {comment.texto}
-                </Text>
+            {postComments.length > 0 ? (
+              postComments.map((comment, index) => (
+                <View key={comment.id || `comment-${index}`} style={styles.commentItem}>
+                  <Text style={[styles.commentText, { color: theme.colors.text.primary }]}>
+                    <Text style={styles.boldText}>{comment.usuario?.nombre || 'Usuario'} </Text>
+                    {comment.texto}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={[styles.noCommentsText, { color: theme.colors.text.tertiary }]}>
+                No hay comentarios aún
+              </Text>
+            )}
+            
+            {/* Input para nuevo comentario */}
+            {user && (
+              <View style={[styles.commentInputContainer, { borderTopColor: theme.colors.border }]}>
+                <TextInput
+                  style={[styles.commentInput, { color: theme.colors.text.primary }]}
+                  placeholder="Escribe un comentario..."
+                  placeholderTextColor={theme.colors.text.tertiary}
+                  value={commentText[item.id] || ''}
+                  onChangeText={(text) => setCommentText(prev => ({ ...prev, [item.id]: text }))}
+                  multiline
+                />
+                <TouchableOpacity 
+                  onPress={() => handleSendComment(item.id)}
+                  disabled={sendingComment[item.id] || !commentText[item.id]?.trim()}
+                  style={styles.sendButton}
+                >
+                  {sendingComment[item.id] ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  ) : (
+                    <Ionicons 
+                      name="send" 
+                      size={20} 
+                      color={commentText[item.id]?.trim() ? theme.colors.primary : theme.colors.text.tertiary} 
+                    />
+                  )}
+                </TouchableOpacity>
               </View>
-            ))}
+            )}
+            
             <TouchableOpacity onPress={() => toggleComments(item.id)}>
               <Text style={[styles.hideCommentsText, { color: theme.colors.text.tertiary }]}>
                 {t('screens.galeria.hideComments')}
@@ -242,7 +334,7 @@ export default function Galeria() {
 
         {/* Tiempo */}
         <Text style={[styles.timeText, { color: theme.colors.text.tertiary }]}>
-          {formatTimeAgo(item.fecha)}
+          {formatTimeAgo(item.created_at || item.fecha)}
         </Text>
       </View>
     );
@@ -324,6 +416,14 @@ export default function Galeria() {
           }
         />
       )}
+
+      {/* Modal para crear post */}
+      <CreatePostModal
+        visible={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSubmit={handleCreatePost}
+        usuario={user}
+      />
     </View>
   );
 }
@@ -507,6 +607,31 @@ const styles = StyleSheet.create({
   hideCommentsText: {
     fontSize: 14,
     paddingTop: 4,
+  },
+  noCommentsText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    paddingVertical: 8,
+  },
+  commentInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    gap: 8,
+  },
+  commentInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    maxHeight: 80,
+  },
+  sendButton: {
+    padding: 8,
   },
 
   // Time

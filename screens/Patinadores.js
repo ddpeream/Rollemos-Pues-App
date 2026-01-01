@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { usePatinadores } from '../hooks/usePatinadores';
 import { theme as staticTheme } from '../theme';
@@ -25,6 +25,7 @@ const { width } = Dimensions.get('window');
 export default function Patinadores() {
   const { t } = useTranslation();
   const { theme } = useAppStore();
+  const navigation = useNavigation();
   
   const {
     patinadores,
@@ -204,6 +205,7 @@ export default function Patinadores() {
           borderColor: theme.colors.border 
         }]}
         activeOpacity={0.7}
+        onPress={() => navigation.navigate('PerfilUsuario', { userId: item.id })}
       >
         {/* Image */}
         <Image 
@@ -272,7 +274,10 @@ export default function Patinadores() {
                 <Ionicons name="logo-instagram" size={18} color={theme.colors.primary} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
+            <TouchableOpacity 
+              style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => navigation.navigate('PerfilUsuario', { userId: item.id })}
+            >
               <Text style={[styles.viewButtonText, { color: theme.colors.onPrimary }]}>{t('screens.patinadores.viewProfile')}</Text>
               <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
             </TouchableOpacity>
