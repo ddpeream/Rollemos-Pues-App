@@ -103,6 +103,7 @@ CREATE TABLE parches (
   nombre TEXT NOT NULL,
   ciudad TEXT NOT NULL,
   foto TEXT,
+  fotos TEXT[] DEFAULT '{}',
   disciplinas TEXT[] NOT NULL,
   descripcion TEXT,
   miembros_aprox INTEGER,
@@ -748,4 +749,12 @@ ORDER BY tablename;
 -- ✅ LISTO! 
 -- Ejecuta este archivo completo en Supabase SQL Editor
 -- =============================================
+
+-- =============================================
+-- MIGRACIONES IDEMPOTENTES (se pueden ejecutar múltiples veces)
+-- Agregan columnas nuevas si no existen
+-- =============================================
+
+-- Agregar columna fotos a parches (para galería de imágenes del crew)
+ALTER TABLE parches ADD COLUMN IF NOT EXISTS fotos TEXT[] DEFAULT '{}';
 

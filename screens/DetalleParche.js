@@ -24,13 +24,16 @@ import {
   FlatList,
   Linking,
   RefreshControl,
+  Modal,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import useAppStore from '../store/useAppStore';
 import { useParches } from '../hooks/useParches';
+import { useRodadas } from '../hooks/useRodadas';
 import { spacing, typography, borderRadius } from '../theme';
+import CreateRodadaModal from '../components/CreateRodadaModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = 280;
@@ -54,14 +57,24 @@ export default function DetalleParche() {
     refreshParches 
   } = useParches();
   
+  // Hook de rodadas para obtener las del parche
+  const { rodadas, fetchRodadas, isLoading: loadingRodadas } = useRodadas();
+  
   const [parche, setParche] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [joining, setJoining] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [showCreateRodadaModal, setShowCreateRodadaModal] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [viewerImageIndex, setViewerImageIndex] = useState(0);
   
   const carouselRef = useRef(null);
+  const imageViewerRef = useRef(null);
+  
+  // Rodadas del parche
+  const parcheRodadas = rodadas.filter(r => r.parche_id === parcheId);
 
   // Cargar datos del parche
   const fetchParche = useCallback(async () => {
@@ -88,12 +101,14 @@ export default function DetalleParche() {
 
   useEffect(() => {
     fetchParche();
+    fetchRodadas({ parcheId }); // Cargar rodadas del parche
   }, [fetchParche]);
 
   // Refresh
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchParche();
+    await fetchRodadas({ parcheId });
     setRefreshing(false);
   };
 
@@ -198,7 +213,7 @@ export default function DetalleParche() {
   };
 
   // Obtener todas las imágenes del parche
-  const getAllImages = () => {
+  const getAllImages = useCallback(() => {
     const images = [];
     
     // Imagen principal
@@ -217,21 +232,38 @@ export default function DetalleParche() {
     }
     
     return images;
-  };
+  }, [parche]);
+  
+  // Array de imágenes para usar en el visor
+  const allImages = getAllImages();
 
   // Render imagen del carrusel
   const renderCarouselImage = ({ item, index }) => (
-    <Image
-      source={{ uri: item }}
-      style={styles.carouselImage}
-      resizeMode="cover"
-    />
+    <TouchableOpacity 
+      activeOpacity={0.9}
+      onPress={() => {
+        setViewerImageIndex(index);
+        setShowImageViewer(true);
+      }}
+    >
+      <Image
+        source={{ uri: item }}
+        style={styles.carouselImage}
+        resizeMode="cover"
+      />
+    </TouchableOpacity>
   );
 
   // Manejar scroll del carrusel
   const onCarouselScroll = (event) => {
     const slideIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
     setCurrentImageIndex(slideIndex);
+  };
+  
+  // Manejar scroll del visor de imágenes
+  const onViewerScroll = (event) => {
+    const slideIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setViewerImageIndex(slideIndex);
   };
 
   // Abrir contacto
@@ -288,7 +320,6 @@ export default function DetalleParche() {
     );
   }
 
-  const images = getAllImages();
   const disciplinas = formatDisciplinas(parche.disciplinas);
 
   return (
@@ -327,7 +358,7 @@ export default function DetalleParche() {
         <View style={styles.carouselContainer}>
           <FlatList
             ref={carouselRef}
-            data={images}
+            data={allImages}
             renderItem={renderCarouselImage}
             keyExtractor={(item, index) => `image-${index}`}
             horizontal
@@ -338,9 +369,9 @@ export default function DetalleParche() {
           />
           
           {/* Indicadores de página */}
-          {images.length > 1 && (
+          {allImages.length > 1 && (
             <View style={styles.paginationContainer}>
-              {images.map((_, index) => (
+              {allImages.map((_, index) => (
                 <View
                   key={index}
                   style={[
@@ -356,7 +387,7 @@ export default function DetalleParche() {
           {/* Contador de imágenes */}
           <View style={styles.imageCounter}>
             <Text style={styles.imageCounterText}>
-              {currentImageIndex + 1} / {images.length}
+              {currentImageIndex + 1} / {allImages.length}
             </Text>
           </View>
         </View>
@@ -544,6 +575,66 @@ export default function DetalleParche() {
             </View>
           )}
 
+          {/* Rodadas del parche */}
+          {parcheRodadas.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
+                🛼 Rodadas ({parcheRodadas.length})
+              </Text>
+              
+              {parcheRodadas.map((rodada, index) => (
+                <TouchableOpacity 
+                  key={rodada.id || index}
+                  style={[styles.rodadaCard, { backgroundColor: theme.colors.background.surface }]}
+                  onPress={() => navigation.navigate('Tracking', { rodadaId: rodada.id })}
+                >
+                  <View style={styles.rodadaHeader}>
+                    <View style={styles.rodadaInfo}>
+                      <Text style={[styles.rodadaName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                        {rodada.nombre}
+                      </Text>
+                      <View style={styles.rodadaDateRow}>
+                        <Ionicons name="calendar-outline" size={14} color={theme.colors.text.secondary} />
+                        <Text style={[styles.rodadaDate, { color: theme.colors.text.secondary }]}>
+                          {rodada.fecha_inicio 
+                            ? new Date(rodada.fecha_inicio).toLocaleDateString('es-CO', { 
+                                weekday: 'short', 
+                                day: 'numeric', 
+                                month: 'short' 
+                              })
+                            : 'Sin fecha'}
+                        </Text>
+                        <Text style={[styles.rodadaTime, { color: theme.colors.primary }]}>
+                          {rodada.hora_encuentro || ''}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[
+                      styles.rodadaStatus, 
+                      { backgroundColor: rodada.estado === 'en_curso' ? '#FF3B30' : '#34C759' }
+                    ]}>
+                      <Text style={styles.rodadaStatusText}>
+                        {rodada.estado === 'en_curso' ? 'En curso' : 'Próxima'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.rodadaFooter}>
+                    <Ionicons name="location-outline" size={14} color={theme.colors.text.tertiary} />
+                    <Text style={[styles.rodadaLocation, { color: theme.colors.text.tertiary }]} numberOfLines={1}>
+                      {rodada.punto_salida_nombre || 'Punto por definir'}
+                    </Text>
+                    <View style={styles.rodadaParticipants}>
+                      <Ionicons name="people-outline" size={14} color={theme.colors.text.tertiary} />
+                      <Text style={[styles.rodadaParticipantsText, { color: theme.colors.text.tertiary }]}>
+                        {rodada.participantes_count || 0}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           {/* Espacio para el botón flotante */}
           <View style={{ height: 100 }} />
         </View>
@@ -585,17 +676,105 @@ export default function DetalleParche() {
         </View>
       )}
 
-      {/* Mensaje para creador */}
+      {/* Acciones para creador */}
       {isCreator && (
         <View style={[styles.bottomAction, { backgroundColor: theme.colors.background.primary }]}>
-          <View style={[styles.creatorBanner, { backgroundColor: theme.colors.alpha.primary15 }]}>
-            <Ionicons name="star" size={20} color={theme.colors.primary} />
-            <Text style={[styles.creatorBannerText, { color: theme.colors.primary }]}>
-              Eres el creador de este parche
-            </Text>
+          <View style={styles.creatorActions}>
+            <TouchableOpacity
+              style={[styles.creatorButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => setShowCreateRodadaModal(true)}
+            >
+              <Ionicons name="bicycle" size={20} color="#000" />
+              <Text style={[styles.creatorButtonText, { color: '#000' }]}>
+                Crear rodada
+              </Text>
+            </TouchableOpacity>
+            <View style={[styles.creatorBadge, { backgroundColor: theme.colors.alpha.primary15 }]}>
+              <Ionicons name="star" size={16} color={theme.colors.primary} />
+              <Text style={[styles.creatorBadgeText, { color: theme.colors.primary }]}>
+                Creador
+              </Text>
+            </View>
           </View>
         </View>
       )}
+
+      {/* Modal para crear rodada del parche */}
+      <CreateRodadaModal
+        visible={showCreateRodadaModal}
+        onClose={() => setShowCreateRodadaModal(false)}
+        parcheId={parcheId}
+        onSuccess={(rodada) => {
+          fetchRodadas({ parcheId }); // Recargar lista de rodadas
+          Alert.alert(
+            '🛼 ¡Rodada creada!',
+            `"${rodada.nombre}" ha sido programada. Los miembros del parche podrán verla.`,
+            [{ text: 'Genial!' }]
+          );
+        }}
+      />
+
+      {/* Modal visor de imágenes pantalla completa */}
+      <Modal
+        visible={showImageViewer}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowImageViewer(false)}
+      >
+        <View style={styles.imageViewerOverlay}>
+          {/* Header con botón cerrar y contador */}
+          <View style={styles.imageViewerHeader}>
+            <TouchableOpacity 
+              style={styles.imageViewerCloseButton}
+              onPress={() => setShowImageViewer(false)}
+            >
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.imageViewerCounter}>
+              {viewerImageIndex + 1} / {allImages.length}
+            </Text>
+          </View>
+          
+          {/* Carrusel de imágenes */}
+          <FlatList
+            ref={imageViewerRef}
+            data={allImages}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onViewerScroll}
+            initialScrollIndex={viewerImageIndex}
+            getItemLayout={(data, index) => ({
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+              index,
+            })}
+            keyExtractor={(item, index) => `viewer-${index}`}
+            renderItem={({ item }) => (
+              <View style={styles.imageViewerSlide}>
+                <Image
+                  source={{ uri: item }}
+                  style={styles.imageViewerImage}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          />
+          
+          {/* Indicadores de página */}
+          <View style={styles.imageViewerDots}>
+            {allImages.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.imageViewerDot,
+                  viewerImageIndex === index && styles.imageViewerDotActive
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -848,6 +1027,36 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: 'bold',
   },
+  creatorActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  creatorButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+  },
+  creatorButtonText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: 'bold',
+  },
+  creatorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    borderRadius: borderRadius.lg,
+    gap: 4,
+  },
+  creatorBadgeText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
+  },
   creatorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -859,5 +1068,123 @@ const styles = StyleSheet.create({
   creatorBannerText: {
     fontSize: typography.fontSize.md,
     fontWeight: '600',
+  },
+  // Estilos para rodadas del parche
+  rodadaCard: {
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  rodadaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  rodadaInfo: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  rodadaName: {
+    fontSize: typography.fontSize.md,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  rodadaDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  rodadaDate: {
+    fontSize: typography.fontSize.sm,
+  },
+  rodadaTime: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
+  },
+  rodadaStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  rodadaStatusText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  rodadaFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  rodadaLocation: {
+    fontSize: typography.fontSize.sm,
+    flex: 1,
+  },
+  rodadaParticipants: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  rodadaParticipantsText: {
+    fontSize: typography.fontSize.sm,
+  },
+  // Visor de imágenes pantalla completa
+  imageViewerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+  },
+  imageViewerHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    zIndex: 10,
+  },
+  imageViewerCloseButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerCounter: {
+    color: '#fff',
+    fontSize: typography.fontSize.md,
+    fontWeight: '600',
+  },
+  imageViewerSlide: {
+    width: SCREEN_WIDTH,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageViewerImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH * 1.2,
+  },
+  imageViewerDots: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  imageViewerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  imageViewerDotActive: {
+    backgroundColor: '#fff',
+    width: 24,
   },
 });

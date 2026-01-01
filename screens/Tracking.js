@@ -55,7 +55,9 @@ export default function Tracking() {
     getRodadasEnCurso,
     unirseARodada,
     salirDeRodada,
+    eliminarRodada,
   } = useRodadas();
+  const [deletingRodada, setDeletingRodada] = useState(false);
   const [showCreateRodadaModal, setShowCreateRodadaModal] = useState(false);
   const [showRodadasList, setShowRodadasList] = useState(false);
   const [showRodadaDetail, setShowRodadaDetail] = useState(false);
@@ -524,15 +526,15 @@ export default function Tracking() {
                 >
                   <View style={styles.rodadaMarkerContainer}>
                     {/* Flecha/Callout de llegada */}
-                    <View style={[styles.rodadaCallout, { backgroundColor: '#FF9500' }]}>
-                      <Text style={styles.rodadaCalloutText} numberOfLines={1}>
+                    <View style={[styles.rodadaCallout, { backgroundColor: '#FFD700' }]}>
+                      <Text style={[styles.rodadaCalloutText, { color: '#000' }]} numberOfLines={1}>
                         🏁 Llegada
                       </Text>
-                      <View style={[styles.rodadaCalloutArrow, { borderTopColor: '#FF9500' }]} />
+                      <View style={[styles.rodadaCalloutArrow, { borderTopColor: '#FFD700' }]} />
                     </View>
                     {/* Marcador de llegada */}
-                    <View style={[styles.rodadaMarker, { backgroundColor: '#FF9500' }]}>
-                      <Ionicons name="flag-outline" size={18} color="#FFFFFF" />
+                    <View style={[styles.rodadaMarker, { backgroundColor: '#FFD700' }]}>
+                      <Ionicons name="flag-outline" size={18} color="#000" />
                     </View>
                   </View>
                 </Marker>
@@ -953,9 +955,18 @@ export default function Tracking() {
           ]}>
             {/* Header */}
             <View style={styles.rodadaDetailHeader}>
-              <Text style={[styles.rodadaDetailTitle, { color: theme.colors.text.primary }]} numberOfLines={2}>
-                {selectedRodada?.nombre || 'Rodada'}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rodadaDetailTitle, { color: theme.colors.text.primary }]} numberOfLines={2}>
+                  {selectedRodada?.nombre || 'Rodada'}
+                </Text>
+                {/* Badge organizador en header */}
+                {user && selectedRodada?.organizador_id === user.id && (
+                  <View style={styles.organizerBadgeHeader}>
+                    <MaterialCommunityIcons name="crown" size={14} color="#34C759" />
+                    <Text style={styles.organizerBadgeText}>Eres el organizador</Text>
+                  </View>
+                )}
+              </View>
               <TouchableOpacity onPress={() => setShowRodadaDetail(false)}>
                 <Ionicons name="close-circle" size={28} color={theme.colors.text.secondary} />
               </TouchableOpacity>
@@ -1079,12 +1090,45 @@ export default function Tracking() {
                 </TouchableOpacity>
               )}
 
-              {/* Si es organizador, mostrar badge */}
+              {/* Si es organizador, mostrar botón eliminar */}
               {user && selectedRodada?.organizador_id === user.id && (
-                <View style={[styles.rodadaDetailButton, { backgroundColor: '#34C759' }]}>
-                  <MaterialCommunityIcons name="crown" size={20} color="#FFFFFF" />
-                  <Text style={styles.rodadaDetailButtonText}>Eres el organizador</Text>
-                </View>
+                <TouchableOpacity 
+                  style={[styles.rodadaDetailButton, { backgroundColor: '#FF3B30' }]}
+                  onPress={() => {
+                    Alert.alert(
+                      'Eliminar rodada',
+                      `¿Seguro que quieres eliminar "${selectedRodada?.nombre}"?`,
+                      [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                          text: 'Eliminar',
+                          style: 'destructive',
+                          onPress: async () => {
+                            setDeletingRodada(true);
+                            const result = await eliminarRodada(selectedRodada.id);
+                            setDeletingRodada(false);
+                            if (result.success) {
+                              setShowRodadaDetail(false);
+                              Alert.alert('✅', 'Rodada eliminada');
+                            } else {
+                              Alert.alert('Error', result.error || 'No se pudo eliminar');
+                            }
+                          }
+                        }
+                      ]
+                    );
+                  }}
+                  disabled={deletingRodada}
+                >
+                  {deletingRodada ? (
+                    <Text style={styles.rodadaDetailButtonText}>Eliminando...</Text>
+                  ) : (
+                    <>
+                      <Ionicons name="trash" size={20} color="#FFFFFF" />
+                      <Text style={styles.rodadaDetailButtonText}>Eliminar rodada</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -1714,17 +1758,27 @@ const styles = StyleSheet.create({
   rodadaDetailHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.1)',
   },
+  organizerBadgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  organizerBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#34C759',
+  },
   rodadaDetailTitle: {
     fontSize: 18,
     fontWeight: '700',
-    flex: 1,
     marginRight: 12,
   },
   rodadaDetailContent: {

@@ -3,7 +3,7 @@
  * Componente elegante con selector de imagen, descripción y ubicación
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,11 +19,13 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
+import { searchPlaces } from '../services/rodadas';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -39,6 +41,46 @@ const CreatePostModal = ({
   const [ubicacion, setUbicacion] = useState('');
   const [loading, setLoading] = useState(false);
   const [imageAspectRatio, setImageAspectRatio] = useState(0.75);
+  
+  // Estados para Places API
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [searchingLocation, setSearchingLocation] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+
+  // Buscar lugares con debounce
+  const searchLocationDebounced = useCallback(async (query) => {
+    if (!query || query.length < 3) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+
+    setSearchingLocation(true);
+    try {
+      const results = await searchPlaces(query, { country: 'co' });
+      setLocationSuggestions(results);
+      setShowLocationSuggestions(results.length > 0);
+    } catch (error) {
+      console.error('Error buscando ubicación:', error);
+    } finally {
+      setSearchingLocation(false);
+    }
+  }, []);
+
+  // Manejar cambio de ubicación con debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchLocationDebounced(ubicacion);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [ubicacion, searchLocationDebounced]);
+
+  // Seleccionar ubicación de la lista
+  const selectLocation = (place) => {
+    setUbicacion(place.mainText || place.description);
+    setShowLocationSuggestions(false);
+    setLocationSuggestions([]);
+  };
 
   // Reset del estado cuando se cierra
   const handleClose = () => {
@@ -47,6 +89,8 @@ const CreatePostModal = ({
     setUbicacion('');
     setLoading(false);
     setImageAspectRatio(0.75);
+    setLocationSuggestions([]);
+    setShowLocationSuggestions(false);
     onClose();
   };
 
@@ -317,31 +361,88 @@ const CreatePostModal = ({
               {descripcion.length}/500
             </Text>
 
-            {/* Ubicación */}
-            <View style={styles.inputContainer}>
-              <Ionicons 
-                name="location-outline" 
-                size={20} 
-                color={theme.colors.text.secondary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={[
-                  styles.textInput,
+            {/* Ubicación con autocompletado */}
+            <View style={styles.locationContainer}>
+              <View style={styles.inputContainer}>
+                <Ionicons 
+                  name="location-outline" 
+                  size={20} 
+                  color={theme.colors.text.secondary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    { 
+                      color: theme.colors.text.primary, 
+                      borderColor: theme.colors.glass.border,
+                      backgroundColor: theme.colors.background.surface,
+                      flex: 1
+                    }
+                  ]}
+                  placeholder="Agregar ubicación (opcional)"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  value={ubicacion}
+                  onChangeText={setUbicacion}
+                  maxLength={100}
+                  editable={!loading}
+                />
+                {searchingLocation && (
+                  <ActivityIndicator 
+                    size="small" 
+                    color={theme.colors.primary} 
+                    style={styles.searchingIndicator}
+                  />
+                )}
+              </View>
+              
+              {/* Lista de sugerencias */}
+              {showLocationSuggestions && locationSuggestions.length > 0 && (
+                <View style={[
+                  styles.suggestionsContainer,
                   { 
-                    color: theme.colors.text.primary, 
-                    borderColor: theme.colors.glass.border,
                     backgroundColor: theme.colors.background.surface,
-                    flex: 1
+                    borderColor: theme.colors.glass.border 
                   }
-                ]}
-                placeholder="Agregar ubicación (opcional)"
-                placeholderTextColor={theme.colors.text.secondary}
-                value={ubicacion}
-                onChangeText={setUbicacion}
-                maxLength={100}
-                editable={!loading}
-              />
+                ]}>
+                  {locationSuggestions.map((place, index) => (
+                    <TouchableOpacity
+                      key={place.placeId || index}
+                      style={[
+                        styles.suggestionItem,
+                        index < locationSuggestions.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: theme.colors.glass.border
+                        }
+                      ]}
+                      onPress={() => selectLocation(place)}
+                    >
+                      <Ionicons 
+                        name="location" 
+                        size={16} 
+                        color={theme.colors.primary}
+                        style={styles.suggestionIcon}
+                      />
+                      <View style={styles.suggestionText}>
+                        <Text 
+                          style={[styles.suggestionMain, { color: theme.colors.text.primary }]}
+                          numberOfLines={1}
+                        >
+                          {place.mainText}
+                        </Text>
+                        {place.secondaryText && (
+                          <Text 
+                            style={[styles.suggestionSecondary, { color: theme.colors.text.secondary }]}
+                            numberOfLines={1}
+                          >
+                            {place.secondaryText}
+                          </Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -466,6 +567,40 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginLeft: 4,
+  },
+  searchingIndicator: {
+    marginRight: 8,
+  },
+  locationContainer: {
+    position: 'relative',
+    zIndex: 10,
+  },
+  suggestionsContainer: {
+    marginTop: 4,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    maxHeight: 200,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  suggestionIcon: {
+    marginRight: 8,
+  },
+  suggestionText: {
+    flex: 1,
+  },
+  suggestionMain: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  suggestionSecondary: {
+    fontSize: 12,
+    marginTop: 2,
   },
 });
 
