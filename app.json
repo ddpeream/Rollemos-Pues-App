@@ -8,13 +8,14 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a1a2e"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rollemos.pues",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para rastrear tus rutas de patinaje y mostrarte spots cercanos.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para grabar tus rutas completas mientras patinas.",
@@ -23,8 +24,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#1a1a2e"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.rollemos.pues",
