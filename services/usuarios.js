@@ -4,6 +4,8 @@
  */
 
 import { supabase } from '../config/supabase';
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
 
 /**
  * 🔍 LEER - Obtener todos los usuarios
@@ -328,27 +330,27 @@ export const uploadAvatarImage = async (imageUri, userId) => {
 
     // Crear nombre único para el archivo
     const fileName = `${userId}_${Date.now()}.jpg`;
-    const filePath = `avatares/${fileName}`;
+    const filePath = `${userId}/${fileName}`;
 
     console.log(`📤 Subiendo imagen: ${filePath}`);
+    console.log(`📍 URI: ${imageUri}`);
 
-    // Obtener el archivo desde el URI
-    const file = {
-      uri: imageUri,
-      name: fileName,
-      type: 'image/jpeg',
-    };
+    // Leer el archivo como base64 (funciona en iOS y Android)
+    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: 'base64',
+    });
 
-    // Crear FormData para el upload
-    const formData = new FormData();
-    formData.append('file', file);
+    console.log(`📦 Base64 creado: ${base64.length} caracteres`);
 
-    // Subir a Storage usando FormData
+    // Convertir base64 a ArrayBuffer para Supabase
+    const arrayBuffer = decode(base64);
+
+    // Subir a Storage usando ArrayBuffer
     const { data, error } = await supabase.storage
       .from('usuarios-avatares')
-      .upload(filePath, formData, {
+      .upload(filePath, arrayBuffer, {
         cacheControl: '3600',
-        upsert: false,
+        upsert: true,
         contentType: 'image/jpeg',
       });
 

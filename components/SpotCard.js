@@ -111,7 +111,7 @@ export default function SpotCard({
       alignSelf: 'flex-start',
     },
     difficultyText: {
-      color: '#FFFFFF',
+      color: theme.colors.onSecondary,
       fontSize: typography.fontSize.xs,
       fontWeight: typography.fontWeight.bold,
       textTransform: 'capitalize',

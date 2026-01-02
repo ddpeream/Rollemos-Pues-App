@@ -19,6 +19,10 @@ import {
   deleteParche,
   getCiudadesParches,
   getDisciplinasParches,
+  joinParche as joinParcheService,
+  leaveParche as leaveParcheService,
+  uploadMultipleParcheImages,
+  getParcheMiembros,
 } from "../services/parches";
 import { useAppStore } from '../store/useAppStore';
 
@@ -210,6 +214,81 @@ export const useParches = () => {
   }, [user, loadParches]);
 
   /**
+   * ➕ Unirse a un parche
+   */
+  const joinParche = useCallback(async (parcheId) => {
+    if (!user?.id) {
+      setError('Debes iniciar sesión');
+      return { success: false, error: 'Debes iniciar sesión' };
+    }
+
+    try {
+      console.log('➕ Uniéndose al parche:', parcheId);
+      const result = await joinParcheService(parcheId, user.id);
+      
+      if (!result.success) {
+        setError(result.error);
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('❌ Error uniéndose al parche:', err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    }
+  }, [user]);
+
+  /**
+   * ➖ Salir de un parche
+   */
+  const leaveParche = useCallback(async (parcheId) => {
+    if (!user?.id) {
+      setError('Debes iniciar sesión');
+      return { success: false, error: 'Debes iniciar sesión' };
+    }
+
+    try {
+      console.log('➖ Saliendo del parche:', parcheId);
+      const result = await leaveParcheService(parcheId, user.id);
+      
+      if (!result.success) {
+        setError(result.error);
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('❌ Error saliendo del parche:', err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    }
+  }, [user]);
+
+  /**
+   * 📸 Agregar imágenes al parche
+   */
+  const addParcheImages = useCallback(async (parcheId, imageUris) => {
+    if (!user?.id) {
+      setError('Debes iniciar sesión');
+      return { success: false, error: 'Debes iniciar sesión' };
+    }
+
+    try {
+      console.log(`📸 Subiendo ${imageUris.length} imágenes...`);
+      const result = await uploadMultipleParcheImages(parcheId, imageUris);
+      
+      if (!result.success) {
+        setError(result.error);
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('❌ Error subiendo imágenes:', err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    }
+  }, [user]);
+
+  /**
    * 🏙️ Obtener lista de ciudades únicas
    */
   const loadCiudades = useCallback(async () => {
@@ -273,6 +352,11 @@ export const useParches = () => {
     createParche: createNewParche,
     updateParche: updateExistingParche,
     deleteParche: deleteExistingParche,
+
+    // Métodos de membresía
+    joinParche,
+    leaveParche,
+    addParcheImages,
 
     // Métodos de filtros
     applyFilters,

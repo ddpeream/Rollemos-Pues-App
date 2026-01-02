@@ -24,6 +24,69 @@
  */
 
 import { supabase } from '../config/supabase';
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
+
+// ==========================================
+// 📤 FUNCIONES DE UPLOAD
+// ==========================================
+
+/**
+ * Subir imagen de parche a Storage
+ * @param {string} imageUri - URI local de la imagen
+ * @param {string} parcheName - Nombre del parche (para nombrar archivo)
+ * @returns {Promise<Object>} { success, url, error }
+ */
+export const uploadParcheImage = async (imageUri, parcheName) => {
+  try {
+    if (!imageUri || !imageUri.startsWith('file://')) {
+      console.log('📸 No hay imagen local para subir');
+      return { success: true, url: imageUri || '' };
+    }
+
+    // Crear nombre único para la imagen
+    const timestamp = Date.now();
+    const safeName = parcheName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const fileName = `parches/${safeName}_${timestamp}.jpg`;
+
+    console.log(`📤 Subiendo imagen de parche: ${fileName}`);
+
+    // Leer archivo como base64
+    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: 'base64',
+    });
+
+    console.log(`📦 Base64 creado: ${base64.length} caracteres`);
+
+    // Convertir a ArrayBuffer
+    const arrayBuffer = decode(base64);
+
+    // Subir a Storage (usar bucket 'posts' o crear uno nuevo 'parches')
+    const { data, error } = await supabase.storage
+      .from('posts') // Reutilizamos el bucket posts para parches
+      .upload(fileName, arrayBuffer, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+
+    if (error) {
+      console.error('❌ Error subiendo imagen de parche:', error.message);
+      return { success: false, error: error.message };
+    }
+
+    // Obtener URL pública
+    const { data: urlData } = supabase.storage
+      .from('posts')
+      .getPublicUrl(fileName);
+
+    console.log('✅ Imagen de parche subida:', urlData.publicUrl);
+    return { success: true, url: urlData.publicUrl };
+
+  } catch (error) {
+    console.error('❌ Error en uploadParcheImage:', error);
+    return { success: false, error: error.message };
+  }
+};
 
 // ==========================================
 // 🔍 FUNCIONES DE LECTURA (READ)
@@ -51,7 +114,8 @@ export const getParches = async (filters = {}) => {
           nombre,
           email,
           avatar_url
-        )
+        ),
+        parches_seguidores(count)
       `)
       .order('created_at', { ascending: false });
 
@@ -80,8 +144,14 @@ export const getParches = async (filters = {}) => {
       throw error;
     }
 
-    console.log(`✅ ${data?.length || 0} parches cargados`);
-    return data || [];
+    // Mapear para extraer el conteo de seguidores
+    const parchesMapped = (data || []).map(parche => ({
+      ...parche,
+      miembros: parche.parches_seguidores?.[0]?.count || 0,
+    }));
+
+    console.log(`✅ ${parchesMapped.length} parches cargados`);
+    return parchesMapped;
 
   } catch (error) {
     console.error('💥 Error en getParches:', error);
@@ -92,7 +162,7 @@ export const getParches = async (filters = {}) => {
 /**
  * Obtener un parche específico por ID
  * @param {string} id - ID del parche
- * @returns {Promise<Object|null>} Datos del parche con información del creador
+ * @returns {Promise<Object|null>} Datos del parche con información del creador y miembros
  */
 export const getParche = async (id) => {
   try {
@@ -121,8 +191,11 @@ export const getParche = async (id) => {
       throw error;
     }
 
-    console.log('✅ Parche cargado:', data.nombre);
-    return data;
+    // Cargar miembros del parche
+    const miembros = await getParcheMiembros(id);
+    
+    console.log('✅ Parche cargado:', data.nombre, `(${miembros.length} miembros)`);
+    return { ...data, miembros };
 
   } catch (error) {
     console.error('💥 Error en getParche:', error);
@@ -233,13 +306,26 @@ export const createParche = async (patchData, userId) => {
       throw new Error('ID de usuario requerido');
     }
 
+    // Si hay una imagen local, subirla primero
+    let fotoUrl = patchData.foto || '';
+    if (patchData.foto && patchData.fotoLocal) {
+      console.log('📤 Subiendo imagen del parche...');
+      const uploadResult = await uploadParcheImage(patchData.foto, patchData.nombre);
+      if (uploadResult.success) {
+        fotoUrl = uploadResult.url;
+      } else {
+        console.warn('⚠️ No se pudo subir la imagen, continuando sin foto');
+        fotoUrl = '';
+      }
+    }
+
     // Preparar datos para inserción
     const parcheToInsert = {
       nombre: patchData.nombre.trim(),
       descripcion: patchData.descripcion?.trim() || '',
       ciudad: patchData.ciudad?.trim() || '',
       disciplinas: Array.isArray(patchData.disciplinas) ? patchData.disciplinas : [],
-      foto: patchData.foto?.trim() || '',
+      foto: fotoUrl,
       miembros_aprox: parseInt(patchData.miembros_aprox) || 1,
       contacto: patchData.contacto || {},
       created_by: userId,
@@ -461,7 +547,201 @@ export const canEditParche = async (parcheId, userId) => {
 };
 
 // ==========================================
-// 📊 FUNCIONES DE VALIDACIÓN
+// � FUNCIONES DE MEMBRESÍA
+// ==========================================
+
+/**
+ * Unirse a un parche
+ * @param {string} parcheId - ID del parche
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<Object>} Resultado de la operación
+ */
+export const joinParche = async (parcheId, userId) => {
+  try {
+    console.log('➕ Uniéndose al parche:', parcheId);
+    
+    // Verificar si ya es seguidor/miembro
+    const { data: existing } = await supabase
+      .from('parches_seguidores')
+      .select('id')
+      .eq('parche_id', parcheId)
+      .eq('usuario_id', userId)
+      .single();
+    
+    if (existing) {
+      return { success: false, error: 'Ya eres miembro de este parche' };
+    }
+    
+    // Insertar nuevo seguidor
+    const { data, error } = await supabase
+      .from('parches_seguidores')
+      .insert([{
+        parche_id: parcheId,
+        usuario_id: userId
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('❌ Error uniéndose al parche:', error);
+      throw error;
+    }
+    
+    console.log('✅ Usuario unido al parche');
+    return { success: true, data };
+    
+  } catch (error) {
+    console.error('💥 Error en joinParche:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Salir de un parche
+ * @param {string} parcheId - ID del parche
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<Object>} Resultado de la operación
+ */
+export const leaveParche = async (parcheId, userId) => {
+  try {
+    console.log('➖ Saliendo del parche:', parcheId);
+    
+    const { error } = await supabase
+      .from('parches_seguidores')
+      .delete()
+      .eq('parche_id', parcheId)
+      .eq('usuario_id', userId);
+    
+    if (error) {
+      console.error('❌ Error saliendo del parche:', error);
+      throw error;
+    }
+    
+    console.log('✅ Usuario salió del parche');
+    return { success: true };
+    
+  } catch (error) {
+    console.error('💥 Error en leaveParche:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Obtener miembros de un parche
+ * @param {string} parcheId - ID del parche
+ * @returns {Promise<Array>} Lista de miembros
+ */
+export const getParcheMiembros = async (parcheId) => {
+  try {
+    const { data, error } = await supabase
+      .from('parches_seguidores')
+      .select(`
+        *,
+        usuario:usuarios!parches_seguidores_usuario_id_fkey (
+          id,
+          nombre,
+          avatar_url,
+          ciudad
+        )
+      `)
+      .eq('parche_id', parcheId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo miembros:', error);
+    return [];
+  }
+};
+
+// ==========================================
+// 📸 FUNCIONES DE IMÁGENES MÚLTIPLES
+// ==========================================
+
+/**
+ * Subir múltiples imágenes para un parche
+ * @param {string} parcheId - ID del parche
+ * @param {Array<string>} imageUris - URIs locales de las imágenes
+ * @returns {Promise<Object>} { success, urls, error }
+ */
+export const uploadMultipleParcheImages = async (parcheId, imageUris) => {
+  try {
+    console.log(`📸 Subiendo ${imageUris.length} imágenes para parche ${parcheId}`);
+    
+    const uploadedUrls = [];
+    
+    for (let i = 0; i < imageUris.length; i++) {
+      const uri = imageUris[i];
+      const timestamp = Date.now();
+      const fileName = `parches/${parcheId}/gallery_${timestamp}_${i}.jpg`;
+      
+      // Leer archivo como base64
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      });
+      
+      // Convertir a ArrayBuffer
+      const arrayBuffer = decode(base64);
+      
+      // Subir a Storage
+      const { data, error } = await supabase.storage
+        .from('posts')
+        .upload(fileName, arrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+      
+      if (error) {
+        console.error(`❌ Error subiendo imagen ${i + 1}:`, error.message);
+        continue; // Continuar con las siguientes
+      }
+      
+      // Obtener URL pública
+      const { data: urlData } = supabase.storage
+        .from('posts')
+        .getPublicUrl(fileName);
+      
+      uploadedUrls.push(urlData.publicUrl);
+      console.log(`✅ Imagen ${i + 1}/${imageUris.length} subida`);
+    }
+    
+    if (uploadedUrls.length === 0) {
+      return { success: false, error: 'No se pudo subir ninguna imagen' };
+    }
+    
+    // Actualizar el array de fotos en el parche
+    const { data: parche } = await supabase
+      .from('parches')
+      .select('fotos')
+      .eq('id', parcheId)
+      .single();
+    
+    const existingPhotos = parche?.fotos || [];
+    const newPhotos = [...existingPhotos, ...uploadedUrls];
+    
+    const { error: updateError } = await supabase
+      .from('parches')
+      .update({ fotos: newPhotos, updated_at: new Date().toISOString() })
+      .eq('id', parcheId);
+    
+    if (updateError) {
+      console.error('❌ Error actualizando fotos del parche:', updateError);
+      return { success: false, error: 'Imágenes subidas pero no guardadas en el parche' };
+    }
+    
+    console.log(`✅ ${uploadedUrls.length} imágenes guardadas en el parche`);
+    return { success: true, urls: uploadedUrls };
+    
+  } catch (error) {
+    console.error('💥 Error en uploadMultipleParcheImages:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ==========================================
+// �📊 FUNCIONES DE VALIDACIÓN
 // ==========================================
 
 /**

@@ -26,8 +26,10 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '../store/useAppStore';
 import { useRouteTracker } from '../hooks/useRouteTracker';
+import BackButton from '../components/common/BackButton';
 
 const { width } = Dimensions.get('window');
 
@@ -50,9 +52,16 @@ export default function RoutesHistory() {
 
   const fetchRoutes = async () => {
     setLoading(true);
+    
+    // Cargar rutas guardadas en AsyncStorage
     const data = await loadRoutes();
     setRoutes(data);
     setLoading(false);
+  };
+
+  // Navegar a ver la ruta en el mapa
+  const handleViewRoute = (route) => {
+    navigation.navigate('TrackingMain', { historicalRoute: route });
   };
 
   const handleRefresh = async () => {
@@ -220,6 +229,7 @@ export default function RoutesHistory() {
         {/* Actions */}
         <View style={styles.actionsRow}>
           <TouchableOpacity
+            onPress={() => handleViewRoute(item)}
             style={[styles.actionButton, { backgroundColor: theme.colors.background.tertiary }]}
           >
             <Ionicons name="eye-outline" size={20} color={theme.colors.primary} />
@@ -249,12 +259,7 @@ export default function RoutesHistory() {
     <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border.primary }]}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
             {t('screens.routesHistory.title')}
@@ -311,18 +316,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 60,
+    paddingRight: 16,
+    paddingTop: 12,
     paddingBottom: 16,
     borderBottomWidth: 0.5,
-    gap: 12,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerContent: {
     flex: 1,

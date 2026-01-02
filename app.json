@@ -8,13 +8,14 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a1a2e"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rollemos.pues",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para rastrear tus rutas de patinaje y mostrarte spots cercanos.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para grabar tus rutas completas mientras patinas.",
@@ -23,8 +24,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#1a1a2e"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.rollemos.pues",
@@ -32,8 +33,13 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION"
       ],
+      "foregroundService": {
+        "notificationTitle": "Rollemos Pues",
+        "notificationBody": "Grabando tu ruta en segundo plano"
+      },
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyAp3esnudg_4QNvVOUBONnxpY06TVXC2Ck"
@@ -53,7 +59,18 @@
     "owner": "ddpeream",
     "plugins": [
       "expo-localization",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Rollemos Pues necesita tu ubicación para grabar tus rutas completas mientras patinas.",
+          "locationAlwaysPermission": "Rollemos Pues necesita tu ubicación en segundo plano para grabar tus rutas de patinaje.",
+          "locationWhenInUsePermission": "Rollemos Pues necesita tu ubicación para rastrear tus rutas de patinaje y mostrarte spots cercanos.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ]
     ]
   }
 }

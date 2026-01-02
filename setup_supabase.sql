@@ -103,6 +103,7 @@ CREATE TABLE parches (
   nombre TEXT NOT NULL,
   ciudad TEXT NOT NULL,
   foto TEXT,
+  fotos TEXT[] DEFAULT '{}',
   disciplinas TEXT[] NOT NULL,
   descripcion TEXT,
   miembros_aprox INTEGER,
@@ -454,13 +455,17 @@ CREATE POLICY "Todos pueden ver tracking live" ON tracking_live
   FOR SELECT USING (true);
 
 CREATE POLICY "Usuario crea tracking live" ON tracking_live
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Usuario actualiza tracking live" ON tracking_live
-  FOR UPDATE USING (auth.uid() = user_id);
+  FOR UPDATE TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Usuario elimina tracking live" ON tracking_live
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE TO authenticated
+  USING (user_id = auth.uid());
 
 -- Verificaci¾n tracking_live
 SELECT
@@ -470,4 +475,286 @@ SELECT
 FROM pg_tables
 WHERE schemaname = 'public'
   AND tablename = 'tracking_live';
+
+
+-- =============================================
+-- REALTIME: PUBLICATION PARA tracking_live
+-- =============================================
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_publication
+    WHERE pubname = 'supabase_realtime'
+  ) THEN
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.tracking_live;
+    EXCEPTION
+      WHEN duplicate_object THEN
+        NULL;
+    END;
+  END IF;
+END
+$$;
+
+-- =============================================
+-- 8. TABLA: PARCHES_SEGUIDORES (Seguidores de parches/crews)
+-- =============================================
+
+DROP TABLE IF EXISTS parches_seguidores CASCADE;
+
+CREATE TABLE parches_seguidores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parche_id UUID NOT NULL REFERENCES parches(id) ON DELETE CASCADE,
+  usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(parche_id, usuario_id)
+);
+
+-- Índices para performance
+CREATE INDEX idx_parches_seguidores_parche ON parches_seguidores(parche_id);
+CREATE INDEX idx_parches_seguidores_usuario ON parches_seguidores(usuario_id);
+
+-- Habilitar RLS
+ALTER TABLE parches_seguidores ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Todos ven seguidores de parches" ON parches_seguidores;
+DROP POLICY IF EXISTS "Usuario sigue parche" ON parches_seguidores;
+DROP POLICY IF EXISTS "Usuario deja de seguir parche" ON parches_seguidores;
+
+CREATE POLICY "Todos ven seguidores de parches" ON parches_seguidores
+  FOR SELECT USING (true);
+
+CREATE POLICY "Usuario sigue parche" ON parches_seguidores
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Usuario deja de seguir parche" ON parches_seguidores
+  FOR DELETE USING (true);
+
+-- =============================================
+-- 9. TABLA: RODADAS (Eventos/Quedadas de grupo)
+-- =============================================
+
+DROP TABLE IF EXISTS rodadas_participantes CASCADE;
+DROP TABLE IF EXISTS rodadas CASCADE;
+
+CREATE TABLE rodadas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre TEXT NOT NULL,
+  descripcion TEXT,
+  
+  -- Punto de salida (obligatorio)
+  punto_salida_nombre TEXT NOT NULL,
+  punto_salida_lat NUMERIC NOT NULL,
+  punto_salida_lng NUMERIC NOT NULL,
+  punto_salida_place_id TEXT,
+  
+  -- Punto de llegada (opcional, puede ser igual a salida)
+  punto_llegada_nombre TEXT,
+  punto_llegada_lat NUMERIC,
+  punto_llegada_lng NUMERIC,
+  punto_llegada_place_id TEXT,
+  
+  -- Fecha y hora
+  fecha_inicio TIMESTAMPTZ NOT NULL,
+  hora_encuentro TEXT, -- Ej: "7:00 AM"
+  
+  -- Organizador
+  organizador_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  
+  -- Parche asociado (opcional)
+  parche_id UUID REFERENCES parches(id) ON DELETE SET NULL,
+  
+  -- Estado del evento
+  estado TEXT DEFAULT 'programada' CHECK (estado IN ('programada', 'en_curso', 'finalizada', 'cancelada')),
+  
+  -- Detalles adicionales
+  nivel_requerido TEXT, -- principiante, intermedio, avanzado, todos
+  distancia_estimada NUMERIC, -- en km
+  duracion_estimada INTEGER, -- en minutos
+  imagen TEXT, -- URL de imagen del evento
+  
+  -- Contadores
+  participantes_count INTEGER DEFAULT 0,
+  max_participantes INTEGER, -- NULL = sin límite
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Índices para performance
+CREATE INDEX idx_rodadas_organizador ON rodadas(organizador_id);
+CREATE INDEX idx_rodadas_parche ON rodadas(parche_id);
+CREATE INDEX idx_rodadas_fecha ON rodadas(fecha_inicio);
+CREATE INDEX idx_rodadas_estado ON rodadas(estado);
+CREATE INDEX idx_rodadas_ubicacion ON rodadas(punto_salida_lat, punto_salida_lng);
+
+-- Habilitar RLS
+ALTER TABLE rodadas ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Todos ven rodadas" ON rodadas;
+DROP POLICY IF EXISTS "Usuario crea rodada" ON rodadas;
+DROP POLICY IF EXISTS "Organizador edita rodada" ON rodadas;
+DROP POLICY IF EXISTS "Organizador elimina rodada" ON rodadas;
+
+CREATE POLICY "Todos ven rodadas" ON rodadas
+  FOR SELECT USING (true);
+
+CREATE POLICY "Usuario crea rodada" ON rodadas
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Organizador edita rodada" ON rodadas
+  FOR UPDATE USING (true);
+
+CREATE POLICY "Organizador elimina rodada" ON rodadas
+  FOR DELETE USING (true);
+
+-- =============================================
+-- 10. TABLA: RODADAS_PARTICIPANTES (Usuarios en rodadas)
+-- =============================================
+
+CREATE TABLE rodadas_participantes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rodada_id UUID NOT NULL REFERENCES rodadas(id) ON DELETE CASCADE,
+  usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  estado TEXT DEFAULT 'confirmado' CHECK (estado IN ('confirmado', 'pendiente', 'cancelado')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(rodada_id, usuario_id)
+);
+
+-- Índices para performance
+CREATE INDEX idx_rodadas_participantes_rodada ON rodadas_participantes(rodada_id);
+CREATE INDEX idx_rodadas_participantes_usuario ON rodadas_participantes(usuario_id);
+CREATE INDEX idx_rodadas_participantes_estado ON rodadas_participantes(estado);
+
+-- Habilitar RLS
+ALTER TABLE rodadas_participantes ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Todos ven participantes" ON rodadas_participantes;
+DROP POLICY IF EXISTS "Usuario se une a rodada" ON rodadas_participantes;
+DROP POLICY IF EXISTS "Usuario actualiza participacion" ON rodadas_participantes;
+DROP POLICY IF EXISTS "Usuario sale de rodada" ON rodadas_participantes;
+
+CREATE POLICY "Todos ven participantes" ON rodadas_participantes
+  FOR SELECT USING (true);
+
+CREATE POLICY "Usuario se une a rodada" ON rodadas_participantes
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Usuario actualiza participacion" ON rodadas_participantes
+  FOR UPDATE USING (true);
+
+CREATE POLICY "Usuario sale de rodada" ON rodadas_participantes
+  FOR DELETE USING (true);
+
+-- =============================================
+-- FUNCIÓN PARA ACTUALIZAR CONTADOR DE PARTICIPANTES
+-- =============================================
+
+DROP TRIGGER IF EXISTS trigger_update_rodadas_participantes_count ON rodadas_participantes;
+
+CREATE OR REPLACE FUNCTION update_rodadas_participantes_count()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE rodadas 
+    SET participantes_count = (
+      SELECT COUNT(*) FROM rodadas_participantes 
+      WHERE rodada_id = NEW.rodada_id AND estado = 'confirmado'
+    )
+    WHERE id = NEW.rodada_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE rodadas 
+    SET participantes_count = (
+      SELECT COUNT(*) FROM rodadas_participantes 
+      WHERE rodada_id = OLD.rodada_id AND estado = 'confirmado'
+    )
+    WHERE id = OLD.rodada_id;
+    RETURN OLD;
+  ELSIF TG_OP = 'UPDATE' THEN
+    UPDATE rodadas 
+    SET participantes_count = (
+      SELECT COUNT(*) FROM rodadas_participantes 
+      WHERE rodada_id = NEW.rodada_id AND estado = 'confirmado'
+    )
+    WHERE id = NEW.rodada_id;
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger para participantes_count
+CREATE TRIGGER trigger_update_rodadas_participantes_count
+  AFTER INSERT OR DELETE OR UPDATE ON rodadas_participantes
+  FOR EACH ROW
+  EXECUTE FUNCTION update_rodadas_participantes_count();
+
+-- =============================================
+-- REALTIME: PUBLICATION PARA rodadas
+-- =============================================
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_publication
+    WHERE pubname = 'supabase_realtime'
+  ) THEN
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.rodadas;
+    EXCEPTION
+      WHEN duplicate_object THEN
+        NULL;
+    END;
+    BEGIN
+      ALTER PUBLICATION supabase_realtime ADD TABLE public.rodadas_participantes;
+    EXCEPTION
+      WHEN duplicate_object THEN
+        NULL;
+    END;
+  END IF;
+END
+$$;
+
+-- =============================================
+-- VERIFICACIÓN FINAL - TODAS LAS TABLAS
+-- =============================================
+
+SELECT 
+  tablename,
+  tableowner
+FROM pg_tables 
+WHERE schemaname = 'public' 
+  AND tablename IN (
+    'usuarios',
+    'galeria', 
+    'galeria_likes', 
+    'galeria_comentarios', 
+    'parches', 
+    'parches_seguidores',
+    'spots', 
+    'spots_favoritos',
+    'tracking_live',
+    'rodadas',
+    'rodadas_participantes'
+  )
+ORDER BY tablename;
+
+-- =============================================
+-- ✅ LISTO! 
+-- Ejecuta este archivo completo en Supabase SQL Editor
+-- =============================================
+
+-- =============================================
+-- MIGRACIONES IDEMPOTENTES (se pueden ejecutar múltiples veces)
+-- Agregan columnas nuevas si no existen
+-- =============================================
+
+-- Agregar columna fotos a parches (para galería de imágenes del crew)
+ALTER TABLE parches ADD COLUMN IF NOT EXISTS fotos TEXT[] DEFAULT '{}';
 

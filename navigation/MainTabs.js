@@ -52,10 +52,10 @@ export default function MainTabs() {
   const closeUserMenu = () => setUserMenuVisible(false);
 
   const getFlag = () => {
-    if (currentLang === 'es') return '🇪🇸';
-    if (currentLang === 'en') return '🇺🇸';
-    if (currentLang === 'fr') return '🇫🇷';
-    return '🇪🇸';
+    if (currentLang === 'es') return '\uD83C\uDDE8\uD83C\uDDF4';
+    if (currentLang === 'en') return '\uD83C\uDDFA\uD83C\uDDF8';
+    if (currentLang === 'fr') return '\uD83C\uDDEB\uD83C\uDDF7';
+    return '\uD83C\uDFF3\uFE0F';
   };
 
   const handleNavigate = (routeName) => {
@@ -93,7 +93,7 @@ export default function MainTabs() {
           onPress={openLanguage}
           style={{
             padding: 8,
-            backgroundColor: 'rgba(0,0,0,0.05)',
+            backgroundColor: theme.colors.glass.background,
             borderRadius: 20,
             minWidth: 40,
             alignItems: 'center',
@@ -108,7 +108,7 @@ export default function MainTabs() {
           onPress={openUserMenu}
           style={{
             padding: 8,
-            backgroundColor: 'rgba(0,0,0,0.05)',
+            backgroundColor: theme.colors.glass.background,
             borderRadius: 20,
             minWidth: 40,
             alignItems: 'center',
@@ -116,7 +116,7 @@ export default function MainTabs() {
           }}
           hitSlop={8}
         >
-          <Ionicons name="ellipsis-horizontal" size={20} color="#333" />
+          <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.text.primary} />
         </Pressable>
       </View>
     ),
@@ -226,9 +226,9 @@ export default function MainTabs() {
             }}
           >
             {[
-              { id: 'es', label: '🇪🇸 Español' },
-              { id: 'en', label: '🇺🇸 English' },
-              { id: 'fr', label: '🇫🇷 Français' },
+              { id: 'es', label: '\uD83C\uDDE8\uD83C\uDDF4 Espanol' },
+              { id: 'en', label: '\uD83C\uDDFA\uD83C\uDDF8 English' },
+              { id: 'fr', label: '\uD83C\uDDEB\uD83C\uDDF7 Francais' },
             ].map((item) => (
               <TouchableOpacity
                 key={item.id}
@@ -302,3 +302,5 @@ export default function MainTabs() {
     </>
   );
 }
+
+

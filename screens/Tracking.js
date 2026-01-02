@@ -9,6 +9,7 @@
  * - Botón flotante animado (Start/Pause/Stop)
  * - Stats overlay con glassmorphism
  * - Animaciones fluidas
+ * - Rodadas (eventos) visibles en el mapa
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -22,20 +23,55 @@ import {
   StatusBar,
   Alert,
   SafeAreaView,
+  ScrollView,
+  Modal,
 } from 'react-native';
-import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Polyline, Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
 import { useRouteTracker, TRACKER_STATUS } from '../hooks/useRouteTracker';
+import { useRodadas } from '../hooks/useRodadas';
+import { useAuth } from '../hooks/useAuth';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
+import CreateRodadaModal from '../components/CreateRodadaModal';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Tracking() {
   const navigation = useNavigation();
-  const { theme } = useAppStore();
+  const route = useRoute();
+  const { theme, isDark } = useAppStore();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  
+  // 🛼 Rodadas
+  const { 
+    rodadas, 
+    fetchRodadas, 
+    isLoading: isLoadingRodadas,
+    getRodadasProximas,
+    getRodadasEnCurso,
+    unirseARodada,
+    salirDeRodada,
+    eliminarRodada,
+    verificarParticipacion,
+  } = useRodadas();
+  const [deletingRodada, setDeletingRodada] = useState(false);
+  const [showCreateRodadaModal, setShowCreateRodadaModal] = useState(false);
+  const [showRodadasList, setShowRodadasList] = useState(false);
+  const [showRodadaDetail, setShowRodadaDetail] = useState(false);
+  const [selectedRodada, setSelectedRodada] = useState(null);
+  const [joiningRodada, setJoiningRodada] = useState(null); // ID de rodada que se está uniendo
+  const [isUserJoined, setIsUserJoined] = useState(false); // Si el usuario está unido a la rodada seleccionada
+  const [checkingJoin, setCheckingJoin] = useState(false); // Verificando participación
+  const [ mapType, setMapType ] = useState('hybrid');
+
+  // 📜 Ruta histórica recibida desde RoutesHistory
+  const [historicalRoute, setHistoricalRoute] = useState(null);
+  
   const {
     status,
     currentLocation,
@@ -60,6 +96,135 @@ export default function Tracking() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const statsOpacity = useRef(new Animated.Value(1)).current;
 
+  // 📜 Recibir ruta histórica desde params
+  useEffect(() => {
+    if (route.params?.historicalRoute) {
+      console.log('📜 Ruta histórica recibida:', route.params.historicalRoute.id);
+      setHistoricalRoute(route.params.historicalRoute);
+      
+      // Ajustar mapa para mostrar toda la ruta histórica
+      if (mapRef.current && route.params.historicalRoute.coordinates?.length > 0) {
+        setTimeout(() => {
+          mapRef.current.fitToCoordinates(route.params.historicalRoute.coordinates, {
+            edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
+            animated: true,
+          });
+        }, 500);
+      }
+    }
+  }, [route.params?.historicalRoute]);
+
+  // 🛼 Cargar rodadas al entrar a la pantalla
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🛼 Cargando rodadas...');
+      fetchRodadas({ soloProximas: false });
+    }, [])
+  );
+
+  // 📡 Suscribirse a cambios en tiempo real de rodadas (solo cuando se muestre el mapa)
+  useRealtimeSubscription('rodadas', (payload) => {
+    console.log('🏃 Nueva rodada o cambio detectado');
+    fetchRodadas({ soloProximas: false });
+  }, showRodadasList);
+
+  // 📡 Suscribirse a cambios en participantes de rodadas
+  useRealtimeSubscription('rodadas_participantes', (payload) => {
+    console.log('👥 Participantes de rodada actualizados');
+    fetchRodadas({ soloProximas: false });
+  }, showRodadasList);
+
+  // 🛼 Función para unirse a una rodada
+  const handleJoinRodada = async (rodada) => {
+    if (!user?.id) {
+      Alert.alert('Iniciar sesión', 'Debes iniciar sesión para unirte a una rodada');
+      return;
+    }
+    
+    // El creador no puede unirse a su propia rodada
+    if (rodada.organizador_id === user.id) {
+      Alert.alert('Eres el organizador', 'No puedes unirte a tu propia rodada');
+      return;
+    }
+
+    setJoiningRodada(rodada.id);
+    try {
+      const result = await unirseARodada(rodada.id, user.id);
+      if (result.success) {
+        if (result.alreadyJoined) {
+          Alert.alert('Ya estás unido', `Ya eres parte de "${rodada.nombre}"`);
+        } else {
+          Alert.alert('¡Te uniste!', `Te has unido a "${rodada.nombre}"`);
+        }
+        fetchRodadas({ soloProximas: false }); // Refrescar lista
+      } else {
+        Alert.alert('Error', result.error || 'No se pudo unir a la rodada');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Ocurrió un error al unirse');
+    } finally {
+      setJoiningRodada(null);
+    }
+  };
+
+  // 🛼 Función para salir de una rodada
+  const handleLeaveRodada = async (rodada) => {
+    if (!user?.id) return;
+
+    Alert.alert(
+      'Abandonar rodada',
+      `¿Seguro que quieres abandonar "${rodada.nombre}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Abandonar',
+          style: 'destructive',
+          onPress: async () => {
+            setJoiningRodada(rodada.id);
+            try {
+              const result = await salirDeRodada(rodada.id, user.id);
+              if (result.success) {
+                setIsUserJoined(false);
+                Alert.alert('👋', `Has abandonado "${rodada.nombre}"`);
+                fetchRodadas({ soloProximas: false });
+              } else {
+                Alert.alert('Error', result.error || 'No se pudo abandonar la rodada');
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Ocurrió un error al abandonar');
+            } finally {
+              setJoiningRodada(null);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // 🛼 Abrir detalle de rodada
+  const handleOpenRodadaDetail = async (rodada) => {
+    setSelectedRodada(rodada);
+    setShowRodadasList(false);
+    setShowRodadaDetail(true);
+    
+    // Verificar si el usuario está unido
+    if (user?.id && rodada.organizador_id !== user.id) {
+      setCheckingJoin(true);
+      const joined = await verificarParticipacion(rodada.id, user.id);
+      setIsUserJoined(joined);
+      setCheckingJoin(false);
+    } else {
+      setIsUserJoined(false);
+    }
+  };
+
+  // Función para cerrar/ocultar la ruta histórica
+  const clearHistoricalRoute = () => {
+    setHistoricalRoute(null);
+    // Limpiar el param para evitar que vuelva a aparecer
+    navigation.setParams({ historicalRoute: undefined });
+  };
+
   // Pedir permisos al montar la pantalla
   useEffect(() => {
     const initPermissions = async () => {
@@ -74,6 +239,40 @@ export default function Tracking() {
     };
     initPermissions();
   }, [hasPermission, requestLocationPermission]);
+
+  // 📍 Centrar mapa en ubicación del usuario al entrar a la pantalla
+  useFocusEffect(
+    React.useCallback(() => {
+      const centerOnUserLocation = async () => {
+        try {
+          console.log('📍 Centrando mapa en ubicación del usuario...');
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          
+          if (location && mapRef.current) {
+            mapRef.current.animateToRegion(
+              {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                latitudeDelta: 0.05, // Vista más amplia para ver la ciudad
+                longitudeDelta: 0.05,
+              },
+              1000
+            );
+            console.log('✅ Mapa centrado en:', location.coords.latitude, location.coords.longitude);
+          }
+        } catch (error) {
+          console.error('❌ Error obteniendo ubicación inicial:', error);
+        }
+      };
+
+      // Solo centrar si no hay ruta histórica
+      if (!route.params?.historicalRoute) {
+        centerOnUserLocation();
+      }
+    }, [route.params?.historicalRoute])
+  );
 
   // Animación de pulso para botón de tracking
   useEffect(() => {
@@ -221,32 +420,118 @@ export default function Tracking() {
   };
 
   const buttonConfig = getButtonConfig();
+  
+  // 📏 Función helper para calcular distancia entre dos puntos (en metros)
+  const getDistanceBetweenPoints = (coord1, coord2) => {
+    if (!coord1 || !coord2) return 0;
+    const R = 6371000; // Radio de la Tierra en metros
+    const lat1 = coord1.latitude * Math.PI / 180;
+    const lat2 = coord2.latitude * Math.PI / 180;
+    const deltaLat = (coord2.latitude - coord1.latitude) * Math.PI / 180;
+    const deltaLon = (coord2.longitude - coord1.longitude) * Math.PI / 180;
+    
+    const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+              Math.cos(lat1) * Math.cos(lat2) *
+              Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+  
+  // 🚩 Mostrar bandera solo si estamos a más de 50 metros del inicio
+  const lastCoord = routeCoordinates.length > 0 ? routeCoordinates[routeCoordinates.length - 1] : null;
+  const firstCoord = routeCoordinates.length > 0 ? routeCoordinates[0] : null;
+  const distanceFromStart = (firstCoord && lastCoord && routeCoordinates.length > 2)
+    ? getDistanceBetweenPoints(firstCoord, lastCoord)
+    : 0;
+  // La bandera aparece solo cuando hay distancia suficiente (50m) para verse separada del patín
+  // y cuando hay más de 5 puntos de ruta (evitar falsos positivos por GPS impreciso)
+  const showStartFlag = routeCoordinates.length > 5 && distanceFromStart > 50;
+  
+  const statsCardStyle = {
+    backgroundColor: isDark ? 'rgba(77, 215, 208, 0.08)' : 'rgba(15, 23, 42, 0.04)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
+  };
+  const statsContainerStyle = {
+    backgroundColor: isDark ? 'rgba(12, 16, 24, 0.7)' : 'rgba(255, 255, 255, 0.75)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+  };
+  const statsTextPrimary = isDark ? '#F8FAFC' : '#0F172A';
+  const statsTextSecondary = isDark ? '#E2E8F0' : '#1E293B';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.background.primary },
+      ]}
+    >
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Mapa */}
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
-        customMapStyle={theme.isDark ? darkMapStyle : []}
+        mapType={mapType}
+        customMapStyle={isDark ? darkMapStyle : []}
         showsUserLocation
         showsMyLocationButton={false}
         followsUserLocation={status === TRACKER_STATUS.TRACKING}
         initialRegion={{
-          latitude: currentLocation?.latitude || 4.7110,
+          latitude: currentLocation?.latitude || 4.711,
           longitude: currentLocation?.longitude || -74.0055,
           latitudeDelta: 0.015,
           longitudeDelta: 0.015,
         }}
         onError={(err) => {
-          console.error('❌ Error en MapView:', err);
-          Alert.alert(t('screens.tracking.mapErrorTitle'), t('screens.tracking.mapErrorMessage'));
+          console.error("❌ Error en MapView:", err);
+          Alert.alert(
+            t("screens.tracking.mapErrorTitle"),
+            t("screens.tracking.mapErrorMessage")
+          );
         }}
       >
-        {/* Polyline de la ruta */}
+        {/* 📜 Polyline de la ruta HISTÓRICA (gris) */}
+        {historicalRoute?.coordinates?.length > 1 && (
+          <Polyline
+            coordinates={historicalRoute.coordinates}
+            strokeColor="#888888"
+            strokeWidth={4}
+            lineCap="round"
+            lineJoin="round"
+            lineDashPattern={[0]} // Línea sólida
+          />
+        )}
+
+        {/* 📜 Marcador de inicio de ruta histórica */}
+        {historicalRoute?.coordinates?.length > 0 && (
+          <Marker coordinate={historicalRoute.coordinates[0]}>
+            <View
+              style={[styles.historicalMarker, { backgroundColor: "#888888" }]}
+            >
+              <Ionicons name="flag" size={16} color="#FFFFFF" />
+            </View>
+          </Marker>
+        )}
+
+        {/* 📜 Marcador de fin de ruta histórica */}
+        {historicalRoute?.coordinates?.length > 1 && (
+          <Marker
+            coordinate={
+              historicalRoute.coordinates[
+                historicalRoute.coordinates.length - 1
+              ]
+            }
+          >
+            <View
+              style={[styles.historicalMarker, { backgroundColor: "#666666" }]}
+            >
+              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+            </View>
+          </Marker>
+        )}
+
+        {/* Polyline de la ruta ACTUAL (color primario) */}
         {routeCoordinates.length > 1 && (
           <Polyline
             coordinates={routeCoordinates}
@@ -257,249 +542,1317 @@ export default function Tracking() {
           />
         )}
 
-        {/* Marcador de inicio */}
-        {routeCoordinates.length > 0 && (
+        {/* 🚩 Marcador de inicio de ruta actual (solo si estamos a más de 20m) */}
+        {showStartFlag && (
           <Marker coordinate={routeCoordinates[0]}>
-            <View style={[styles.startMarker, { backgroundColor: '#34C759' }]}> 
-              <MaterialCommunityIcons name="roller-skate" size={20} color="#FFFFFF" />
+            <View style={[styles.startMarker, { backgroundColor: "#34C759" }]}>
+              <Ionicons name="flag" size={16} color="#FFFFFF" />
             </View>
           </Marker>
         )}
+
+        {/* 🛼 Marcador de posición actual (patín que se mueve) */}
+        {routeCoordinates.length > 0 && status !== TRACKER_STATUS.IDLE && (
+          <Marker
+            coordinate={routeCoordinates[routeCoordinates.length - 1]}
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View
+              style={[
+                styles.currentPositionMarker,
+                { backgroundColor: theme.colors.primary },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="roller-skate"
+                size={18}
+                color={theme.colors.onPrimary}
+              />
+            </View>
+          </Marker>
+        )}
+
+        {/* 🛼 Marcadores de Rodadas (salida) */}
+        {rodadas.map((rodada) => {
+          const isEnCurso = rodada.estado === "en_curso";
+          // Colores más intensos para mejor visibilidad en tema claro
+          const markerColor = isEnCurso ? "#D32F2F" : "#2E7D32"; // Rojo oscuro en curso, Verde oscuro programada
+          const calloutColor = isEnCurso ? "#B71C1C" : "#1B5E20"; // Aún más oscuro para el callout
+
+          return (
+            <React.Fragment key={rodada.id}>
+              {/* Marcador de punto de salida */}
+              <Marker
+                coordinate={{
+                  latitude: parseFloat(rodada.punto_salida_lat),
+                  longitude: parseFloat(rodada.punto_salida_lng),
+                }}
+                onPress={() => setSelectedRodada(rodada)}
+              >
+                <View style={styles.rodadaMarkerContainer}>
+                  {/* Flecha/Callout con nombre */}
+                  <View
+                    style={[
+                      styles.rodadaCallout,
+                      { backgroundColor: calloutColor },
+                    ]}
+                  >
+                    <Text style={styles.rodadaCalloutText} numberOfLines={1}>
+                      {rodada.nombre?.substring(0, 20)}
+                      {rodada.nombre?.length > 20 ? "..." : ""}
+                    </Text>
+                    <View
+                      style={[
+                        styles.rodadaCalloutArrow,
+                        { borderTopColor: calloutColor },
+                      ]}
+                    />
+                  </View>
+                  {/* Marcador circular */}
+                  <View
+                    style={[
+                      styles.rodadaMarker,
+                      { backgroundColor: markerColor },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="account-group"
+                      size={18}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                </View>
+              </Marker>
+
+              {/* Marcador de punto de llegada (si existe) */}
+              {rodada.punto_llegada_lat && rodada.punto_llegada_lng && (
+                <Marker
+                  coordinate={{
+                    latitude: parseFloat(rodada.punto_llegada_lat),
+                    longitude: parseFloat(rodada.punto_llegada_lng),
+                  }}
+                  onPress={() => setSelectedRodada(rodada)}
+                >
+                  <View style={styles.rodadaMarkerContainer}>
+                    {/* Flecha/Callout de llegada */}
+                    <View
+                      style={[
+                        styles.rodadaCallout,
+                        { backgroundColor: "#FFD700" },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.rodadaCalloutText, { color: "#000" }]}
+                        numberOfLines={1}
+                      >
+                        🏁 Llegada
+                      </Text>
+                      <View
+                        style={[
+                          styles.rodadaCalloutArrow,
+                          { borderTopColor: "#FFD700" },
+                        ]}
+                      />
+                    </View>
+                    {/* Marcador de llegada */}
+                    <View
+                      style={[
+                        styles.rodadaMarker,
+                        { backgroundColor: "#FFD700" },
+                      ]}
+                    >
+                      <Ionicons name="flag-outline" size={18} color="#000" />
+                    </View>
+                  </View>
+                </Marker>
+              )}
+            </React.Fragment>
+          );
+        })}
       </MapView>
 
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.background.overlay }]}>
-        <TouchableOpacity 
-          onPress={() => {
-            console.log('🔙 Volviendo a rutinas...');
-            navigation.navigate('RoutesHistoryScreen');
-          }}
-          style={styles.headerButton}
+      {/* 📜 Badge de ruta histórica */}
+      {historicalRoute && (
+        <View
+          style={[
+            styles.historicalBadge,
+            {
+              backgroundColor: isDark
+                ? "rgba(136, 136, 136, 0.95)"
+                : "rgba(100, 100, 100, 0.95)",
+            },
+          ]}
         >
-          <Ionicons name="list-outline" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-          {status === TRACKER_STATUS.IDLE && t('screens.tracking.statusIdle')}
-          {status === TRACKER_STATUS.TRACKING && t('screens.tracking.statusTracking')}
-          {status === TRACKER_STATUS.PAUSED && t('screens.tracking.statusPaused')}
-        </Text>
+          <View style={styles.historicalBadgeContent}>
+            <Ionicons name="time-outline" size={18} color="#FFFFFF" />
+            <View style={styles.historicalBadgeText}>
+              <Text style={styles.historicalBadgeTitle} numberOfLines={1}>
+                {historicalRoute.name || "Ruta guardada"}
+              </Text>
+              <Text style={styles.historicalBadgeStats}>
+                {(historicalRoute.distance / 1000).toFixed(1)} km •{" "}
+                {Math.floor(historicalRoute.duration / 60)} min
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={clearHistoricalRoute}
+            style={styles.historicalBadgeClose}
+          >
+            <Ionicons name="close" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Header */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: isDark
+              ? "rgba(11, 15, 20, 0.85)"
+              : "rgba(255, 255, 255, 0.9)",
+          },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => {
-            if (mapRef.current && currentLocation) {
-              mapRef.current.animateToRegion({
-                latitude: currentLocation.latitude,
-                longitude: currentLocation.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
+            console.log("🔙 Volviendo a rutinas...");
+            navigation.navigate("RoutesHistoryScreen");
+          }}
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
+          ]}
+        >
+          <Ionicons
+            name="list-outline"
+            size={24}
+            color={theme.colors.primary}
+          />
+        </TouchableOpacity>
+
+        {/* Botón listar rodadas */}
+        <TouchableOpacity
+          onPress={() => setShowRodadasList(!showRodadasList)}
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: showRodadasList
+                ? theme.colors.primary
+                : isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="calendar-clock"
+            size={24}
+            color={showRodadasList ? "#FFFFFF" : theme.colors.primary}
+          />
+        </TouchableOpacity>
+
+        {/* Botón crear rodada */}
+        <TouchableOpacity
+          onPress={() => setShowCreateRodadaModal(true)}
+          style={[
+            styles.headerButton,
+            styles.createRodadaButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
+        >
+          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <MaterialCommunityIcons
+            name="account-group"
+            size={16}
+            color="#FFFFFF"
+            style={{ marginLeft: 2 }}
+          />
+        </TouchableOpacity>
+
+        {/* Botón para cambiar tipo de mapa */}
+        {/* Botón cambiar tipo de mapa */}
+        <TouchableOpacity
+          onPress={() =>
+            setMapType((prev) => (prev === "standard" ? "hybrid" : "standard"))
+          }
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
+          ]}
+        >
+          <Ionicons
+            name={mapType === "hybrid" ? "map-outline" : "earth-outline"}
+            size={24}
+            color={theme.colors.primary}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={async () => {
+            try {
+              // Obtener ubicación actual directamente
+              const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High,
               });
+              if (mapRef.current && location?.coords) {
+                mapRef.current.animateToRegion(
+                  {
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  },
+                  500
+                );
+              }
+            } catch (err) {
+              console.log("Error obteniendo ubicación:", err);
+              // Fallback a currentLocation del hook
+              if (mapRef.current && currentLocation) {
+                mapRef.current.animateToRegion(
+                  {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  },
+                  500
+                );
+              }
             }
           }}
-          style={styles.headerButton}
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
+          ]}
         >
           <Ionicons name="locate" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* Stats Overlay */}
-      <Animated.View
-        style={[
-          styles.statsContainer,
-          { backgroundColor: theme.colors.background.overlay, opacity: statsOpacity },
-        ]}
-        pointerEvents={showStats ? 'auto' : 'none'}
-      >
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Ionicons name="speedometer-outline" size={24} color={theme.colors.primary} />
-            <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>
-              {speed.toFixed(1)}
+      {/* 🛼 Panel de lista de rodadas */}
+      {showRodadasList && (
+        <View
+          style={[
+            styles.rodadasListPanel,
+            {
+              backgroundColor: isDark
+                ? "rgba(12, 16, 24, 0.95)"
+                : "rgba(255, 255, 255, 0.98)",
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.1)"
+                : "rgba(0, 0, 0, 0.08)",
+            },
+          ]}
+        >
+          <View style={styles.rodadasListHeader}>
+            <Text
+              style={[
+                styles.rodadasListTitle,
+                { color: theme.colors.text.primary },
+              ]}
+            >
+              🛼 Rodadas Programadas
             </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
-              {t('screens.tracking.speedUnit')}
-            </Text>
+            <TouchableOpacity onPress={() => setShowRodadasList(false)}>
+              <Ionicons
+                name="close"
+                size={24}
+                color={theme.colors.text.secondary}
+              />
+            </TouchableOpacity>
           </View>
 
-          <View style={[styles.statDivider, { backgroundColor: theme.colors.border.primary }]} />
+          {isLoadingRodadas ? (
+            <View style={styles.rodadasListEmpty}>
+              <Text style={{ color: theme.colors.text.secondary }}>
+                Cargando rodadas...
+              </Text>
+            </View>
+          ) : rodadas.length === 0 ? (
+            <View style={styles.rodadasListEmpty}>
+              <MaterialCommunityIcons
+                name="calendar-blank"
+                size={48}
+                color={theme.colors.text.disabled}
+              />
+              <Text
+                style={[
+                  styles.rodadasListEmptyText,
+                  { color: theme.colors.text.secondary },
+                ]}
+              >
+                No hay rodadas programadas
+              </Text>
+              <Text
+                style={[
+                  styles.rodadasListEmptySubtext,
+                  { color: theme.colors.text.disabled },
+                ]}
+              >
+                ¡Crea la primera rodada!
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.rodadasListScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              {rodadas.map((rodada) => {
+                const isOrganizer = rodada.organizador_id === user?.id;
+                const isJoining = joiningRodada === rodada.id;
 
-          <View style={styles.statItem}>
-            <Ionicons name="navigate-outline" size={24} color={theme.colors.primary} />
-            <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>
-              {formatDistance(distance)}
-            </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
-              {t('screens.tracking.distance')}
-            </Text>
-          </View>
+                return (
+                  <View
+                    key={rodada.id}
+                    style={[
+                      styles.rodadaListItem,
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(255,255,255,0.05)"
+                          : "rgba(0,0,0,0.03)",
+                        borderColor: isDark
+                          ? "rgba(255,255,255,0.08)"
+                          : "rgba(0,0,0,0.06)",
+                      },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      style={styles.rodadaListItemMain}
+                      onPress={() => {
+                        setSelectedRodada(rodada);
+                        setShowRodadasList(false);
+                        // Centrar mapa en la rodada
+                        if (mapRef.current && rodada.punto_salida_lat) {
+                          mapRef.current.animateToRegion({
+                            latitude: rodada.punto_salida_lat,
+                            longitude: rodada.punto_salida_lng,
+                            latitudeDelta: 0.01,
+                            longitudeDelta: 0.01,
+                          });
+                        }
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.rodadaListItemStatus,
+                          {
+                            backgroundColor:
+                              rodada.estado === "en_curso"
+                                ? "#FF3B30"
+                                : "#34C759",
+                          },
+                        ]}
+                      />
+                      <View style={styles.rodadaListItemContent}>
+                        <Text
+                          style={[
+                            styles.rodadaListItemName,
+                            { color: theme.colors.text.primary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {rodada.nombre}
+                          {isOrganizer && (
+                            <Text style={{ color: theme.colors.primary }}>
+                              {" "}
+                              (tuya)
+                            </Text>
+                          )}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.rodadaListItemDetails,
+                            { color: theme.colors.text.secondary },
+                          ]}
+                        >
+                          📅{" "}
+                          {new Date(rodada.fecha_inicio).toLocaleDateString(
+                            "es-CO",
+                            { weekday: "short", day: "numeric", month: "short" }
+                          )}
+                          {" • "}🕐 {rodada.hora_encuentro || "---"}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.rodadaListItemDetails,
+                            { color: theme.colors.text.disabled },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          📍 {rodada.punto_salida_nombre}
+                        </Text>
+                      </View>
+                      <View style={styles.rodadaListItemParticipants}>
+                        <MaterialCommunityIcons
+                          name="account-group"
+                          size={16}
+                          color={theme.colors.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.rodadaListItemCount,
+                            { color: theme.colors.primary },
+                          ]}
+                        >
+                          {rodada.participantes_count || 0}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
 
-          <View style={[styles.statDivider, { backgroundColor: theme.colors.border.primary }]} />
-
-          <View style={styles.statItem}>
-            <Ionicons name="time-outline" size={24} color={theme.colors.primary} />
-            <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>
-              {formatDuration(duration)}
-            </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.text.tertiary }]}>
-              {t('screens.tracking.time')}
-            </Text>
-          </View>
+                    {/* Botón de acción - Ver detalle */}
+                    <TouchableOpacity
+                      style={[
+                        styles.rodadaActionButton,
+                        { backgroundColor: theme.colors.primary },
+                      ]}
+                      onPress={() => handleOpenRodadaDetail(rodada)}
+                    >
+                      <Ionicons name="eye" size={18} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
+      )}
 
-        <View style={[styles.secondaryStatsRow, { marginTop: 16 }]}>
-          <View style={styles.secondaryStatItem}>
-            <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
-              {t('screens.tracking.avgSpeed')}
-            </Text>
-            <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
-              {avgSpeed.toFixed(1)} km/h
-            </Text>
+      {/* 🛼 Badge de rodada seleccionada */}
+      {selectedRodada && (
+        <View
+          style={[
+            styles.rodadaBadge,
+            {
+              backgroundColor: isDark
+                ? "rgba(52, 199, 89, 0.95)"
+                : "rgba(52, 199, 89, 0.95)",
+            },
+          ]}
+        >
+          <View style={styles.rodadaBadgeContent}>
+            <MaterialCommunityIcons
+              name="account-group"
+              size={20}
+              color="#FFFFFF"
+            />
+            <View style={styles.rodadaBadgeText}>
+              <Text style={styles.rodadaBadgeTitle} numberOfLines={1}>
+                {selectedRodada.nombre}
+              </Text>
+              <Text style={styles.rodadaBadgeStats}>
+                📍 {selectedRodada.punto_salida_nombre?.substring(0, 30)}...
+              </Text>
+              <Text style={styles.rodadaBadgeStats}>
+                📅{" "}
+                {new Date(selectedRodada.fecha_inicio).toLocaleDateString(
+                  "es-CO"
+                )}{" "}
+                • {selectedRodada.hora_encuentro || "---"}
+              </Text>
+              <Text style={styles.rodadaBadgeStats}>
+                👥 {selectedRodada.participantes_count || 0} participantes •{" "}
+                {selectedRodada.nivel_requerido || "Todos"}
+              </Text>
+            </View>
           </View>
-
-          <View style={styles.secondaryStatItem}>
-            <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
-              {t('screens.tracking.maxSpeed')}
-            </Text>
-            <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
-              {maxSpeed.toFixed(1)} km/h
-            </Text>
-          </View>
-
-          <View style={styles.secondaryStatItem}>
-            <Text style={[styles.secondaryStatLabel, { color: theme.colors.text.tertiary }]}>
-              {t('screens.tracking.calories')}
-            </Text>
-            <Text style={[styles.secondaryStatValue, { color: theme.colors.text.primary }]}>
-              {calories} kcal
-            </Text>
-          </View>
+          <TouchableOpacity
+            onPress={() => setSelectedRodada(null)}
+            style={styles.rodadaBadgeClose}
+          >
+            <Ionicons name="close" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
-      </Animated.View>
+      )}
 
-      {/* Control Buttons */}
-      <View style={styles.controlsContainer}>
-        {/* Botón de Stop (solo visible cuando está tracking o pausado) */}
-        {status !== TRACKER_STATUS.IDLE && (
-          <TouchableOpacity
-            onPress={handleStopTracking}
-            style={[styles.stopButton, { backgroundColor: theme.colors.background.overlay }]}
-          >
-            <Ionicons name="stop" size={28} color="#FF3B30" />
-          </TouchableOpacity>
-        )}
+      {/* Stats Overlay - Diseño compacto horizontal */}
+      {status !== TRACKER_STATUS.IDLE && (
+        <Animated.View
+          style={[
+            styles.statsContainer,
+            statsContainerStyle,
+            { opacity: statsOpacity },
+          ]}
+          pointerEvents={showStats ? "auto" : "none"}
+        >
+          {/* Fila principal de stats */}
+          <View style={styles.mainStatsRow}>
+            <View style={styles.mainStatItem}>
+              <Text
+                style={[styles.mainStatValue, { color: theme.colors.primary }]}
+              >
+                {formatDistance(distance)}
+              </Text>
+              <Text
+                style={[styles.mainStatLabel, { color: statsTextSecondary }]}
+              >
+                {t("screens.tracking.distance")}
+              </Text>
+            </View>
 
-        {/* Botón Principal (Start/Pause/Resume) */}
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <TouchableOpacity
-            onPress={handleMainButton}
-            style={[styles.mainButton, { backgroundColor: buttonConfig.color }]}
-            activeOpacity={0.8}
-          >
-            <Ionicons name={buttonConfig.icon} size={40} color="#FFFFFF" />
-          </TouchableOpacity>
+            <View
+              style={[
+                styles.statDividerVertical,
+                { backgroundColor: theme.colors.border },
+              ]}
+            />
+
+            <View style={styles.mainStatItem}>
+              <Text style={[styles.mainStatValue, { color: statsTextPrimary }]}>
+                {formatDuration(duration)}
+              </Text>
+              <Text
+                style={[styles.mainStatLabel, { color: statsTextSecondary }]}
+              >
+                {t("screens.tracking.time")}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.statDividerVertical,
+                { backgroundColor: theme.colors.border },
+              ]}
+            />
+
+            <View style={styles.mainStatItem}>
+              <Text style={[styles.mainStatValue, { color: statsTextPrimary }]}>
+                {speed.toFixed(1)}
+              </Text>
+              <Text
+                style={[styles.mainStatLabel, { color: statsTextSecondary }]}
+              >
+                km/h
+              </Text>
+            </View>
+          </View>
+
+          {/* Fila secundaria compacta */}
+          <View style={styles.secondaryStatsRow}>
+            <View style={styles.miniStatItem}>
+              <Ionicons
+                name="trending-up"
+                size={12}
+                color={theme.colors.primary}
+              />
+              <Text
+                style={[styles.miniStatValue, { color: statsTextSecondary }]}
+              >
+                {avgSpeed.toFixed(1)}
+              </Text>
+            </View>
+            <View style={styles.miniStatItem}>
+              <Ionicons name="flash" size={12} color="#FF9500" />
+              <Text
+                style={[styles.miniStatValue, { color: statsTextSecondary }]}
+              >
+                {maxSpeed.toFixed(1)}
+              </Text>
+            </View>
+            <View style={styles.miniStatItem}>
+              <Ionicons name="flame" size={12} color="#FF3B30" />
+              <Text
+                style={[styles.miniStatValue, { color: statsTextSecondary }]}
+              >
+                {calories}
+              </Text>
+            </View>
+          </View>
         </Animated.View>
+      )}
+
+      {/* Control Buttons - Diseño elegante */}
+      <View style={styles.controlsContainer}>
+        <View
+          style={[
+            styles.controlsWrapper,
+            {
+              backgroundColor: isDark
+                ? "rgba(12, 16, 24, 0.85)"
+                : "rgba(255, 255, 255, 0.9)",
+            },
+          ]}
+        >
+          {/* Botón de Stop */}
+          {status !== TRACKER_STATUS.IDLE && (
+            <TouchableOpacity
+              onPress={handleStopTracking}
+              style={styles.stopButton}
+              activeOpacity={0.7}
+            >
+              <View style={styles.stopButtonInner}>
+                <Ionicons
+                  name="stop"
+                  size={20}
+                  color={theme.colors.onSecondary}
+                />
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* Botón Principal (Start/Pause/Resume) */}
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <TouchableOpacity
+              onPress={handleMainButton}
+              style={[
+                styles.mainButton,
+                { backgroundColor: buttonConfig.color },
+                status === TRACKER_STATUS.IDLE && styles.mainButtonLarge,
+              ]}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={buttonConfig.icon}
+                size={status === TRACKER_STATUS.IDLE ? 32 : 28}
+                color={theme.colors.onPrimary}
+              />
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Placeholder para balance cuando hay botón stop */}
+          {status !== TRACKER_STATUS.IDLE && (
+            <View style={styles.placeholderButton} />
+          )}
+        </View>
       </View>
 
       {/* Error Message */}
       {error && (
-        <View style={[styles.errorContainer, { backgroundColor: theme.colors.background.overlay }]}>
+        <View
+          style={[
+            styles.errorContainer,
+            {
+              backgroundColor: isDark
+                ? "rgba(11, 15, 20, 0.9)"
+                : "rgba(255, 255, 255, 0.95)",
+            },
+          ]}
+        >
           <Ionicons name="alert-circle" size={20} color="#FF3B30" />
-          <Text style={[styles.errorText, { color: '#FF3B30' }]}>
+          <Text
+            style={[styles.errorText, { color: theme.colors.text.primary }]}
+          >
             {error}
           </Text>
           <TouchableOpacity
             onPress={() => {
-              console.log('🔄 Reintentando permisos...');
+              console.log("🔄 Reintentando permisos...");
               requestLocationPermission();
             }}
             style={{ paddingLeft: 12 }}
           >
-            <Ionicons name="refresh" size={18} color="#FF3B30" />
+            <Ionicons name="refresh" size={18} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
       )}
+
+      {/* 🛼 Modal para crear rodada */}
+      <CreateRodadaModal
+        visible={showCreateRodadaModal}
+        onClose={() => setShowCreateRodadaModal(false)}
+        onSuccess={(rodada) => {
+          console.log("✅ Rodada creada:", rodada);
+          Alert.alert(
+            "🛼 ¡Rodada creada!",
+            `"${rodada.nombre}" ha sido programada. Los patinadores podrán verla en el mapa.`,
+            [{ text: "Genial!" }]
+          );
+          fetchRodadas(); // Recargar lista
+        }}
+      />
+
+      {/* 🛼 Modal de detalle de rodada */}
+      <Modal
+        visible={showRodadaDetail}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRodadaDetail(false)}
+      >
+        <View style={styles.rodadaDetailOverlay}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setShowRodadaDetail(false)}
+          />
+          <View
+            style={[
+              styles.rodadaDetailPanel,
+              {
+                backgroundColor: isDark
+                  ? "rgba(12, 16, 24, 0.98)"
+                  : "rgba(255, 255, 255, 0.98)",
+                borderColor: isDark
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.08)",
+              },
+            ]}
+          >
+            {/* Header */}
+            <View style={styles.rodadaDetailHeader}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.rodadaDetailTitle,
+                    { color: theme.colors.text.primary },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {selectedRodada?.nombre || "Rodada"}
+                </Text>
+                {/* Badge organizador en header */}
+                {user && selectedRodada?.organizador_id === user.id && (
+                  <View style={styles.organizerBadgeHeader}>
+                    <MaterialCommunityIcons
+                      name="crown"
+                      size={14}
+                      color="#34C759"
+                    />
+                    <Text style={styles.organizerBadgeText}>
+                      Eres el organizador
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => setShowRodadaDetail(false)}>
+                <Ionicons
+                  name="close-circle"
+                  size={28}
+                  color={theme.colors.text.secondary}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Content */}
+            <ScrollView style={styles.rodadaDetailContent}>
+              {/* Estado */}
+              <View style={styles.rodadaDetailSection}>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Estado
+                </Text>
+                <View style={styles.rodadaDetailRow}>
+                  <View
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor:
+                        selectedRodada?.estado === "en_curso"
+                          ? "#FF3B30"
+                          : "#34C759",
+                    }}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.estado === "en_curso"
+                      ? "🔴 En curso"
+                      : "🟢 Programada"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Punto de salida */}
+              <View style={styles.rodadaDetailSection}>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Punto de salida
+                </Text>
+                <View style={styles.rodadaDetailRow}>
+                  <Ionicons
+                    name="location"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary, flex: 1 },
+                    ]}
+                  >
+                    {selectedRodada?.punto_salida_nombre || "No especificado"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Fecha y hora */}
+              <View style={styles.rodadaDetailSection}>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Fecha y hora
+                </Text>
+                <View style={styles.rodadaDetailRow}>
+                  <Ionicons
+                    name="calendar"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.fecha_inicio
+                      ? new Date(
+                          selectedRodada.fecha_inicio
+                        ).toLocaleDateString("es-CO", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                        })
+                      : "No especificada"}
+                  </Text>
+                </View>
+                <View style={[styles.rodadaDetailRow, { marginTop: 4 }]}>
+                  <Ionicons
+                    name="time"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.hora_encuentro || "No especificada"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Nivel requerido */}
+              <View style={styles.rodadaDetailSection}>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Nivel requerido
+                </Text>
+                <View style={styles.rodadaDetailRow}>
+                  <MaterialCommunityIcons
+                    name="medal"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.nivel_requerido || "Todos los niveles"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Participantes */}
+              <View style={styles.rodadaDetailSection}>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Participantes
+                </Text>
+                <View style={styles.rodadaDetailRow}>
+                  <Ionicons
+                    name="people"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.participantes_count || 0} personas se han
+                    unido
+                  </Text>
+                </View>
+              </View>
+
+              {/* Descripción */}
+              {selectedRodada?.descripcion && (
+                <View style={styles.rodadaDetailSection}>
+                  <Text
+                    style={[
+                      styles.rodadaDetailLabel,
+                      { color: theme.colors.text.secondary },
+                    ]}
+                  >
+                    Descripción
+                  </Text>
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada.descripcion}
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Actions */}
+            <View style={styles.rodadaDetailActions}>
+              {/* Botón para centrar en mapa */}
+              <TouchableOpacity
+                style={[
+                  styles.rodadaDetailButton,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(255,255,255,0.1)"
+                      : "rgba(0,0,0,0.06)",
+                  },
+                ]}
+                onPress={() => {
+                  if (
+                    selectedRodada?.punto_salida_lat &&
+                    selectedRodada?.punto_salida_lng &&
+                    mapRef.current
+                  ) {
+                    mapRef.current.animateToRegion(
+                      {
+                        latitude: selectedRodada.punto_salida_lat,
+                        longitude: selectedRodada.punto_salida_lng,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                      },
+                      500
+                    );
+                  }
+                  setShowRodadaDetail(false);
+                }}
+              >
+                <Ionicons
+                  name="locate"
+                  size={20}
+                  color={theme.colors.text.primary}
+                />
+                <Text
+                  style={[
+                    styles.rodadaDetailButtonText,
+                    { color: theme.colors.text.primary },
+                  ]}
+                >
+                  Ver en mapa
+                </Text>
+              </TouchableOpacity>
+
+              {/* Botón de unirse/abandonar (solo si no es organizador) */}
+              {user &&
+                selectedRodada?.organizador_id !== user.id &&
+                (checkingJoin ? (
+                  <View
+                    style={[
+                      styles.rodadaDetailButton,
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(255,255,255,0.1)"
+                          : "rgba(0,0,0,0.06)",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.rodadaDetailButtonText,
+                        { color: theme.colors.text.secondary },
+                      ]}
+                    >
+                      Verificando...
+                    </Text>
+                  </View>
+                ) : isUserJoined ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.rodadaDetailButton,
+                      {
+                        backgroundColor: "transparent",
+                        borderWidth: 2,
+                        borderColor: "#FF3B30",
+                      },
+                    ]}
+                    onPress={() => handleLeaveRodada(selectedRodada)}
+                    disabled={joiningRodada === selectedRodada?.id}
+                  >
+                    {joiningRodada === selectedRodada?.id ? (
+                      <Text
+                        style={[
+                          styles.rodadaDetailButtonText,
+                          { color: "#FF3B30" },
+                        ]}
+                      >
+                        Abandonando...
+                      </Text>
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="exit-outline"
+                          size={20}
+                          color="#FF3B30"
+                        />
+                        <Text
+                          style={[
+                            styles.rodadaDetailButtonText,
+                            { color: "#FF3B30" },
+                          ]}
+                        >
+                          Abandonar
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.rodadaDetailButton,
+                      { backgroundColor: theme.colors.primary },
+                    ]}
+                    onPress={async () => {
+                      await handleJoinRodada(selectedRodada);
+                      setIsUserJoined(true);
+                    }}
+                    disabled={joiningRodada === selectedRodada?.id}
+                  >
+                    {joiningRodada === selectedRodada?.id ? (
+                      <Text style={styles.rodadaDetailButtonText}>
+                        Uniéndote...
+                      </Text>
+                    ) : (
+                      <>
+                        <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                        <Text style={styles.rodadaDetailButtonText}>
+                          Unirme
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ))}
+
+              {/* Si es organizador, mostrar botón eliminar */}
+              {user && selectedRodada?.organizador_id === user.id && (
+                <TouchableOpacity
+                  style={[
+                    styles.rodadaDetailButton,
+                    { backgroundColor: "#FF3B30" },
+                  ]}
+                  onPress={() => {
+                    Alert.alert(
+                      "Eliminar rodada",
+                      `¿Seguro que quieres eliminar "${selectedRodada?.nombre}"?`,
+                      [
+                        { text: "Cancelar", style: "cancel" },
+                        {
+                          text: "Eliminar",
+                          style: "destructive",
+                          onPress: async () => {
+                            setDeletingRodada(true);
+                            const result = await eliminarRodada(
+                              selectedRodada.id
+                            );
+                            setDeletingRodada(false);
+                            if (result.success) {
+                              setShowRodadaDetail(false);
+                              Alert.alert("✅", "Rodada eliminada");
+                            } else {
+                              Alert.alert(
+                                "Error",
+                                result.error || "No se pudo eliminar"
+                              );
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                  disabled={deletingRodada}
+                >
+                  {deletingRodada ? (
+                    <Text style={styles.rodadaDetailButtonText}>
+                      Eliminando...
+                    </Text>
+                  ) : (
+                    <>
+                      <Ionicons name="trash" size={20} color="#FFFFFF" />
+                      <Text style={styles.rodadaDetailButtonText}>
+                        Eliminar rodada
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-// Dark map style
+// Dark map style - Same as Spots.js
 const darkMapStyle = [
-  { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
   {
-    featureType: 'administrative.locality',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
+    "elementType": "geometry",
+    "stylers": [{ "color": "#1d2c4d" }]
   },
   {
-    featureType: 'poi',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#8ec3b9" }]
   },
   {
-    featureType: 'poi.park',
-    elementType: 'geometry',
-    stylers: [{ color: '#263c3f' }],
+    "elementType": "labels.text.stroke",
+    "stylers": [{ "color": "#1a3646" }]
   },
   {
-    featureType: 'poi.park',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#6b9a76' }],
+    "featureType": "administrative.country",
+    "elementType": "geometry.stroke",
+    "stylers": [{ "color": "#4b6878" }]
   },
   {
-    featureType: 'road',
-    elementType: 'geometry',
-    stylers: [{ color: '#38414e' }],
+    "featureType": "administrative.land_parcel",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#64779e" }]
   },
   {
-    featureType: 'road',
-    elementType: 'geometry.stroke',
-    stylers: [{ color: '#212a37' }],
+    "featureType": "administrative.province",
+    "elementType": "geometry.stroke",
+    "stylers": [{ "color": "#4b6878" }]
   },
   {
-    featureType: 'road',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#9ca5b3' }],
+    "featureType": "landscape.man_made",
+    "elementType": "geometry.stroke",
+    "stylers": [{ "color": "#334e87" }]
   },
   {
-    featureType: 'road.highway',
-    elementType: 'geometry',
-    stylers: [{ color: '#746855' }],
+    "featureType": "landscape.natural",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#023e58" }]
   },
   {
-    featureType: 'road.highway',
-    elementType: 'geometry.stroke',
-    stylers: [{ color: '#1f2835' }],
+    "featureType": "poi",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#283d6a" }]
   },
   {
-    featureType: 'road.highway',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#f3d19c' }],
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#6f9ba5" }]
   },
   {
-    featureType: 'transit',
-    elementType: 'geometry',
-    stylers: [{ color: '#2f3948' }],
+    "featureType": "poi",
+    "elementType": "labels.text.stroke",
+    "stylers": [{ "color": "#1d2c4d" }]
   },
   {
-    featureType: 'transit.station',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
+    "featureType": "poi.park",
+    "elementType": "geometry.fill",
+    "stylers": [{ "color": "#023e58" }]
   },
   {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [{ color: '#17263c' }],
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#3C7680" }]
   },
   {
-    featureType: 'water',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#515c6d' }],
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#304a7d" }]
   },
   {
-    featureType: 'water',
-    elementType: 'labels.text.stroke',
-    stylers: [{ color: '#17263c' }],
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#98a5be" }]
   },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.stroke",
+    "stylers": [{ "color": "#1d2c4d" }]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#2c6675" }]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry.stroke",
+    "stylers": [{ "color": "#255763" }]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#b0d5ce" }]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.stroke",
+    "stylers": [{ "color": "#023e58" }]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#98a5be" }]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "labels.text.stroke",
+    "stylers": [{ "color": "#1d2c4d" }]
+  },
+  {
+    "featureType": "transit.line",
+    "elementType": "geometry.fill",
+    "stylers": [{ "color": "#283d6a" }]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#3a4762" }]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [{ "color": "#0e1626" }]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [{ "color": "#4e6d70" }]
+  }
 ];
 
 const styles = StyleSheet.create({
@@ -520,115 +1873,142 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingTop: 50,
+    paddingBottom: 12,
   },
   headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+
+  // Stats Overlay - Nuevo diseño compacto
+  statsContainer: {
+    position: 'absolute',
+    bottom: 140,
+    left: 16,
+    right: 16,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  mainStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  mainStatItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  mainStatValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  mainStatLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statDividerVertical: {
+    width: 1,
+    height: 36,
+    opacity: 0.3,
+  },
+  secondaryStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.15)',
+    gap: 24,
+  },
+  miniStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  miniStatValue: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Controls - Nuevo diseño elegante
+  controlsContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  controlsWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 40,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  mainButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  mainButtonLarge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  stopButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-
-  // Stats Overlay
-  statsContainer: {
-    position: 'absolute',
-    top: 140,
-    left: 16,
-    right: 16,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 8,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  statDivider: {
-    width: 1,
-    height: 60,
-    marginHorizontal: 12,
-  },
-  secondaryStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  secondaryStatItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  secondaryStatLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  secondaryStatValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Controls
-  controlsContainer: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
+  stopButtonInner: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#FF3B30',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
   },
-  mainButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  stopButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  placeholderButton: {
+    width: 44,
+    height: 44,
   },
 
   // Marker
@@ -642,21 +2022,394 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
 
+  // 📜 Marcador de ruta histórica
+  historicalMarker: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+
+  // 📜 Badge de ruta histórica
+  historicalBadge: {
+    position: 'absolute',
+    top: 130,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  historicalBadgeContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  historicalBadgeText: {
+    flex: 1,
+  },
+  historicalBadgeTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  historicalBadgeStats: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  historicalBadgeClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+
   // Error
   errorContainer: {
     position: 'absolute',
-    top: 300,
+    top: 120,
     left: 16,
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
   },
   errorText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
+  },
+
+  // 🛼 Botón crear rodada
+  createRodadaButton: {
+    flexDirection: 'row',
+    width: 'auto',
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+
+  // 🛼 Marcador de posición actual (patín)
+  currentPositionMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+
+  // 🛼 Contenedor de marcador de rodada con callout
+  rodadaMarkerContainer: {
+    alignItems: 'center',
+  },
+  
+  // 🛼 Callout/flecha con nombre de rodada
+  rodadaCallout: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 4,
+    maxWidth: 150,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  rodadaCalloutText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  rodadaCalloutArrow: {
+    position: 'absolute',
+    bottom: -6,
+    left: '50%',
+    marginLeft: -6,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+
+  // 🛼 Marcador de rodada
+  rodadaMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  // 🛼 Badge de rodada seleccionada
+  rodadaBadge: {
+    position: 'absolute',
+    top: 130,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  rodadaBadgeContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  rodadaBadgeText: {
+    flex: 1,
+  },
+  rodadaBadgeTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  rodadaBadgeStats: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  rodadaBadgeClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+
+  // 🛼 Panel de lista de rodadas
+  rodadasListPanel: {
+    position: 'absolute',
+    top: 80,
+    left: 16,
+    right: 16,
+    maxHeight: 350,
+    borderRadius: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 10,
+    overflow: 'hidden',
+  },
+  rodadasListHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  rodadasListTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rodadasListScroll: {
+    maxHeight: 280,
+  },
+  rodadasListEmpty: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rodadasListEmptyText: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginTop: 12,
+  },
+  rodadasListEmptySubtext: {
+    fontSize: 13,
+    marginTop: 4,
+  },
+  rodadaListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 8,
+    marginVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  rodadaListItemStatus: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  rodadaListItemContent: {
+    flex: 1,
+  },
+  rodadaListItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  rodadaListItemDetails: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  rodadaListItemParticipants: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 8,
+  },
+  rodadaListItemCount: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  // 🛼 Botones de acción en lista
+  rodadaListItemMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rodadaListItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 8,
+  },
+  rodadaActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // 🛼 Modal de detalle de rodada
+  rodadaDetailOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  rodadaDetailPanel: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    maxHeight: '80%',
+  },
+  rodadaDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  organizerBadgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  organizerBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#34C759',
+  },
+  rodadaDetailTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginRight: 12,
+  },
+  rodadaDetailContent: {
+    padding: 20,
+  },
+  rodadaDetailSection: {
+    marginBottom: 20,
+  },
+  rodadaDetailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    opacity: 0.6,
+  },
+  rodadaDetailValue: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  rodadaDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  rodadaDetailActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    paddingTop: 8,
+  },
+  rodadaDetailButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  rodadaDetailButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

@@ -15,9 +15,10 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { usePatinadores } from '../hooks/usePatinadores';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { theme as staticTheme } from '../theme';
 
 const { width } = Dimensions.get('window');
@@ -25,6 +26,7 @@ const { width } = Dimensions.get('window');
 export default function Patinadores() {
   const { t } = useTranslation();
   const { theme } = useAppStore();
+  const navigation = useNavigation();
   
   const {
     patinadores,
@@ -54,8 +56,16 @@ export default function Patinadores() {
   useFocusEffect(
     React.useCallback(() => {
       loadPatinadores();
-    }, [])
+    }, [loadPatinadores])
   );
+
+  // 📡 Suscribirse a cambios en tiempo real de usuarios/patinadores (callback estable)
+  const handlePatinersChange = React.useCallback(() => {
+    console.log('👤 Recargando patinadores por cambio en realtime');
+    loadPatinadores();
+  }, [loadPatinadores]);
+
+  useRealtimeSubscription('usuarios', handlePatinersChange);
 
   // Extract unique values for filters
   const cities = useMemo(() => {
@@ -131,18 +141,18 @@ export default function Patinadores() {
           <Ionicons 
             name={icon} 
             size={16} 
-            color={hasSelection ? '#FFFFFF' : theme.colors.text.primary} 
+            color={hasSelection ? theme.colors.onPrimary : theme.colors.text.primary} 
           />
           <Text style={[
             styles.filterButtonText,
-            { color: hasSelection ? '#FFFFFF' : theme.colors.text.primary }
+            { color: hasSelection ? theme.colors.onPrimary : theme.colors.text.primary }
           ]}>
             {displayText}
           </Text>
           <Ionicons 
             name={isActive ? "chevron-up" : "chevron-down"} 
             size={16} 
-            color={hasSelection ? '#FFFFFF' : theme.colors.text.secondary} 
+            color={hasSelection ? theme.colors.onPrimary : theme.colors.text.secondary} 
           />
         </TouchableOpacity>
 
@@ -204,6 +214,7 @@ export default function Patinadores() {
           borderColor: theme.colors.border 
         }]}
         activeOpacity={0.7}
+        onPress={() => navigation.navigate('PerfilUsuario', { userId: item.id })}
       >
         {/* Image */}
         <Image 
@@ -248,7 +259,7 @@ export default function Patinadores() {
             {/* Level Badge */}
             {item.nivel && (
               <View style={[styles.levelBadge, getLevelStyle(item.nivel, theme)]}>
-                <Text style={styles.levelText}>{item.nivel}</Text>
+                <Text style={[styles.levelText, { color: theme.colors.text.primary }]}>{item.nivel}</Text>
               </View>
             )}
             
@@ -272,9 +283,12 @@ export default function Patinadores() {
                 <Ionicons name="logo-instagram" size={18} color={theme.colors.primary} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.viewButtonText}>{t('screens.patinadores.viewProfile')}</Text>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
+            <TouchableOpacity 
+              style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => navigation.navigate('PerfilUsuario', { userId: item.id })}
+            >
+              <Text style={[styles.viewButtonText, { color: theme.colors.onPrimary }]}>{t('screens.patinadores.viewProfile')}</Text>
+              <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -297,7 +311,7 @@ export default function Patinadores() {
     >
       <Text style={[
         styles.filterChipText,
-        { color: selected ? '#fff' : theme.colors.text.primary }
+        { color: selected ? theme.colors.onPrimary : theme.colors.text.primary }
       ]}>
         {label}
       </Text>
@@ -611,7 +625,6 @@ const styles = StyleSheet.create({
   levelText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#fff',
     textTransform: 'capitalize',
   },
   disciplineBadge: {
@@ -649,7 +662,6 @@ const styles = StyleSheet.create({
     borderRadius: staticTheme.borderRadius.md,
   },
   viewButtonText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },

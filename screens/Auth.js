@@ -193,7 +193,7 @@ export default function Auth({ navigation }) {
     buttonText: {
       fontSize: typography.fontSize.sm,
       fontWeight: '700',
-      color: '#fff',
+      color: theme.colors.onPrimary,
     },
     dividerContainer: {
       flexDirection: 'row',
@@ -307,7 +307,7 @@ export default function Auth({ navigation }) {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={theme.colors.onPrimary} />
             ) : (
               <Text style={styles.buttonText}>{t('screens.auth.login')}</Text>
             )}
