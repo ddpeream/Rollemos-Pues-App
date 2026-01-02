@@ -17,7 +17,6 @@ import {
   getPostById,
   getMisPosts,
   createPost,
-  updatePost,
   deletePost,
   toggleLike,
   isLikedByUser,
@@ -25,7 +24,6 @@ import {
   addComentario,
   getComentarios,
   deleteComentario,
-  uploadPostImage,
 } from '../services/galeria';
 import { useAppStore } from '../store/useAppStore';
 
@@ -45,16 +43,31 @@ export const useGaleria = () => {
     setError(null);
 
     try {
-      console.log('📋 Cargando posts...');
+      console.log('📋 Cargando posts desde Supabase...');
       
-      // Por ahora cargamos del JSON local
-      // TODO: Migrar a Supabase cuando esté listo
-      const galeriaData = require('../data/galeria.json');
+      // Cargar posts desde Supabase
+      const data = await getGaleria(filters);
       
-      setPosts(galeriaData || []);
-      console.log(`✅ ${galeriaData?.length || 0} posts cargados`);
+      // Para cada post, verificar si el usuario actual dio like y cargar likes/comentarios count
+      if (user?.id && data.length > 0) {
+        const postsWithLikeStatus = await Promise.all(
+          data.map(async (post) => {
+            const liked = await isLikedByUser(post.id, user.id);
+            return {
+              ...post,
+              userLiked: liked,
+            };
+          })
+        );
+        setPosts(postsWithLikeStatus);
+        console.log(`✅ ${postsWithLikeStatus.length} posts cargados con estado de like`);
+        return { success: true, data: postsWithLikeStatus };
+      }
+      
+      setPosts(data || []);
+      console.log(`✅ ${data?.length || 0} posts cargados`);
 
-      return { success: true, data: galeriaData };
+      return { success: true, data };
     } catch (err) {
       console.error('❌ Error cargando posts:', err);
       setError(err.message || 'Error al cargar posts');
@@ -62,7 +75,7 @@ export const useGaleria = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   /**
    * 🔄 Refrescar posts (pull-to-refresh)
@@ -143,32 +156,22 @@ export const useGaleria = () => {
     setError(null);
 
     try {
-      console.log('📸 Subiendo imagen...');
+      console.log('📸 Creando post con imagen...');
 
-      // Subir imagen primero
-      const uploadResult = await uploadPostImage(imageUri, user.id);
-
-      if (!uploadResult.success) {
-        setError(uploadResult.error);
-        return { success: false, error: uploadResult.error };
-      }
-
-      console.log('✏️ Creando post...');
-
-      // Crear post con la URL de la imagen
+      // El servicio createPost ya maneja el upload internamente
       const postData = {
         usuario_id: user.id,
-        imagen: uploadResult.url,
+        imagen: imageUri, // URI local, el servicio la sube
         descripcion,
         ubicacion,
-        aspect_ratio: uploadResult.aspectRatio || 1,
+        aspect_ratio: 1, // Puede calcularse antes si es necesario
       };
 
-      const data = await createPost(postData);
+      const result = await createPost(postData);
 
-      if (!data) {
-        setError('Error al crear post');
-        return { success: false, error: 'Error al crear post' };
+      if (!result.success) {
+        setError(result.error || 'Error al crear post');
+        return { success: false, error: result.error };
       }
 
       console.log('✅ Post creado exitosamente');
@@ -176,7 +179,7 @@ export const useGaleria = () => {
       // Recargar posts
       await loadPosts();
 
-      return { success: true, data };
+      return { success: true, data: result.data };
     } catch (err) {
       console.error('❌ Error creando post:', err);
       setError(err.message || 'Error al crear post');
@@ -234,27 +237,28 @@ export const useGaleria = () => {
     try {
       console.log('❤️ Toggling like en post:', postId);
       
-      // Actualizar localmente (en producción sería con Supabase)
-      setPosts(prevPosts => 
-        prevPosts.map(post => {
-          if (post.id === postId) {
-            const currentLikes = post.likes || 0;
-            const liked = post.likes_usuarios?.includes(user.id) || false;
-            
-            return {
-              ...post,
-              likes: liked ? currentLikes - 1 : currentLikes + 1,
-              likes_usuarios: liked 
-                ? (post.likes_usuarios || []).filter(id => id !== user.id)
-                : [...(post.likes_usuarios || []), user.id]
-            };
-          }
-          return post;
-        })
-      );
-
-      console.log('✅ Like actualizado');
-      return { success: true };
+      // Llamar al servicio de Supabase
+      const result = await toggleLike(postId, user.id);
+      
+      if (result.success) {
+        // Actualizar el estado local
+        setPosts(prevPosts => 
+          prevPosts.map(post => {
+            if (post.id === postId) {
+              const currentLikes = post.likes_count || 0;
+              return {
+                ...post,
+                likes_count: result.liked ? currentLikes + 1 : currentLikes - 1,
+                userLiked: result.liked
+              };
+            }
+            return post;
+          })
+        );
+        console.log('✅ Like actualizado:', result.liked ? 'dado' : 'quitado');
+      }
+      
+      return result;
     } catch (err) {
       console.error('❌ Error toggling like:', err);
       setError(err.message || 'Error al dar like');
@@ -375,11 +379,11 @@ export const useGaleria = () => {
     loadPosts,
     loadPost,
     loadMyPosts,
-    createPost: createNewPost,
+    createNewPost,
     deletePost: deleteExistingPost,
 
     // Métodos de likes
-    toggleLike: handleToggleLike,
+    handleToggleLike,
     checkIfLiked,
     getLikesCount,
 

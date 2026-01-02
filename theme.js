@@ -14,6 +14,10 @@ export const colors = {
   primary: '#4DD7D0',        // Cian/aguamarina
   secondary: '#D26BFF',      // Magenta/lila
   
+  // Colores para texto sobre fondos de color
+  onPrimary: '#000000',      // Texto sobre fondo primary (cyan)
+  onSecondary: '#FFFFFF',    // Texto sobre fondo secondary (magenta)
+  
   // Fondos (dark mode por defecto)
   background: {
     dark: '#0B0F14',
@@ -546,17 +550,27 @@ export const getTheme = (isDark = true) => {
   // Colores dinámicos según el tema
   const dynamicColors = {
     ...colors,
+    // Colores para texto sobre fondos de color (botones, badges, etc)
+    onPrimary: '#000000',      // Texto sobre fondo primary (cyan)
+    onSecondary: '#FFFFFF',    // Texto sobre fondo secondary (magenta)
+    onError: '#FFFFFF',        // Texto sobre fondo error
+    onSuccess: '#000000',      // Texto sobre fondo success
     background: {
       ...colors.background,
       primary: isDark ? '#0B0F14' : '#F7F9FB',
+      secondary: isDark ? '#141A21' : '#FFFFFF',
+      tertiary: isDark ? '#1C242D' : '#F0F2F5',
       surface: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
       surface2: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+      overlay: isDark ? 'rgba(11, 15, 20, 0.85)' : 'rgba(255, 255, 255, 0.9)',
     },
     text: {
       ...colors.text,
       primary: isDark ? '#E6EEF5' : '#101418',
       secondary: isDark ? '#A8B3BE' : '#495469',
+      tertiary: isDark ? '#6B7280' : '#9CA3AF',
       muted: isDark ? '#A8B3BE' : '#495469',
+      inverse: isDark ? '#101418' : '#E6EEF5',
     },
     glass: {
       background: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',

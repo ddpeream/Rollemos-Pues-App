@@ -19,7 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme, useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
-import { updateUsuario, uploadAvatarImage, getUsuarioById } from '../utils/usuarios';
+import { updateUsuario, uploadAvatarImage, getUsuarioById } from '../services/usuarios';
+import BackButton from '../components/common/BackButton';
 
 export default function EditarPerfil() {
   const { t } = useTranslation();
@@ -131,7 +132,7 @@ export default function EditarPerfil() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -307,7 +308,7 @@ export default function EditarPerfil() {
     buttonText: {
       fontSize: typography.fontSize.md,
       fontWeight: typography.fontWeight.bold,
-      color: '#000',
+      color: theme.colors.onPrimary,
     },
     cancelButtonText: {
       color: theme.colors.text.primary,
@@ -399,6 +400,8 @@ export default function EditarPerfil() {
       style={styles.keyboardView}
     >
       <ScrollView style={styles.container}>
+        <BackButton title="Editar Perfil" />
+        
         <View style={styles.content}>
           {/* Avatar Section */}
           <View style={styles.avatarSection}>
@@ -416,9 +419,9 @@ export default function EditarPerfil() {
                   />
                   <View style={styles.avatarOverlay}>
                     {uploadingAvatar ? (
-                      <ActivityIndicator color="#fff" size="large" />
+                      <ActivityIndicator color={theme.colors.onSecondary} size="large" />
                     ) : (
-                      <Ionicons name="camera" size={24} color="#fff" />
+                      <Ionicons name="camera" size={24} color={theme.colors.onSecondary} />
                     )}
                   </View>
                 </>
@@ -525,7 +528,7 @@ export default function EditarPerfil() {
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color="#000" />
+                <ActivityIndicator color={theme.colors.onPrimary} />
               ) : (
                 <>
                   <Text style={styles.buttonText}>{strings.save}</Text>

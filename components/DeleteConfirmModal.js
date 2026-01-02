@@ -182,11 +182,11 @@ const DeleteConfirmModal = ({
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={theme.colors.onSecondary} size="small" />
               ) : (
                 <>
-                  <Ionicons name="trash" size={16} color="#fff" />
-                  <Text style={styles.deleteButtonText}>Eliminar</Text>
+                  <Ionicons name="trash" size={16} color={theme.colors.onSecondary} />
+                  <Text style={[styles.deleteButtonText, { color: theme.colors.onSecondary }]}>Eliminar</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -300,7 +300,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF4444',
   },
   deleteButtonText: {
-    color: '#fff',
     fontSize: 15,
     fontWeight: '600',
   },

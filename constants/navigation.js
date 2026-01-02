@@ -26,6 +26,11 @@ export const SCREENS = {
   // Modales
   PERFIL: 'Perfil',
   EDITAR_PERFIL: 'EditarPerfil',
+  
+  // Rodadas
+  RODADAS: 'Rodadas',
+  RODADA_DETALLE: 'RodadaDetalle',
+  CREATE_RODADA: 'CreateRodada',
 };
 
 // ============================================

@@ -13,8 +13,25 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '../store/useAppStore';
+import { supabase } from '../config/supabase';
+import { upsertTrackingLive } from '../services/tracking';
+import {
+  startBackgroundTracking,
+  stopBackgroundTracking,
+} from "../services/backgroundTracking";
+import {
+  saveTrackingState,
+  clearTrackingState,
+  updateLastMovement,
+  getLastMovement,
+  checkOrphanedTracking,
+  markTrackingInactive,
+  INACTIVITY_TIMEOUT,
+  MIN_MOVEMENT_DISTANCE,
+} from '../services/trackingAutoStop';
 
 const STORAGE_KEY = '@rollemos_routes';
 
@@ -40,12 +57,205 @@ export const useRouteTracker = () => {
   const [calories, setCalories] = useState(0); // kcal estimadas
   const [hasPermission, setHasPermission] = useState(false);
   const [error, setError] = useState(null);
+  const [authUid, setAuthUid] = useState(null);
 
   // Refs para tracking
   const locationSubscription = useRef(null);
   const startTime = useRef(null);
   const timerInterval = useRef(null);
   const speedHistory = useRef([]);
+  const lastLiveUpdateRef = useRef(0);
+  const authUserIdRef = useRef(null);
+  const inactivityCheckInterval = useRef(null);
+  const lastMovementTime = useRef(Date.now());
+  const appState = useRef(AppState.currentState);
+
+  const sendLiveUpdate = useCallback(
+    async (coord, isActive = true) => {
+      if (!coord) {
+        return;
+      }
+
+      try {
+        const userId = authUserIdRef.current;
+        if (!userId) {
+          console.log('?? tracking_live skip: no auth user id');
+          return;
+        }
+
+        console.log('?? tracking_live upsert:', {
+          userId,
+          authUid: authUserIdRef.current,
+          profileId: user?.id || null,
+          lat: coord.latitude,
+          lng: coord.longitude,
+          isActive,
+        });
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log('?? tracking_live session uid:', sessionData?.session?.user?.id || null);
+
+        const result = await upsertTrackingLive({
+          userId,
+          latitude: coord.latitude,
+          longitude: coord.longitude,
+          speed: coord.speed ?? null,
+          heading: coord.heading ?? null,
+          isActive,
+        });
+
+        if (!result.ok) {
+          console.error('❌ tracking_live upsert error:', result.error);
+        } else {
+          console.log('✅ tracking_live upsert ok');
+        }
+      } catch (err) {
+        console.error('❌ Error updating tracking_live:', err);
+      }
+    },
+    [user]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAuthUserId = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (isMounted) {
+          authUserIdRef.current = data?.user?.id || null;
+          setAuthUid(authUserIdRef.current);
+          console.log('?? tracking_live auth uid:', authUserIdRef.current);
+        }
+      } catch (err) {
+        console.error('Error loading auth user for tracking:', err);
+      }
+    };
+
+    loadAuthUserId();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  /**
+   * 🔄 Manejar cambios de estado de la app (background/foreground)
+   * Cuando la app vuelve al foreground, verificar si el tracking debe detenerse
+   */
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState) => {
+      console.log(`📱 AppState: ${appState.current} → ${nextAppState}`);
+      
+      // Cuando la app vuelve al foreground
+      if (
+        appState.current.match(/inactive|background/) && 
+        nextAppState === 'active' &&
+        status === TRACKER_STATUS.TRACKING
+      ) {
+        console.log('📱 App volvió al foreground, verificando inactividad...');
+        
+        const check = await checkOrphanedTracking();
+        
+        if (check && check.shouldStop) {
+          console.log(`🛑 Auto-stop por inactividad (${check.inactiveMinutes} min)`);
+          setError(`Tracking detenido automáticamente por ${check.inactiveMinutes} minutos de inactividad`);
+          
+          // Detener tracking automáticamente
+          await autoStopTracking();
+        }
+      }
+      
+      // Cuando la app va al background, guardar el estado
+      if (nextAppState.match(/inactive|background/) && status === TRACKER_STATUS.TRACKING) {
+        console.log('📱 App yendo al background, guardando estado...');
+        await saveTrackingState(
+          authUserIdRef.current,
+          startTime.current,
+          currentLocation
+        );
+      }
+      
+      appState.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [status, currentLocation]);
+
+  /**
+   * 🛑 Auto-stop tracking por inactividad
+   */
+  const autoStopTracking = useCallback(async () => {
+    console.log('🛑 Auto-deteniendo tracking...');
+
+    // Marcar como inactivo en Supabase
+    if (authUserIdRef.current) {
+      await markTrackingInactive(authUserIdRef.current);
+    }
+
+    // Limpiar suscripción de ubicación
+    if (locationSubscription.current) {
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
+    }
+
+    // Detener timer
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+      timerInterval.current = null;
+    }
+
+    // Detener chequeo de inactividad
+    if (inactivityCheckInterval.current) {
+      clearInterval(inactivityCheckInterval.current);
+      inactivityCheckInterval.current = null;
+    }
+
+    await stopBackgroundTracking();
+    await clearTrackingState();
+
+    // Resetear estados
+    setStatus(TRACKER_STATUS.IDLE);
+    setRouteCoordinates([]);
+    setDistance(0);
+    setDuration(0);
+    setSpeed(0);
+    setAvgSpeed(0);
+    setMaxSpeed(0);
+    setCalories(0);
+    speedHistory.current = [];
+    startTime.current = null;
+    lastMovementTime.current = Date.now();
+
+    console.log('✅ Tracking auto-detenido');
+  }, []);
+
+  /**
+   * ⏱️ Verificar inactividad periódicamente mientras se trackea
+   */
+  const startInactivityCheck = useCallback(() => {
+    // Verificar cada minuto
+    inactivityCheckInterval.current = setInterval(async () => {
+      const lastMove = await getLastMovement();
+      const now = Date.now();
+      
+      if (lastMove && (now - lastMove) >= INACTIVITY_TIMEOUT) {
+        console.log('⏱️ Inactividad detectada por timer interno');
+        setError('Tracking detenido: 20 minutos sin movimiento');
+        await autoStopTracking();
+      }
+    }, 60000); // Cada 60 segundos
+  }, [autoStopTracking]);
+
+  useEffect(() => {
+    if (authUid && status === TRACKER_STATUS.TRACKING && currentLocation) {
+      sendLiveUpdate(currentLocation, true);
+    }
+  }, [authUid, status, currentLocation, sendLiveUpdate]);
 
   /**
    * 📍 Solicitar permisos de ubicación
@@ -130,7 +340,13 @@ export const useRouteTracker = () => {
     console.log('▶️ Iniciando tracking...');
 
     try {
-      // Verificar permisos
+      if (!authUserIdRef.current) {
+        console.log('?? tracking_live: sin sesion activa, no se puede iniciar tracking');
+        setError('Debes iniciar sesion para compartir tu ubicacion.');
+        return;
+      }
+
+      // IMPORTANTE: Verificar permisos ANTES de iniciar background tracking (requerido por iOS)
       const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
       if (foregroundStatus !== 'granted') {
         const granted = await requestLocationPermission();
@@ -142,6 +358,13 @@ export const useRouteTracker = () => {
       }
 
       console.log('✅ Permisos verificados');
+
+      // Iniciar background tracking después de verificar permisos
+      // En Expo Go, esto retornará { foregroundOnly: true } y no fallará
+      const bgResult = await startBackgroundTracking(authUserIdRef.current);
+      if (bgResult?.foregroundOnly) {
+        console.log('📱 Modo foreground-only activo (Expo Go o sin permisos background)');
+      }
 
       // Obtener ubicación inicial con timeout
       // Obtener ubicaci¢n inicial con timeout y fallback
@@ -195,6 +418,20 @@ export const useRouteTracker = () => {
       setRouteCoordinates([initialCoord]);
       setStatus(TRACKER_STATUS.TRACKING);
       startTime.current = Date.now();
+      lastLiveUpdateRef.current = Date.now();
+      lastMovementTime.current = Date.now();
+      sendLiveUpdate(initialCoord, true);
+
+      // 💾 Guardar estado del tracking para detectar cierre de app
+      await saveTrackingState(
+        authUserIdRef.current,
+        startTime.current,
+        initialCoord
+      );
+      await updateLastMovement();
+
+      // ⏱️ Iniciar verificación de inactividad
+      startInactivityCheck();
 
       // Iniciar contador de tiempo
       timerInterval.current = setInterval(() => {
@@ -234,6 +471,10 @@ export const useRouteTracker = () => {
 
                 // Solo agregar si se movió más de 3 metros (evitar ruido GPS)
                 if (distanceFromLast > 3) {
+                  // ⏱️ Actualizar tiempo del último movimiento (para auto-stop)
+                  lastMovementTime.current = Date.now();
+                  updateLastMovement().catch(console.error);
+
                   // Actualizar distancia total
                   setDistance((prevDist) => prevDist + distanceFromLast);
 
@@ -257,6 +498,12 @@ export const useRouteTracker = () => {
                   // Calcular calorías
                   const durationMinutes = (Date.now() - startTime.current) / 60000;
                   setCalories(calculateCalories(durationMinutes, avgSpd));
+
+                  const now = Date.now();
+                  if (now - lastLiveUpdateRef.current > 2000) {
+                    lastLiveUpdateRef.current = now;
+                    sendLiveUpdate(newCoord, true);
+                  }
 
                   return [...prev, newCoord];
                 }
@@ -284,7 +531,7 @@ export const useRouteTracker = () => {
       setError(`Error: ${err.message}`);
       setStatus(TRACKER_STATUS.IDLE);
     }
-  }, [requestLocationPermission, calculateDistance, calculateCalories, maxSpeed]);
+  }, [requestLocationPermission, calculateDistance, calculateCalories, maxSpeed, sendLiveUpdate]);
 
   /**
    * ⏸️ Pausar tracking
@@ -317,6 +564,10 @@ export const useRouteTracker = () => {
    * ⏹️ Detener tracking y guardar ruta
    */
   const stopTracking = useCallback(async () => {
+    const lastCoord = currentLocation || routeCoordinates[routeCoordinates.length - 1];
+    if (lastCoord) {
+      await sendLiveUpdate(lastCoord, false);
+    }
     console.log('⏹️ Deteniendo tracking...');
 
     // Limpiar suscripción de ubicación
@@ -331,10 +582,21 @@ export const useRouteTracker = () => {
       timerInterval.current = null;
     }
 
+    // Detener verificación de inactividad
+    if (inactivityCheckInterval.current) {
+      clearInterval(inactivityCheckInterval.current);
+      inactivityCheckInterval.current = null;
+    }
+
     // Guardar ruta si tiene datos significativos
     if (routeCoordinates.length > 10 && distance > 100) {
       await saveRoute();
     }
+
+    await stopBackgroundTracking();
+    
+    // 🗑️ Limpiar estado de tracking persistido
+    await clearTrackingState();
 
     // Resetear estados
     setStatus(TRACKER_STATUS.IDLE);
@@ -347,9 +609,10 @@ export const useRouteTracker = () => {
     setCalories(0);
     speedHistory.current = [];
     startTime.current = null;
+    lastMovementTime.current = Date.now();
 
     console.log('✅ Tracking detenido');
-  }, [routeCoordinates, distance]);
+  }, [currentLocation, routeCoordinates, distance, sendLiveUpdate]);
 
   /**
    * 💾 Guardar ruta en AsyncStorage
@@ -460,3 +723,4 @@ export const useRouteTracker = () => {
 };
 
 export default useRouteTracker;
+
