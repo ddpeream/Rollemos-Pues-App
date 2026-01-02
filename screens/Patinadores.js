@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { usePatinadores } from '../hooks/usePatinadores';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { theme as staticTheme } from '../theme';
 
 const { width } = Dimensions.get('window');
@@ -55,8 +56,16 @@ export default function Patinadores() {
   useFocusEffect(
     React.useCallback(() => {
       loadPatinadores();
-    }, [])
+    }, [loadPatinadores])
   );
+
+  // 📡 Suscribirse a cambios en tiempo real de usuarios/patinadores (callback estable)
+  const handlePatinersChange = React.useCallback(() => {
+    console.log('👤 Recargando patinadores por cambio en realtime');
+    loadPatinadores();
+  }, [loadPatinadores]);
+
+  useRealtimeSubscription('usuarios', handlePatinersChange);
 
   // Extract unique values for filters
   const cities = useMemo(() => {

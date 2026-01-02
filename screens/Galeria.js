@@ -29,6 +29,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useGaleria } from '../hooks/useGaleria';
 import { useAppStore } from '../store/useAppStore';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { Ionicons } from '@expo/vector-icons';
 import CreatePostModal from '../components/CreatePostModal';
 
@@ -59,8 +60,24 @@ export default function Galeria() {
   useFocusEffect(
     React.useCallback(() => {
       loadPosts();
-    }, [])
+    }, [loadPosts])
   );
+
+  // 📡 Suscribirse a cambios en tiempo real de galería (callback estable)
+  const handleGaleriaChange = React.useCallback((payload) => {
+    console.log('📷 Cambio en galería:', payload.eventType);
+    loadPosts(); // Recargar posts
+  }, [loadPosts]);
+
+  useRealtimeSubscription('galeria', handleGaleriaChange);
+
+  // 📡 Suscribirse a cambios en galeria_comentarios
+  const handleCommentsChange = React.useCallback((payload) => {
+    console.log('💬 Nuevo comentario');
+    loadPosts(); // Recargar posts para actualizar comentarios
+  }, [loadPosts]);
+
+  useRealtimeSubscription('galeria_comentarios', handleCommentsChange);
 
   // Toggle like
   const handleLike = async (postId) => {

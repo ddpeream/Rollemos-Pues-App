@@ -35,6 +35,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useRouteTracker, TRACKER_STATUS } from '../hooks/useRouteTracker';
 import { useRodadas } from '../hooks/useRodadas';
 import { useAuth } from '../hooks/useAuth';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import CreateRodadaModal from '../components/CreateRodadaModal';
 
 const { width, height } = Dimensions.get('window');
@@ -66,6 +67,7 @@ export default function Tracking() {
   const [joiningRodada, setJoiningRodada] = useState(null); // ID de rodada que se está uniendo
   const [isUserJoined, setIsUserJoined] = useState(false); // Si el usuario está unido a la rodada seleccionada
   const [checkingJoin, setCheckingJoin] = useState(false); // Verificando participación
+  const [ mapType, setMapType ] = useState('hybrid');
 
   // 📜 Ruta histórica recibida desde RoutesHistory
   const [historicalRoute, setHistoricalRoute] = useState(null);
@@ -119,6 +121,18 @@ export default function Tracking() {
       fetchRodadas({ soloProximas: false });
     }, [])
   );
+
+  // 📡 Suscribirse a cambios en tiempo real de rodadas (solo cuando se muestre el mapa)
+  useRealtimeSubscription('rodadas', (payload) => {
+    console.log('🏃 Nueva rodada o cambio detectado');
+    fetchRodadas({ soloProximas: false });
+  }, showRodadasList);
+
+  // 📡 Suscribirse a cambios en participantes de rodadas
+  useRealtimeSubscription('rodadas_participantes', (payload) => {
+    console.log('👥 Participantes de rodada actualizados');
+    fetchRodadas({ soloProximas: false });
+  }, showRodadasList);
 
   // 🛼 Función para unirse a una rodada
   const handleJoinRodada = async (rodada) => {
@@ -445,7 +459,12 @@ export default function Tracking() {
   const statsTextSecondary = isDark ? '#E2E8F0' : '#1E293B';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.background.primary },
+      ]}
+    >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       {/* Mapa */}
@@ -453,19 +472,23 @@ export default function Tracking() {
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
+        mapType={mapType}
         customMapStyle={isDark ? darkMapStyle : []}
         showsUserLocation
         showsMyLocationButton={false}
         followsUserLocation={status === TRACKER_STATUS.TRACKING}
         initialRegion={{
-          latitude: currentLocation?.latitude || 4.7110,
+          latitude: currentLocation?.latitude || 4.711,
           longitude: currentLocation?.longitude || -74.0055,
           latitudeDelta: 0.015,
           longitudeDelta: 0.015,
         }}
         onError={(err) => {
-          console.error('❌ Error en MapView:', err);
-          Alert.alert(t('screens.tracking.mapErrorTitle'), t('screens.tracking.mapErrorMessage'));
+          console.error("❌ Error en MapView:", err);
+          Alert.alert(
+            t("screens.tracking.mapErrorTitle"),
+            t("screens.tracking.mapErrorMessage")
+          );
         }}
       >
         {/* 📜 Polyline de la ruta HISTÓRICA (gris) */}
@@ -483,7 +506,9 @@ export default function Tracking() {
         {/* 📜 Marcador de inicio de ruta histórica */}
         {historicalRoute?.coordinates?.length > 0 && (
           <Marker coordinate={historicalRoute.coordinates[0]}>
-            <View style={[styles.historicalMarker, { backgroundColor: '#888888' }]}>
+            <View
+              style={[styles.historicalMarker, { backgroundColor: "#888888" }]}
+            >
               <Ionicons name="flag" size={16} color="#FFFFFF" />
             </View>
           </Marker>
@@ -491,8 +516,16 @@ export default function Tracking() {
 
         {/* 📜 Marcador de fin de ruta histórica */}
         {historicalRoute?.coordinates?.length > 1 && (
-          <Marker coordinate={historicalRoute.coordinates[historicalRoute.coordinates.length - 1]}>
-            <View style={[styles.historicalMarker, { backgroundColor: '#666666' }]}>
+          <Marker
+            coordinate={
+              historicalRoute.coordinates[
+                historicalRoute.coordinates.length - 1
+              ]
+            }
+          >
+            <View
+              style={[styles.historicalMarker, { backgroundColor: "#666666" }]}
+            >
               <Ionicons name="checkmark" size={16} color="#FFFFFF" />
             </View>
           </Marker>
@@ -512,7 +545,7 @@ export default function Tracking() {
         {/* 🚩 Marcador de inicio de ruta actual (solo si estamos a más de 20m) */}
         {showStartFlag && (
           <Marker coordinate={routeCoordinates[0]}>
-            <View style={[styles.startMarker, { backgroundColor: '#34C759' }]}> 
+            <View style={[styles.startMarker, { backgroundColor: "#34C759" }]}>
               <Ionicons name="flag" size={16} color="#FFFFFF" />
             </View>
           </Marker>
@@ -520,23 +553,32 @@ export default function Tracking() {
 
         {/* 🛼 Marcador de posición actual (patín que se mueve) */}
         {routeCoordinates.length > 0 && status !== TRACKER_STATUS.IDLE && (
-          <Marker 
+          <Marker
             coordinate={routeCoordinates[routeCoordinates.length - 1]}
             anchor={{ x: 0.5, y: 0.5 }}
           >
-            <View style={[styles.currentPositionMarker, { backgroundColor: theme.colors.primary }]}> 
-              <MaterialCommunityIcons name="roller-skate" size={18} color={theme.colors.onPrimary} />
+            <View
+              style={[
+                styles.currentPositionMarker,
+                { backgroundColor: theme.colors.primary },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="roller-skate"
+                size={18}
+                color={theme.colors.onPrimary}
+              />
             </View>
           </Marker>
         )}
 
         {/* 🛼 Marcadores de Rodadas (salida) */}
         {rodadas.map((rodada) => {
-          const isEnCurso = rodada.estado === 'en_curso';
+          const isEnCurso = rodada.estado === "en_curso";
           // Colores más intensos para mejor visibilidad en tema claro
-          const markerColor = isEnCurso ? '#D32F2F' : '#2E7D32'; // Rojo oscuro en curso, Verde oscuro programada
-          const calloutColor = isEnCurso ? '#B71C1C' : '#1B5E20'; // Aún más oscuro para el callout
-          
+          const markerColor = isEnCurso ? "#D32F2F" : "#2E7D32"; // Rojo oscuro en curso, Verde oscuro programada
+          const calloutColor = isEnCurso ? "#B71C1C" : "#1B5E20"; // Aún más oscuro para el callout
+
           return (
             <React.Fragment key={rodada.id}>
               {/* Marcador de punto de salida */}
@@ -549,18 +591,34 @@ export default function Tracking() {
               >
                 <View style={styles.rodadaMarkerContainer}>
                   {/* Flecha/Callout con nombre */}
-                  <View style={[styles.rodadaCallout, { backgroundColor: calloutColor }]}>
+                  <View
+                    style={[
+                      styles.rodadaCallout,
+                      { backgroundColor: calloutColor },
+                    ]}
+                  >
                     <Text style={styles.rodadaCalloutText} numberOfLines={1}>
-                      {rodada.nombre?.substring(0, 20)}{rodada.nombre?.length > 20 ? '...' : ''}
+                      {rodada.nombre?.substring(0, 20)}
+                      {rodada.nombre?.length > 20 ? "..." : ""}
                     </Text>
-                    <View style={[styles.rodadaCalloutArrow, { borderTopColor: calloutColor }]} />
+                    <View
+                      style={[
+                        styles.rodadaCalloutArrow,
+                        { borderTopColor: calloutColor },
+                      ]}
+                    />
                   </View>
                   {/* Marcador circular */}
-                  <View style={[styles.rodadaMarker, { backgroundColor: markerColor }]}>
-                    <MaterialCommunityIcons 
-                      name="account-group" 
-                      size={18} 
-                      color="#FFFFFF" 
+                  <View
+                    style={[
+                      styles.rodadaMarker,
+                      { backgroundColor: markerColor },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="account-group"
+                      size={18}
+                      color="#FFFFFF"
                     />
                   </View>
                 </View>
@@ -577,14 +635,32 @@ export default function Tracking() {
                 >
                   <View style={styles.rodadaMarkerContainer}>
                     {/* Flecha/Callout de llegada */}
-                    <View style={[styles.rodadaCallout, { backgroundColor: '#FFD700' }]}>
-                      <Text style={[styles.rodadaCalloutText, { color: '#000' }]} numberOfLines={1}>
+                    <View
+                      style={[
+                        styles.rodadaCallout,
+                        { backgroundColor: "#FFD700" },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.rodadaCalloutText, { color: "#000" }]}
+                        numberOfLines={1}
+                      >
                         🏁 Llegada
                       </Text>
-                      <View style={[styles.rodadaCalloutArrow, { borderTopColor: '#FFD700' }]} />
+                      <View
+                        style={[
+                          styles.rodadaCalloutArrow,
+                          { borderTopColor: "#FFD700" },
+                        ]}
+                      />
                     </View>
                     {/* Marcador de llegada */}
-                    <View style={[styles.rodadaMarker, { backgroundColor: '#FFD700' }]}>
+                    <View
+                      style={[
+                        styles.rodadaMarker,
+                        { backgroundColor: "#FFD700" },
+                      ]}
+                    >
                       <Ionicons name="flag-outline" size={18} color="#000" />
                     </View>
                   </View>
@@ -597,19 +673,29 @@ export default function Tracking() {
 
       {/* 📜 Badge de ruta histórica */}
       {historicalRoute && (
-        <View style={[styles.historicalBadge, { backgroundColor: isDark ? 'rgba(136, 136, 136, 0.95)' : 'rgba(100, 100, 100, 0.95)' }]}>
+        <View
+          style={[
+            styles.historicalBadge,
+            {
+              backgroundColor: isDark
+                ? "rgba(136, 136, 136, 0.95)"
+                : "rgba(100, 100, 100, 0.95)",
+            },
+          ]}
+        >
           <View style={styles.historicalBadgeContent}>
             <Ionicons name="time-outline" size={18} color="#FFFFFF" />
             <View style={styles.historicalBadgeText}>
               <Text style={styles.historicalBadgeTitle} numberOfLines={1}>
-                {historicalRoute.name || 'Ruta guardada'}
+                {historicalRoute.name || "Ruta guardada"}
               </Text>
               <Text style={styles.historicalBadgeStats}>
-                {(historicalRoute.distance / 1000).toFixed(1)} km • {Math.floor(historicalRoute.duration / 60)} min
+                {(historicalRoute.distance / 1000).toFixed(1)} km •{" "}
+                {Math.floor(historicalRoute.duration / 60)} min
               </Text>
             </View>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={clearHistoricalRoute}
             style={styles.historicalBadgeClose}
           >
@@ -619,41 +705,98 @@ export default function Tracking() {
       )}
 
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: isDark ? 'rgba(11, 15, 20, 0.85)' : 'rgba(255, 255, 255, 0.9)' }]}>
-        <TouchableOpacity 
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: isDark
+              ? "rgba(11, 15, 20, 0.85)"
+              : "rgba(255, 255, 255, 0.9)",
+          },
+        ]}
+      >
+        <TouchableOpacity
           onPress={() => {
-            console.log('🔙 Volviendo a rutinas...');
-            navigation.navigate('RoutesHistoryScreen');
+            console.log("🔙 Volviendo a rutinas...");
+            navigation.navigate("RoutesHistoryScreen");
           }}
-          style={[styles.headerButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}
-        >
-          <Ionicons name="list-outline" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-        
-        {/* Botón listar rodadas */}
-        <TouchableOpacity 
-          onPress={() => setShowRodadasList(!showRodadasList)}
           style={[
-            styles.headerButton, 
-            { backgroundColor: showRodadasList ? theme.colors.primary : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)') }
+            styles.headerButton,
+            {
+              backgroundColor: isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
           ]}
         >
-          <MaterialCommunityIcons 
-            name="calendar-clock" 
-            size={24} 
-            color={showRodadasList ? '#FFFFFF' : theme.colors.primary} 
+          <Ionicons
+            name="list-outline"
+            size={24}
+            color={theme.colors.primary}
           />
         </TouchableOpacity>
-        
+
+        {/* Botón listar rodadas */}
+        <TouchableOpacity
+          onPress={() => setShowRodadasList(!showRodadasList)}
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: showRodadasList
+                ? theme.colors.primary
+                : isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="calendar-clock"
+            size={24}
+            color={showRodadasList ? "#FFFFFF" : theme.colors.primary}
+          />
+        </TouchableOpacity>
+
         {/* Botón crear rodada */}
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setShowCreateRodadaModal(true)}
-          style={[styles.headerButton, styles.createRodadaButton, { backgroundColor: theme.colors.primary }]}
+          style={[
+            styles.headerButton,
+            styles.createRodadaButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
         >
           <Ionicons name="add" size={20} color="#FFFFFF" />
-          <MaterialCommunityIcons name="account-group" size={16} color="#FFFFFF" style={{ marginLeft: 2 }} />
+          <MaterialCommunityIcons
+            name="account-group"
+            size={16}
+            color="#FFFFFF"
+            style={{ marginLeft: 2 }}
+          />
         </TouchableOpacity>
-        
+
+        {/* Botón para cambiar tipo de mapa */}
+        {/* Botón cambiar tipo de mapa */}
+        <TouchableOpacity
+          onPress={() =>
+            setMapType((prev) => (prev === "standard" ? "hybrid" : "standard"))
+          }
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
+          ]}
+        >
+          <Ionicons
+            name={mapType === "hybrid" ? "map-outline" : "earth-outline"}
+            size={24}
+            color={theme.colors.primary}
+          />
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={async () => {
             try {
@@ -662,27 +805,40 @@ export default function Tracking() {
                 accuracy: Location.Accuracy.High,
               });
               if (mapRef.current && location?.coords) {
-                mapRef.current.animateToRegion({
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }, 500);
+                mapRef.current.animateToRegion(
+                  {
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  },
+                  500
+                );
               }
             } catch (err) {
-              console.log('Error obteniendo ubicación:', err);
+              console.log("Error obteniendo ubicación:", err);
               // Fallback a currentLocation del hook
               if (mapRef.current && currentLocation) {
-                mapRef.current.animateToRegion({
-                  latitude: currentLocation.latitude,
-                  longitude: currentLocation.longitude,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }, 500);
+                mapRef.current.animateToRegion(
+                  {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                  },
+                  500
+                );
               }
             }
           }}
-          style={[styles.headerButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
+          ]}
         >
           <Ionicons name="locate" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
@@ -690,54 +846,92 @@ export default function Tracking() {
 
       {/* 🛼 Panel de lista de rodadas */}
       {showRodadasList && (
-        <View style={[
-          styles.rodadasListPanel, 
-          { 
-            backgroundColor: isDark ? 'rgba(12, 16, 24, 0.95)' : 'rgba(255, 255, 255, 0.98)',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-          }
-        ]}>
+        <View
+          style={[
+            styles.rodadasListPanel,
+            {
+              backgroundColor: isDark
+                ? "rgba(12, 16, 24, 0.95)"
+                : "rgba(255, 255, 255, 0.98)",
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.1)"
+                : "rgba(0, 0, 0, 0.08)",
+            },
+          ]}
+        >
           <View style={styles.rodadasListHeader}>
-            <Text style={[styles.rodadasListTitle, { color: theme.colors.text.primary }]}>
+            <Text
+              style={[
+                styles.rodadasListTitle,
+                { color: theme.colors.text.primary },
+              ]}
+            >
               🛼 Rodadas Programadas
             </Text>
             <TouchableOpacity onPress={() => setShowRodadasList(false)}>
-              <Ionicons name="close" size={24} color={theme.colors.text.secondary} />
+              <Ionicons
+                name="close"
+                size={24}
+                color={theme.colors.text.secondary}
+              />
             </TouchableOpacity>
           </View>
-          
+
           {isLoadingRodadas ? (
             <View style={styles.rodadasListEmpty}>
-              <Text style={{ color: theme.colors.text.secondary }}>Cargando rodadas...</Text>
+              <Text style={{ color: theme.colors.text.secondary }}>
+                Cargando rodadas...
+              </Text>
             </View>
           ) : rodadas.length === 0 ? (
             <View style={styles.rodadasListEmpty}>
-              <MaterialCommunityIcons name="calendar-blank" size={48} color={theme.colors.text.disabled} />
-              <Text style={[styles.rodadasListEmptyText, { color: theme.colors.text.secondary }]}>
+              <MaterialCommunityIcons
+                name="calendar-blank"
+                size={48}
+                color={theme.colors.text.disabled}
+              />
+              <Text
+                style={[
+                  styles.rodadasListEmptyText,
+                  { color: theme.colors.text.secondary },
+                ]}
+              >
                 No hay rodadas programadas
               </Text>
-              <Text style={[styles.rodadasListEmptySubtext, { color: theme.colors.text.disabled }]}>
+              <Text
+                style={[
+                  styles.rodadasListEmptySubtext,
+                  { color: theme.colors.text.disabled },
+                ]}
+              >
                 ¡Crea la primera rodada!
               </Text>
             </View>
           ) : (
-            <ScrollView style={styles.rodadasListScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.rodadasListScroll}
+              showsVerticalScrollIndicator={false}
+            >
               {rodadas.map((rodada) => {
                 const isOrganizer = rodada.organizador_id === user?.id;
                 const isJoining = joiningRodada === rodada.id;
-                
+
                 return (
                   <View
                     key={rodada.id}
                     style={[
                       styles.rodadaListItem,
-                      { 
-                        backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                      }
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(255,255,255,0.05)"
+                          : "rgba(0,0,0,0.03)",
+                        borderColor: isDark
+                          ? "rgba(255,255,255,0.08)"
+                          : "rgba(0,0,0,0.06)",
+                      },
                     ]}
                   >
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.rodadaListItemMain}
                       onPress={() => {
                         setSelectedRodada(rodada);
@@ -753,34 +947,79 @@ export default function Tracking() {
                         }
                       }}
                     >
-                      <View style={[
-                        styles.rodadaListItemStatus,
-                        { backgroundColor: rodada.estado === 'en_curso' ? '#FF3B30' : '#34C759' }
-                      ]} />
+                      <View
+                        style={[
+                          styles.rodadaListItemStatus,
+                          {
+                            backgroundColor:
+                              rodada.estado === "en_curso"
+                                ? "#FF3B30"
+                                : "#34C759",
+                          },
+                        ]}
+                      />
                       <View style={styles.rodadaListItemContent}>
-                        <Text style={[styles.rodadaListItemName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                        <Text
+                          style={[
+                            styles.rodadaListItemName,
+                            { color: theme.colors.text.primary },
+                          ]}
+                          numberOfLines={1}
+                        >
                           {rodada.nombre}
-                          {isOrganizer && <Text style={{ color: theme.colors.primary }}> (tuya)</Text>}
+                          {isOrganizer && (
+                            <Text style={{ color: theme.colors.primary }}>
+                              {" "}
+                              (tuya)
+                            </Text>
+                          )}
                         </Text>
-                        <Text style={[styles.rodadaListItemDetails, { color: theme.colors.text.secondary }]}>
-                          📅 {new Date(rodada.fecha_inicio).toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short' })}
-                          {' • '}🕐 {rodada.hora_encuentro || '---'}
+                        <Text
+                          style={[
+                            styles.rodadaListItemDetails,
+                            { color: theme.colors.text.secondary },
+                          ]}
+                        >
+                          📅{" "}
+                          {new Date(rodada.fecha_inicio).toLocaleDateString(
+                            "es-CO",
+                            { weekday: "short", day: "numeric", month: "short" }
+                          )}
+                          {" • "}🕐 {rodada.hora_encuentro || "---"}
                         </Text>
-                        <Text style={[styles.rodadaListItemDetails, { color: theme.colors.text.disabled }]} numberOfLines={1}>
+                        <Text
+                          style={[
+                            styles.rodadaListItemDetails,
+                            { color: theme.colors.text.disabled },
+                          ]}
+                          numberOfLines={1}
+                        >
                           📍 {rodada.punto_salida_nombre}
                         </Text>
                       </View>
                       <View style={styles.rodadaListItemParticipants}>
-                        <MaterialCommunityIcons name="account-group" size={16} color={theme.colors.primary} />
-                        <Text style={[styles.rodadaListItemCount, { color: theme.colors.primary }]}>
+                        <MaterialCommunityIcons
+                          name="account-group"
+                          size={16}
+                          color={theme.colors.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.rodadaListItemCount,
+                            { color: theme.colors.primary },
+                          ]}
+                        >
                           {rodada.participantes_count || 0}
                         </Text>
                       </View>
                     </TouchableOpacity>
-                    
+
                     {/* Botón de acción - Ver detalle */}
-                    <TouchableOpacity 
-                      style={[styles.rodadaActionButton, { backgroundColor: theme.colors.primary }]}
+                    <TouchableOpacity
+                      style={[
+                        styles.rodadaActionButton,
+                        { backgroundColor: theme.colors.primary },
+                      ]}
                       onPress={() => handleOpenRodadaDetail(rodada)}
                     >
                       <Ionicons name="eye" size={18} color="#FFFFFF" />
@@ -795,9 +1034,22 @@ export default function Tracking() {
 
       {/* 🛼 Badge de rodada seleccionada */}
       {selectedRodada && (
-        <View style={[styles.rodadaBadge, { backgroundColor: isDark ? 'rgba(52, 199, 89, 0.95)' : 'rgba(52, 199, 89, 0.95)' }]}>
+        <View
+          style={[
+            styles.rodadaBadge,
+            {
+              backgroundColor: isDark
+                ? "rgba(52, 199, 89, 0.95)"
+                : "rgba(52, 199, 89, 0.95)",
+            },
+          ]}
+        >
           <View style={styles.rodadaBadgeContent}>
-            <MaterialCommunityIcons name="account-group" size={20} color="#FFFFFF" />
+            <MaterialCommunityIcons
+              name="account-group"
+              size={20}
+              color="#FFFFFF"
+            />
             <View style={styles.rodadaBadgeText}>
               <Text style={styles.rodadaBadgeTitle} numberOfLines={1}>
                 {selectedRodada.nombre}
@@ -806,14 +1058,19 @@ export default function Tracking() {
                 📍 {selectedRodada.punto_salida_nombre?.substring(0, 30)}...
               </Text>
               <Text style={styles.rodadaBadgeStats}>
-                📅 {new Date(selectedRodada.fecha_inicio).toLocaleDateString('es-CO')} • {selectedRodada.hora_encuentro || '---'}
+                📅{" "}
+                {new Date(selectedRodada.fecha_inicio).toLocaleDateString(
+                  "es-CO"
+                )}{" "}
+                • {selectedRodada.hora_encuentro || "---"}
               </Text>
               <Text style={styles.rodadaBadgeStats}>
-                👥 {selectedRodada.participantes_count || 0} participantes • {selectedRodada.nivel_requerido || 'Todos'}
+                👥 {selectedRodada.participantes_count || 0} participantes •{" "}
+                {selectedRodada.nivel_requerido || "Todos"}
               </Text>
             </View>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setSelectedRodada(null)}
             style={styles.rodadaBadgeClose}
           >
@@ -830,37 +1087,55 @@ export default function Tracking() {
             statsContainerStyle,
             { opacity: statsOpacity },
           ]}
-          pointerEvents={showStats ? 'auto' : 'none'}
+          pointerEvents={showStats ? "auto" : "none"}
         >
           {/* Fila principal de stats */}
           <View style={styles.mainStatsRow}>
             <View style={styles.mainStatItem}>
-              <Text style={[styles.mainStatValue, { color: theme.colors.primary }]}>
+              <Text
+                style={[styles.mainStatValue, { color: theme.colors.primary }]}
+              >
                 {formatDistance(distance)}
               </Text>
-              <Text style={[styles.mainStatLabel, { color: statsTextSecondary }]}>
-                {t('screens.tracking.distance')}
+              <Text
+                style={[styles.mainStatLabel, { color: statsTextSecondary }]}
+              >
+                {t("screens.tracking.distance")}
               </Text>
             </View>
 
-            <View style={[styles.statDividerVertical, { backgroundColor: theme.colors.border }]} />
+            <View
+              style={[
+                styles.statDividerVertical,
+                { backgroundColor: theme.colors.border },
+              ]}
+            />
 
             <View style={styles.mainStatItem}>
               <Text style={[styles.mainStatValue, { color: statsTextPrimary }]}>
                 {formatDuration(duration)}
               </Text>
-              <Text style={[styles.mainStatLabel, { color: statsTextSecondary }]}>
-                {t('screens.tracking.time')}
+              <Text
+                style={[styles.mainStatLabel, { color: statsTextSecondary }]}
+              >
+                {t("screens.tracking.time")}
               </Text>
             </View>
 
-            <View style={[styles.statDividerVertical, { backgroundColor: theme.colors.border }]} />
+            <View
+              style={[
+                styles.statDividerVertical,
+                { backgroundColor: theme.colors.border },
+              ]}
+            />
 
             <View style={styles.mainStatItem}>
               <Text style={[styles.mainStatValue, { color: statsTextPrimary }]}>
                 {speed.toFixed(1)}
               </Text>
-              <Text style={[styles.mainStatLabel, { color: statsTextSecondary }]}>
+              <Text
+                style={[styles.mainStatLabel, { color: statsTextSecondary }]}
+              >
                 km/h
               </Text>
             </View>
@@ -869,20 +1144,30 @@ export default function Tracking() {
           {/* Fila secundaria compacta */}
           <View style={styles.secondaryStatsRow}>
             <View style={styles.miniStatItem}>
-              <Ionicons name="trending-up" size={12} color={theme.colors.primary} />
-              <Text style={[styles.miniStatValue, { color: statsTextSecondary }]}>
+              <Ionicons
+                name="trending-up"
+                size={12}
+                color={theme.colors.primary}
+              />
+              <Text
+                style={[styles.miniStatValue, { color: statsTextSecondary }]}
+              >
                 {avgSpeed.toFixed(1)}
               </Text>
             </View>
             <View style={styles.miniStatItem}>
               <Ionicons name="flash" size={12} color="#FF9500" />
-              <Text style={[styles.miniStatValue, { color: statsTextSecondary }]}>
+              <Text
+                style={[styles.miniStatValue, { color: statsTextSecondary }]}
+              >
                 {maxSpeed.toFixed(1)}
               </Text>
             </View>
             <View style={styles.miniStatItem}>
               <Ionicons name="flame" size={12} color="#FF3B30" />
-              <Text style={[styles.miniStatValue, { color: statsTextSecondary }]}>
+              <Text
+                style={[styles.miniStatValue, { color: statsTextSecondary }]}
+              >
                 {calories}
               </Text>
             </View>
@@ -892,7 +1177,16 @@ export default function Tracking() {
 
       {/* Control Buttons - Diseño elegante */}
       <View style={styles.controlsContainer}>
-        <View style={[styles.controlsWrapper, { backgroundColor: isDark ? 'rgba(12, 16, 24, 0.85)' : 'rgba(255, 255, 255, 0.9)' }]}>
+        <View
+          style={[
+            styles.controlsWrapper,
+            {
+              backgroundColor: isDark
+                ? "rgba(12, 16, 24, 0.85)"
+                : "rgba(255, 255, 255, 0.9)",
+            },
+          ]}
+        >
           {/* Botón de Stop */}
           {status !== TRACKER_STATUS.IDLE && (
             <TouchableOpacity
@@ -901,7 +1195,11 @@ export default function Tracking() {
               activeOpacity={0.7}
             >
               <View style={styles.stopButtonInner}>
-                <Ionicons name="stop" size={20} color={theme.colors.onSecondary} />
+                <Ionicons
+                  name="stop"
+                  size={20}
+                  color={theme.colors.onSecondary}
+                />
               </View>
             </TouchableOpacity>
           )}
@@ -917,10 +1215,10 @@ export default function Tracking() {
               ]}
               activeOpacity={0.8}
             >
-              <Ionicons 
-                name={buttonConfig.icon} 
-                size={status === TRACKER_STATUS.IDLE ? 32 : 28} 
-                color={theme.colors.onPrimary} 
+              <Ionicons
+                name={buttonConfig.icon}
+                size={status === TRACKER_STATUS.IDLE ? 32 : 28}
+                color={theme.colors.onPrimary}
               />
             </TouchableOpacity>
           </Animated.View>
@@ -934,14 +1232,25 @@ export default function Tracking() {
 
       {/* Error Message */}
       {error && (
-        <View style={[styles.errorContainer, { backgroundColor: isDark ? 'rgba(11, 15, 20, 0.9)' : 'rgba(255, 255, 255, 0.95)' }]}>
+        <View
+          style={[
+            styles.errorContainer,
+            {
+              backgroundColor: isDark
+                ? "rgba(11, 15, 20, 0.9)"
+                : "rgba(255, 255, 255, 0.95)",
+            },
+          ]}
+        >
           <Ionicons name="alert-circle" size={20} color="#FF3B30" />
-          <Text style={[styles.errorText, { color: theme.colors.text.primary }]}>
+          <Text
+            style={[styles.errorText, { color: theme.colors.text.primary }]}
+          >
             {error}
           </Text>
           <TouchableOpacity
             onPress={() => {
-              console.log('🔄 Reintentando permisos...');
+              console.log("🔄 Reintentando permisos...");
               requestLocationPermission();
             }}
             style={{ paddingLeft: 12 }}
@@ -956,11 +1265,11 @@ export default function Tracking() {
         visible={showCreateRodadaModal}
         onClose={() => setShowCreateRodadaModal(false)}
         onSuccess={(rodada) => {
-          console.log('✅ Rodada creada:', rodada);
+          console.log("✅ Rodada creada:", rodada);
           Alert.alert(
-            '🛼 ¡Rodada creada!',
+            "🛼 ¡Rodada creada!",
             `"${rodada.nombre}" ha sido programada. Los patinadores podrán verla en el mapa.`,
-            [{ text: 'Genial!' }]
+            [{ text: "Genial!" }]
           );
           fetchRodadas(); // Recargar lista
         }}
@@ -974,34 +1283,56 @@ export default function Tracking() {
         onRequestClose={() => setShowRodadaDetail(false)}
       >
         <View style={styles.rodadaDetailOverlay}>
-          <TouchableOpacity 
-            style={{ flex: 1 }} 
-            activeOpacity={1} 
-            onPress={() => setShowRodadaDetail(false)} 
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setShowRodadaDetail(false)}
           />
-          <View style={[
-            styles.rodadaDetailPanel,
-            { 
-              backgroundColor: isDark ? 'rgba(12, 16, 24, 0.98)' : 'rgba(255, 255, 255, 0.98)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
-            }
-          ]}>
+          <View
+            style={[
+              styles.rodadaDetailPanel,
+              {
+                backgroundColor: isDark
+                  ? "rgba(12, 16, 24, 0.98)"
+                  : "rgba(255, 255, 255, 0.98)",
+                borderColor: isDark
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.08)",
+              },
+            ]}
+          >
             {/* Header */}
             <View style={styles.rodadaDetailHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.rodadaDetailTitle, { color: theme.colors.text.primary }]} numberOfLines={2}>
-                  {selectedRodada?.nombre || 'Rodada'}
+                <Text
+                  style={[
+                    styles.rodadaDetailTitle,
+                    { color: theme.colors.text.primary },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {selectedRodada?.nombre || "Rodada"}
                 </Text>
                 {/* Badge organizador en header */}
                 {user && selectedRodada?.organizador_id === user.id && (
                   <View style={styles.organizerBadgeHeader}>
-                    <MaterialCommunityIcons name="crown" size={14} color="#34C759" />
-                    <Text style={styles.organizerBadgeText}>Eres el organizador</Text>
+                    <MaterialCommunityIcons
+                      name="crown"
+                      size={14}
+                      color="#34C759"
+                    />
+                    <Text style={styles.organizerBadgeText}>
+                      Eres el organizador
+                    </Text>
                   </View>
                 )}
               </View>
               <TouchableOpacity onPress={() => setShowRodadaDetail(false)}>
-                <Ionicons name="close-circle" size={28} color={theme.colors.text.secondary} />
+                <Ionicons
+                  name="close-circle"
+                  size={28}
+                  color={theme.colors.text.secondary}
+                />
               </TouchableOpacity>
             </View>
 
@@ -1009,66 +1340,167 @@ export default function Tracking() {
             <ScrollView style={styles.rodadaDetailContent}>
               {/* Estado */}
               <View style={styles.rodadaDetailSection}>
-                <Text style={[styles.rodadaDetailLabel, { color: theme.colors.text.secondary }]}>Estado</Text>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Estado
+                </Text>
                 <View style={styles.rodadaDetailRow}>
-                  <View style={{ 
-                    width: 10, height: 10, borderRadius: 5,
-                    backgroundColor: selectedRodada?.estado === 'en_curso' ? '#FF3B30' : '#34C759'
-                  }} />
-                  <Text style={[styles.rodadaDetailValue, { color: theme.colors.text.primary }]}>
-                    {selectedRodada?.estado === 'en_curso' ? '🔴 En curso' : '🟢 Programada'}
+                  <View
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor:
+                        selectedRodada?.estado === "en_curso"
+                          ? "#FF3B30"
+                          : "#34C759",
+                    }}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.estado === "en_curso"
+                      ? "🔴 En curso"
+                      : "🟢 Programada"}
                   </Text>
                 </View>
               </View>
 
               {/* Punto de salida */}
               <View style={styles.rodadaDetailSection}>
-                <Text style={[styles.rodadaDetailLabel, { color: theme.colors.text.secondary }]}>Punto de salida</Text>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Punto de salida
+                </Text>
                 <View style={styles.rodadaDetailRow}>
-                  <Ionicons name="location" size={18} color={theme.colors.primary} />
-                  <Text style={[styles.rodadaDetailValue, { color: theme.colors.text.primary, flex: 1 }]}>
-                    {selectedRodada?.punto_salida_nombre || 'No especificado'}
+                  <Ionicons
+                    name="location"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary, flex: 1 },
+                    ]}
+                  >
+                    {selectedRodada?.punto_salida_nombre || "No especificado"}
                   </Text>
                 </View>
               </View>
 
               {/* Fecha y hora */}
               <View style={styles.rodadaDetailSection}>
-                <Text style={[styles.rodadaDetailLabel, { color: theme.colors.text.secondary }]}>Fecha y hora</Text>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Fecha y hora
+                </Text>
                 <View style={styles.rodadaDetailRow}>
-                  <Ionicons name="calendar" size={18} color={theme.colors.primary} />
-                  <Text style={[styles.rodadaDetailValue, { color: theme.colors.text.primary }]}>
-                    {selectedRodada?.fecha_inicio 
-                      ? new Date(selectedRodada.fecha_inicio).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
-                      : 'No especificada'}
+                  <Ionicons
+                    name="calendar"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.fecha_inicio
+                      ? new Date(
+                          selectedRodada.fecha_inicio
+                        ).toLocaleDateString("es-CO", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                        })
+                      : "No especificada"}
                   </Text>
                 </View>
                 <View style={[styles.rodadaDetailRow, { marginTop: 4 }]}>
-                  <Ionicons name="time" size={18} color={theme.colors.primary} />
-                  <Text style={[styles.rodadaDetailValue, { color: theme.colors.text.primary }]}>
-                    {selectedRodada?.hora_encuentro || 'No especificada'}
+                  <Ionicons
+                    name="time"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.hora_encuentro || "No especificada"}
                   </Text>
                 </View>
               </View>
 
               {/* Nivel requerido */}
               <View style={styles.rodadaDetailSection}>
-                <Text style={[styles.rodadaDetailLabel, { color: theme.colors.text.secondary }]}>Nivel requerido</Text>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Nivel requerido
+                </Text>
                 <View style={styles.rodadaDetailRow}>
-                  <MaterialCommunityIcons name="medal" size={18} color={theme.colors.primary} />
-                  <Text style={[styles.rodadaDetailValue, { color: theme.colors.text.primary }]}>
-                    {selectedRodada?.nivel_requerido || 'Todos los niveles'}
+                  <MaterialCommunityIcons
+                    name="medal"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.nivel_requerido || "Todos los niveles"}
                   </Text>
                 </View>
               </View>
 
               {/* Participantes */}
               <View style={styles.rodadaDetailSection}>
-                <Text style={[styles.rodadaDetailLabel, { color: theme.colors.text.secondary }]}>Participantes</Text>
+                <Text
+                  style={[
+                    styles.rodadaDetailLabel,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Participantes
+                </Text>
                 <View style={styles.rodadaDetailRow}>
-                  <Ionicons name="people" size={18} color={theme.colors.primary} />
-                  <Text style={[styles.rodadaDetailValue, { color: theme.colors.text.primary }]}>
-                    {selectedRodada?.participantes_count || 0} personas se han unido
+                  <Ionicons
+                    name="people"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
+                    {selectedRodada?.participantes_count || 0} personas se han
+                    unido
                   </Text>
                 </View>
               </View>
@@ -1076,8 +1508,20 @@ export default function Tracking() {
               {/* Descripción */}
               {selectedRodada?.descripcion && (
                 <View style={styles.rodadaDetailSection}>
-                  <Text style={[styles.rodadaDetailLabel, { color: theme.colors.text.secondary }]}>Descripción</Text>
-                  <Text style={[styles.rodadaDetailValue, { color: theme.colors.text.primary }]}>
+                  <Text
+                    style={[
+                      styles.rodadaDetailLabel,
+                      { color: theme.colors.text.secondary },
+                    ]}
+                  >
+                    Descripción
+                  </Text>
+                  <Text
+                    style={[
+                      styles.rodadaDetailValue,
+                      { color: theme.colors.text.primary },
+                    ]}
+                  >
                     {selectedRodada.descripcion}
                   </Text>
                 </View>
@@ -1087,48 +1531,118 @@ export default function Tracking() {
             {/* Actions */}
             <View style={styles.rodadaDetailActions}>
               {/* Botón para centrar en mapa */}
-              <TouchableOpacity 
-                style={[styles.rodadaDetailButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}
+              <TouchableOpacity
+                style={[
+                  styles.rodadaDetailButton,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(255,255,255,0.1)"
+                      : "rgba(0,0,0,0.06)",
+                  },
+                ]}
                 onPress={() => {
-                  if (selectedRodada?.punto_salida_lat && selectedRodada?.punto_salida_lng && mapRef.current) {
-                    mapRef.current.animateToRegion({
-                      latitude: selectedRodada.punto_salida_lat,
-                      longitude: selectedRodada.punto_salida_lng,
-                      latitudeDelta: 0.01,
-                      longitudeDelta: 0.01,
-                    }, 500);
+                  if (
+                    selectedRodada?.punto_salida_lat &&
+                    selectedRodada?.punto_salida_lng &&
+                    mapRef.current
+                  ) {
+                    mapRef.current.animateToRegion(
+                      {
+                        latitude: selectedRodada.punto_salida_lat,
+                        longitude: selectedRodada.punto_salida_lng,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                      },
+                      500
+                    );
                   }
                   setShowRodadaDetail(false);
                 }}
               >
-                <Ionicons name="locate" size={20} color={theme.colors.text.primary} />
-                <Text style={[styles.rodadaDetailButtonText, { color: theme.colors.text.primary }]}>Ver en mapa</Text>
+                <Ionicons
+                  name="locate"
+                  size={20}
+                  color={theme.colors.text.primary}
+                />
+                <Text
+                  style={[
+                    styles.rodadaDetailButtonText,
+                    { color: theme.colors.text.primary },
+                  ]}
+                >
+                  Ver en mapa
+                </Text>
               </TouchableOpacity>
 
               {/* Botón de unirse/abandonar (solo si no es organizador) */}
-              {user && selectedRodada?.organizador_id !== user.id && (
-                checkingJoin ? (
-                  <View style={[styles.rodadaDetailButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}>
-                    <Text style={[styles.rodadaDetailButtonText, { color: theme.colors.text.secondary }]}>Verificando...</Text>
+              {user &&
+                selectedRodada?.organizador_id !== user.id &&
+                (checkingJoin ? (
+                  <View
+                    style={[
+                      styles.rodadaDetailButton,
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(255,255,255,0.1)"
+                          : "rgba(0,0,0,0.06)",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.rodadaDetailButtonText,
+                        { color: theme.colors.text.secondary },
+                      ]}
+                    >
+                      Verificando...
+                    </Text>
                   </View>
                 ) : isUserJoined ? (
-                  <TouchableOpacity 
-                    style={[styles.rodadaDetailButton, { backgroundColor: 'transparent', borderWidth: 2, borderColor: '#FF3B30' }]}
+                  <TouchableOpacity
+                    style={[
+                      styles.rodadaDetailButton,
+                      {
+                        backgroundColor: "transparent",
+                        borderWidth: 2,
+                        borderColor: "#FF3B30",
+                      },
+                    ]}
                     onPress={() => handleLeaveRodada(selectedRodada)}
                     disabled={joiningRodada === selectedRodada?.id}
                   >
                     {joiningRodada === selectedRodada?.id ? (
-                      <Text style={[styles.rodadaDetailButtonText, { color: '#FF3B30' }]}>Abandonando...</Text>
+                      <Text
+                        style={[
+                          styles.rodadaDetailButtonText,
+                          { color: "#FF3B30" },
+                        ]}
+                      >
+                        Abandonando...
+                      </Text>
                     ) : (
                       <>
-                        <Ionicons name="exit-outline" size={20} color="#FF3B30" />
-                        <Text style={[styles.rodadaDetailButtonText, { color: '#FF3B30' }]}>Abandonar</Text>
+                        <Ionicons
+                          name="exit-outline"
+                          size={20}
+                          color="#FF3B30"
+                        />
+                        <Text
+                          style={[
+                            styles.rodadaDetailButtonText,
+                            { color: "#FF3B30" },
+                          ]}
+                        >
+                          Abandonar
+                        </Text>
                       </>
                     )}
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity 
-                    style={[styles.rodadaDetailButton, { backgroundColor: theme.colors.primary }]}
+                  <TouchableOpacity
+                    style={[
+                      styles.rodadaDetailButton,
+                      { backgroundColor: theme.colors.primary },
+                    ]}
                     onPress={async () => {
                       await handleJoinRodada(selectedRodada);
                       setIsUserJoined(true);
@@ -1136,53 +1650,68 @@ export default function Tracking() {
                     disabled={joiningRodada === selectedRodada?.id}
                   >
                     {joiningRodada === selectedRodada?.id ? (
-                      <Text style={styles.rodadaDetailButtonText}>Uniéndote...</Text>
+                      <Text style={styles.rodadaDetailButtonText}>
+                        Uniéndote...
+                      </Text>
                     ) : (
                       <>
                         <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                        <Text style={styles.rodadaDetailButtonText}>Unirme</Text>
+                        <Text style={styles.rodadaDetailButtonText}>
+                          Unirme
+                        </Text>
                       </>
                     )}
                   </TouchableOpacity>
-                )
-              )}
+                ))}
 
               {/* Si es organizador, mostrar botón eliminar */}
               {user && selectedRodada?.organizador_id === user.id && (
-                <TouchableOpacity 
-                  style={[styles.rodadaDetailButton, { backgroundColor: '#FF3B30' }]}
+                <TouchableOpacity
+                  style={[
+                    styles.rodadaDetailButton,
+                    { backgroundColor: "#FF3B30" },
+                  ]}
                   onPress={() => {
                     Alert.alert(
-                      'Eliminar rodada',
+                      "Eliminar rodada",
                       `¿Seguro que quieres eliminar "${selectedRodada?.nombre}"?`,
                       [
-                        { text: 'Cancelar', style: 'cancel' },
+                        { text: "Cancelar", style: "cancel" },
                         {
-                          text: 'Eliminar',
-                          style: 'destructive',
+                          text: "Eliminar",
+                          style: "destructive",
                           onPress: async () => {
                             setDeletingRodada(true);
-                            const result = await eliminarRodada(selectedRodada.id);
+                            const result = await eliminarRodada(
+                              selectedRodada.id
+                            );
                             setDeletingRodada(false);
                             if (result.success) {
                               setShowRodadaDetail(false);
-                              Alert.alert('✅', 'Rodada eliminada');
+                              Alert.alert("✅", "Rodada eliminada");
                             } else {
-                              Alert.alert('Error', result.error || 'No se pudo eliminar');
+                              Alert.alert(
+                                "Error",
+                                result.error || "No se pudo eliminar"
+                              );
                             }
-                          }
-                        }
+                          },
+                        },
                       ]
                     );
                   }}
                   disabled={deletingRodada}
                 >
                   {deletingRodada ? (
-                    <Text style={styles.rodadaDetailButtonText}>Eliminando...</Text>
+                    <Text style={styles.rodadaDetailButtonText}>
+                      Eliminando...
+                    </Text>
                   ) : (
                     <>
                       <Ionicons name="trash" size={20} color="#FFFFFF" />
-                      <Text style={styles.rodadaDetailButtonText}>Eliminar rodada</Text>
+                      <Text style={styles.rodadaDetailButtonText}>
+                        Eliminar rodada
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>

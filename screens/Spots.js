@@ -22,6 +22,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { useSpots } from '../hooks/useSpots';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { theme as staticTheme } from '../theme';
 import { fetchTrackingLive, subscribeTrackingLive, unsubscribeTrackingLive } from '../services/tracking';
 
@@ -76,8 +77,16 @@ export default function Spots() {
   useFocusEffect(
     React.useCallback(() => {
       loadSpots();
-    }, [])
+    }, [loadSpots])
   );
+
+  // 📡 Suscribirse a cambios en tiempo real de spots (callback estable)
+  const handleSpotsChange = React.useCallback(() => {
+    console.log('📍 Recargando spots por cambio en realtime');
+    loadSpots();
+  }, [loadSpots]);
+
+  useRealtimeSubscription('spots', handleSpotsChange);
 
   const normalizeLiveRecord = (record) => {
     if (!record) return null;
@@ -353,7 +362,7 @@ export default function Spots() {
       if (user?.id && skater.userId === user.id) return false;
       return true;
     });
-    console.log('👀 visibleLiveSkaters:', { total: liveSkaters.length, visible: visible.length, userId: user?.id, visible });
+    console.log('👀 visibleLiveSkaters:', JSON.stringify({ total: liveSkaters.length, visible: visible.length, userId: user?.id, visible }, null, 2));
     return visible;
   }, [liveSkaters, user]);
 
@@ -618,6 +627,7 @@ export default function Spots() {
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={styles.map}
+            mapType='satellite'
             initialRegion={mapRegion}
             customMapStyle={theme.colors.background.primary === '#0B0F14' ? darkMapStyle : []}
             showsUserLocation

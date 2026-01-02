@@ -52,7 +52,20 @@ export const subscribeTrackingLive = (onChange) => {
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'tracking_live' },
-      (payload) => {
+      async (payload) => {
+        // 📡 Si viene del realtime, necesitamos enriquecer con los datos del usuario
+        if (payload.new) {
+          const { data: userdata, error } = await supabase
+            .from('tracking_live')
+            .select('user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( * )')
+            .eq('user_id', payload.new.user_id)
+            .single();
+          
+          if (!error && userdata) {
+            payload.new = userdata;
+          }
+        }
+        
         if (typeof onChange === 'function') {
           onChange(payload);
         }

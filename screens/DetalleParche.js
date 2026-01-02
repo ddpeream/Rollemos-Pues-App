@@ -32,6 +32,7 @@ import * as ImagePicker from 'expo-image-picker';
 import useAppStore from '../store/useAppStore';
 import { useParches } from '../hooks/useParches';
 import { useRodadas } from '../hooks/useRodadas';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { spacing, typography, borderRadius } from '../theme';
 import CreateRodadaModal from '../components/CreateRodadaModal';
 import FollowersModal from '../components/FollowersModal';
@@ -107,6 +108,24 @@ export default function DetalleParche() {
     fetchParche();
     fetchRodadas({ parcheId }); // Cargar rodadas del parche
   }, [fetchParche]);
+
+  // 📡 Suscribirse a cambios en tiempo real de parches
+  useRealtimeSubscription('parches', (payload) => {
+    console.log('🎯 Parche actualizado en realtime');
+    fetchParche();
+  });
+
+  // 📡 Suscribirse a cambios en tiempo real de rodadas
+  useRealtimeSubscription('rodadas', (payload) => {
+    console.log('🏃 Rodada actualizada en realtime');
+    fetchRodadas({ parcheId });
+  });
+
+  // 📡 Suscribirse a cambios en tiempo real de miembros del parche
+  useRealtimeSubscription('parches_seguidores', (payload) => {
+    console.log('👥 Miembros del parche actualizados');
+    fetchParche();
+  });
 
   // Refresh
   const handleRefresh = async () => {

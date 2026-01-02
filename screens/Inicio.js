@@ -35,12 +35,14 @@ export default function Inicio() {
   const { parches, loadParches, loading: loadingParches } = useParches();
   const { spots, loadSpots, loading: loadingSpots } = useSpots();
 
-  // Cargar datos al entrar a la pantalla
+  // Cargar datos al entrar a la pantalla SOLO si mostramos datos destacados
+  // En caso contrario, los datos se cargan cuando el usuario navegue a cada pantalla
   useFocusEffect(
     useCallback(() => {
-      loadPatinadores();
-      loadParches();
-      loadSpots();
+      // Comentado: cada pantalla cargará sus propios datos
+      // loadPatinadores();
+      // loadParches();
+      // loadSpots();
     }, [])
   );
 

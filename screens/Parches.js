@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { useParches } from '../hooks/useParches';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { theme as staticTheme } from '../theme';
 import CreateParcheModal from '../components/CreateParcheModal';
 
@@ -53,8 +54,16 @@ export default function Parches() {
   useFocusEffect(
     React.useCallback(() => {
       loadParches();
-    }, [])
+    }, [loadParches])
   );
+
+  // 📡 Suscribirse a cambios en tiempo real de parches (callback estable)
+  const handleParchesChange = React.useCallback(() => {
+    console.log('🎯 Recargando parches por cambio en realtime');
+    loadParches();
+  }, [loadParches]);
+
+  useRealtimeSubscription('parches', handleParchesChange);
 
   // Extract unique values for filters
   const cities = useMemo(() => {
