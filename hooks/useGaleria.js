@@ -152,36 +152,54 @@ export const useGaleria = () => {
       return { success: false, error: 'Debes iniciar sesión' };
     }
 
+    if (!imageUri) {
+      setError('Debes seleccionar una imagen');
+      return { success: false, error: 'Debes seleccionar una imagen' };
+    }
+
+    if (!descripcion || !descripcion.trim()) {
+      setError('Debes agregar una descripción');
+      return { success: false, error: 'Debes agregar una descripción' };
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      console.log('📸 Creando post con imagen...');
+      console.log('📸 Creando post...');
+      console.log('📸 URI:', imageUri);
+      console.log('📸 Usuario ID:', user.id);
 
-      // El servicio createPost ya maneja el upload internamente
       const postData = {
         usuario_id: user.id,
-        imagen: imageUri, // URI local, el servicio la sube
-        descripcion,
-        ubicacion,
-        aspect_ratio: 1, // Puede calcularse antes si es necesario
+        imagen: imageUri,
+        descripcion: descripcion.trim(),
+        ubicacion: ubicacion?.trim() || null,
+        aspect_ratio: 1,
       };
+
+      console.log('📸 Llamando a createPost con datos:', {
+        usuario_id: postData.usuario_id,
+        imagen: imageUri.substring(0, 50) + '...',
+        descripcion: postData.descripcion.substring(0, 30) + '...',
+      });
 
       const result = await createPost(postData);
 
       if (!result.success) {
+        console.error('❌ createPost retornó error:', result.error);
         setError(result.error || 'Error al crear post');
         return { success: false, error: result.error };
       }
 
       console.log('✅ Post creado exitosamente');
-
-      // Recargar posts
       await loadPosts();
 
       return { success: true, data: result.data };
     } catch (err) {
       console.error('❌ Error creando post:', err);
+      console.error('❌ Error message:', err.message);
+      console.error('❌ Error stack:', err.stack);
       setError(err.message || 'Error al crear post');
       return { success: false, error: err.message };
     } finally {
