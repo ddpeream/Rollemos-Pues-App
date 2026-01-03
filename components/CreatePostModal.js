@@ -20,6 +20,7 @@ import {
   ScrollView,
   ActivityIndicator,
   FlatList,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -112,28 +113,25 @@ const CreatePostModal = ({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        quality: 0.8,
-        aspect: undefined, // Permitir cualquier aspect ratio
+        quality: 0.85,
+        aspect: undefined,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        setImagen(asset.uri);
         
-        // Calcular aspect ratio
+        if (!asset.uri) {
+          throw new Error('La imagen seleccionada no tiene URI válida');
+        }
+        
+        setImagen(asset.uri);
         const aspectRatio = asset.width / asset.height;
         setImageAspectRatio(aspectRatio);
         
-        console.log('✅ Imagen seleccionada:', {
-          uri: asset.uri,
-          width: asset.width,
-          height: asset.height,
-          aspectRatio
-        });
+        console.log('✅ Imagen seleccionada');
       }
     } catch (error) {
-      console.error('❌ Error seleccionando imagen:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      Alert.alert('Error', `No se pudo seleccionar la imagen: ${error.message}`);
     }
   };
 
@@ -154,28 +152,25 @@ const CreatePostModal = ({
       // Tomar foto
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        quality: 0.8,
+        quality: 0.85,
         aspect: undefined,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        setImagen(asset.uri);
         
-        // Calcular aspect ratio
+        if (!asset.uri) {
+          throw new Error('La foto capturada no tiene URI válida');
+        }
+        
+        setImagen(asset.uri);
         const aspectRatio = asset.width / asset.height;
         setImageAspectRatio(aspectRatio);
         
-        console.log('✅ Foto tomada:', {
-          uri: asset.uri,
-          width: asset.width,
-          height: asset.height,
-          aspectRatio
-        });
+        console.log('✅ Foto capturada');
       }
     } catch (error) {
-      console.error('❌ Error tomando foto:', error);
-      Alert.alert('Error', 'No se pudo tomar la foto');
+      Alert.alert('Error', `No se pudo tomar la foto: ${error.message}`);
     }
   };
 
@@ -194,8 +189,6 @@ const CreatePostModal = ({
 
   // Enviar post
   const handleSubmit = async () => {
-    console.log('📤 handleSubmit presionado', { imagen, descripcion, usuario_id: usuario.id });
-    
     // Validaciones
     if (!imagen) {
       Alert.alert('Error', 'Debes seleccionar una imagen');
@@ -218,11 +211,17 @@ const CreatePostModal = ({
         aspect_ratio: imageAspectRatio
       };
 
-      await onSubmit(postData);
-      handleClose();
+      const result = await onSubmit(postData);
+      
+      if (result && result.success) {
+        Alert.alert('Éxito', 'Post publicado correctamente');
+        handleClose();
+      } else {
+        const errorMsg = result?.error || 'Error desconocido';
+        Alert.alert('Error', `No se pudo publicar: ${errorMsg}`);
+      }
     } catch (error) {
-      console.error('❌ Error creando post:', error);
-      Alert.alert('Error', 'No se pudo crear el post');
+      Alert.alert('Error', `Error: ${error.message || 'Intenta nuevamente'}`);
     } finally {
       setLoading(false);
     }
@@ -238,17 +237,21 @@ const CreatePostModal = ({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="formSheet"
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView 
-        style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <SafeAreaView 
+        style={[styles.safeContainer, { backgroundColor: theme.colors.background.primary }]}
+        edges={['top', 'left', 'right']}
       >
-        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-        
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: theme.colors.glass.border }]}>
+        <KeyboardAvoidingView 
+          style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent={false} />
+          
+          {/* Header */}
+          <View style={[styles.header, { borderBottomColor: theme.colors.glass.border }]}>
           <TouchableOpacity 
             onPress={handleClose} 
             style={styles.cancelButton}
@@ -447,11 +450,15 @@ const CreatePostModal = ({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+    </SafeAreaView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
@@ -461,7 +468,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
-    paddingTop: Platform.OS === 'ios' ? 50 : spacing.md,
     borderBottomWidth: 1,
   },
   cancelButton: {

@@ -1,4 +1,6 @@
 import "expo-sqlite/localStorage/install";
+import 'react-native-url-polyfill/auto'; // ✅ IMPORTANTE: Polyfill para URL
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -18,14 +20,20 @@ console.log(
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    storage: typeof localStorage !== "undefined" ? localStorage : null,
+    storage: AsyncStorage, // ✅ Usar AsyncStorage como recomienda Supabase
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
   global: {
     headers: {
-      "Content-Type": "application/json",
+      // NO forzar Content-Type aquí para Storage uploads
+    },
+    fetch: fetch,
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
     },
   },
 });
