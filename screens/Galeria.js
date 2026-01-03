@@ -24,6 +24,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  Modal,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -55,11 +57,17 @@ export default function Galeria() {
   const [commentText, setCommentText] = useState({});
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [sendingComment, setSendingComment] = useState({});
+  const [showPostMenu, setShowPostMenu] = useState(false);
+  const [menuPost, setMenuPost] = useState(null);
 
   // Cargar posts al entrar a la pantalla
   useFocusEffect(
     React.useCallback(() => {
       loadPosts();
+      // Cerrar cualquier modal abierto cuando enfocamos la pantalla
+      setShowUploadModal(false);
+      setShowPostMenu(false);
+      setMenuPost(null);
     }, [loadPosts])
   );
 
@@ -87,13 +95,65 @@ export default function Galeria() {
 
   // Crear nuevo post
   const handleCreatePost = async (postData) => {
-    // postData viene del modal con: imagen, descripcion, ubicacion, aspect_ratio
-    const result = await createNewPost(postData.imagen, postData.descripcion, postData.ubicacion);
-    if (result.success) {
-      setShowUploadModal(false);
-      loadPosts();
+    try {
+      const result = await createNewPost(postData.imagen, postData.descripcion, postData.ubicacion);
+      
+      if (result.success) {
+        setShowUploadModal(false);
+        setTimeout(() => loadPosts(), 300);
+      }
+      return result;
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.message || 'Error al crear post'
+      };
     }
-    return result;
+  };
+
+  // Mostrar menú de post
+  const handleShowPostMenu = (post) => {
+    setMenuPost(post);
+    setShowPostMenu(true);
+  };
+
+  // Eliminar post
+  const handleDeletePost = async (postId) => {
+    Alert.alert(
+      'Eliminar Foto',
+      '¿Estás seguro de que deseas eliminar esta foto?',
+      [
+        { 
+          text: 'Cancelar', 
+          onPress: () => {
+            setShowPostMenu(false);
+          }, 
+          style: 'cancel' 
+        },
+        {
+          text: 'Eliminar',
+          onPress: async () => {
+            try {
+              const { supabase } = await import('../config/supabase');
+              const { error } = await supabase
+                .from('galeria')
+                .delete()
+                .eq('id', postId);
+
+              if (error) throw error;
+
+              setShowPostMenu(false);
+              setMenuPost(null);
+              Alert.alert('Éxito', 'Foto eliminada correctamente');
+              loadPosts();
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar la foto');
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
   };
 
   // Toggle mostrar comentarios y cargar desde Supabase
@@ -224,7 +284,7 @@ export default function Galeria() {
               )}
             </View>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => handleShowPostMenu(item)}>
             <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text.primary} />
           </TouchableOpacity>
         </View>
@@ -437,10 +497,56 @@ export default function Galeria() {
       {/* Modal para crear post */}
       <CreatePostModal
         visible={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
+        onClose={() => {
+          setShowUploadModal(false);
+          setShowPostMenu(false);
+          setMenuPost(null);
+        }}
         onSubmit={handleCreatePost}
         usuario={user}
       />
+
+      {/* Modal de menú del post */}
+      {showPostMenu && (
+        <Modal
+          visible={showPostMenu}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowPostMenu(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowPostMenu(false)}
+          >
+            <View style={[styles.menuContainer, { backgroundColor: theme.colors.background.secondary }]}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  if (menuPost) {
+                    handleDeletePost(menuPost.id);
+                  }
+                }}
+              >
+                <Ionicons name="trash-outline" size={20} color="#FF4757" />
+                <Text style={[styles.menuItemText, { color: '#FF4757' }]}>
+                  Eliminar foto
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => setShowPostMenu(false)}
+              >
+                <Ionicons name="close" size={20} color={theme.colors.text.primary} />
+                <Text style={[styles.menuItemText, { color: theme.colors.text.primary }]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -698,6 +804,37 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Post Menu Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContainer: {
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    gap: 12,
+    borderRadius: 10,
+  },
+  menuItemText: {
     fontSize: 16,
     fontWeight: '600',
   },

@@ -1,18 +1,22 @@
 /**
- * 🗺️ Tracking Screen - GPS Route Tracker
+ * 🗺️ Tracking Screen - GPS Route Tracker + Live Skaters + Spots Map
  * 
- * Pantalla de tracking de rutas en tiempo real con diseño moderno.
+ * Pantalla unificada que combina:
+ * - Seguimiento de rutas en tiempo real con GPS
+ * - Visualización de otros patinadores en vivo
+ * - Mapa de lugares especiales para patinar
  * 
  * Características:
  * - Mapa a pantalla completa con ubicación en vivo
  * - Polyline que se dibuja en tiempo real
+ * - Visualización de skaters en tiempo real
+ * - Markers de spots (lugares especiales)
  * - Botón flotante animado (Start/Pause/Stop)
  * - Stats overlay con glassmorphism
- * - Animaciones fluidas
- * - Rodadas (eventos) visibles en el mapa
+ * - Toggle para mostrar/ocultar spots
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -25,6 +29,7 @@ import {
   SafeAreaView,
   ScrollView,
   Modal,
+  Image,
 } from 'react-native';
 import MapView, { Polyline, Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -34,8 +39,10 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
 import { useRouteTracker, TRACKER_STATUS } from '../hooks/useRouteTracker';
 import { useRodadas } from '../hooks/useRodadas';
+import { useSpots } from '../hooks/useSpots';
 import { useAuth } from '../hooks/useAuth';
 import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
+import { fetchTrackingLive, subscribeTrackingLive, unsubscribeTrackingLive } from '../services/tracking';
 import CreateRodadaModal from '../components/CreateRodadaModal';
 
 const { width, height } = Dimensions.get('window');
@@ -59,6 +66,14 @@ export default function Tracking() {
     eliminarRodada,
     verificarParticipacion,
   } = useRodadas();
+  
+  // 🛹 Spots (Lugares especiales para patinar)
+  const { 
+    spots, 
+    loading: loadingSpots,
+    loadSpots,
+  } = useSpots();
+  
   const [deletingRodada, setDeletingRodada] = useState(false);
   const [showCreateRodadaModal, setShowCreateRodadaModal] = useState(false);
   const [showRodadasList, setShowRodadasList] = useState(false);
@@ -68,6 +83,11 @@ export default function Tracking() {
   const [isUserJoined, setIsUserJoined] = useState(false); // Si el usuario está unido a la rodada seleccionada
   const [checkingJoin, setCheckingJoin] = useState(false); // Verificando participación
   const [ mapType, setMapType ] = useState('hybrid');
+
+  // 👥 Live Skaters (Otros patinadores en tiempo real)
+  const [liveSkaters, setLiveSkaters] = useState([]);
+  const [livePaths, setLivePaths] = useState({});
+  const [showSpotsOnMap, setShowSpotsOnMap] = useState(true); // Toggle para mostrar spots
 
   // 📜 Ruta histórica recibida desde RoutesHistory
   const [historicalRoute, setHistoricalRoute] = useState(null);
@@ -119,8 +139,144 @@ export default function Tracking() {
     React.useCallback(() => {
       console.log('🛼 Cargando rodadas...');
       fetchRodadas({ soloProximas: false });
+      loadSpots(); // 🛹 Cargar spots también
     }, [])
   );
+
+  // 👥 Normalizar datos de patinador en vivo
+  const normalizeLiveRecord = (record) => {
+    if (!record) return null;
+    return {
+      userId: record.user_id,
+      lat: Number(record.lat),
+      lng: Number(record.lng),
+      speed: record.speed,
+      heading: record.heading,
+      isActive: record.is_active,
+      updatedAt: record.updated_at,
+      usuario: record.usuarios || null,
+    };
+  };
+
+  // 👥 Obtener género del patinador
+  const getSkaterGender = (skater) => {
+    const raw =
+      skater?.usuario?.genero ||
+      skater?.usuario?.gender ||
+      skater?.usuario?.sexo ||
+      '';
+    const value = String(raw).toLowerCase();
+    if (value.startsWith('f') || value.includes('mujer')) return 'female';
+    if (value.startsWith('m') || value.includes('hombre')) return 'male';
+    return 'male';
+  };
+
+  // 👥 Obtener color del patinador según género
+  const getSkaterColor = (skater) => {
+    return getSkaterGender(skater) === 'female' ? '#FF4FA3' : '#19C37D';
+  };
+
+  // 👥 Filtrar patinadores visibles
+  const visibleLiveSkaters = useMemo(() => {
+    const visible = liveSkaters.filter((skater) => {
+      if (!skater.isActive) return false;
+      if (!Number.isFinite(skater.lat) || !Number.isFinite(skater.lng)) return false;
+      if (user?.id && skater.userId === user.id) return false;
+      return true;
+    });
+    return visible;
+  }, [liveSkaters, user]);
+
+  // 👥 Agregar punto a la ruta de un patinador
+  const appendLivePath = (userId, lat, lng) => {
+    setLivePaths((prev) => {
+      const current = prev[userId];
+      const nextPoint = { latitude: lat, longitude: lng };
+
+      if (!current) {
+        return {
+          ...prev,
+          [userId]: {
+            start: nextPoint,
+            points: [nextPoint],
+          },
+        };
+      }
+
+      const last = current.points[current.points.length - 1];
+      const moved =
+        Math.abs(last.latitude - lat) > 0.00001 ||
+        Math.abs(last.longitude - lng) > 0.00001;
+
+      if (!moved) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [userId]: {
+          ...current,
+          points: [...current.points, nextPoint],
+        },
+      };
+    });
+  };
+
+  // 👥 Cargar patinadores en vivo inicial
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadLiveSkaters = async () => {
+      console.log('👥 Cargando patinadores en vivo...');
+      const { data, error, ok } = await fetchTrackingLive();
+      if (!isMounted) return;
+      const normalized = (data || []).map(normalizeLiveRecord).filter(Boolean);
+      console.log('👥 Patinadores normalizados:', normalized);
+      setLiveSkaters(normalized);
+      normalized.forEach((item) => {
+        if (item.isActive && Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
+          appendLivePath(item.userId, item.lat, item.lng);
+        }
+      });
+    };
+
+    loadLiveSkaters();
+
+    // 📡 Suscribirse a cambios en tiempo real
+    const channel = subscribeTrackingLive((payload) => {
+      if (!isMounted) return;
+      const record = payload.new || payload.old;
+      const normalized = normalizeLiveRecord(record);
+      if (!normalized) return;
+
+      if (payload.eventType === 'DELETE' || normalized.isActive === false) {
+        setLiveSkaters((prev) => prev.filter((item) => item.userId !== normalized.userId));
+        setLivePaths((prev) => {
+          const next = { ...prev };
+          delete next[normalized.userId];
+          return next;
+        });
+        return;
+      }
+
+      setLiveSkaters((prev) => {
+        const index = prev.findIndex((item) => item.userId === normalized.userId);
+        if (index === -1) {
+          return [...prev, normalized];
+        }
+        const next = [...prev];
+        next[index] = { ...next[index], ...normalized };
+        return next;
+      });
+
+      appendLivePath(normalized.userId, normalized.lat, normalized.lng);
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribeTrackingLive(channel);
+    };
+  }, []);
 
   // 📡 Suscribirse a cambios en tiempo real de rodadas (solo cuando se muestre el mapa)
   useRealtimeSubscription('rodadas', (payload) => {
@@ -437,15 +593,15 @@ export default function Tracking() {
     return R * c;
   };
   
-  // 🚩 Mostrar bandera solo si estamos a más de 50 metros del inicio
+  // 🚩 Mostrar bandera solo si estamos a más de 10 metros del inicio
   const lastCoord = routeCoordinates.length > 0 ? routeCoordinates[routeCoordinates.length - 1] : null;
   const firstCoord = routeCoordinates.length > 0 ? routeCoordinates[0] : null;
   const distanceFromStart = (firstCoord && lastCoord && routeCoordinates.length > 2)
     ? getDistanceBetweenPoints(firstCoord, lastCoord)
     : 0;
-  // La bandera aparece solo cuando hay distancia suficiente (50m) para verse separada del patín
+  // La bandera aparece solo cuando hay distancia suficiente (10m) para verse separada del patín
   // y cuando hay más de 5 puntos de ruta (evitar falsos positivos por GPS impreciso)
-  const showStartFlag = routeCoordinates.length > 5 && distanceFromStart > 50;
+  const showStartFlag = routeCoordinates.length > 5 && distanceFromStart > 10;
   
   const statsCardStyle = {
     backgroundColor: isDark ? 'rgba(77, 215, 208, 0.08)' : 'rgba(15, 23, 42, 0.04)',
@@ -542,10 +698,10 @@ export default function Tracking() {
           />
         )}
 
-        {/* 🚩 Marcador de inicio de ruta actual (solo si estamos a más de 20m) */}
+        {/* 🚩 Marcador de inicio de ruta actual (rojo, solo si avanzó 10m) */}
         {showStartFlag && (
           <Marker coordinate={routeCoordinates[0]}>
-            <View style={[styles.startMarker, { backgroundColor: "#34C759" }]}>
+            <View style={[styles.startMarker, { backgroundColor: "#DC3545" }]}>
               <Ionicons name="flag" size={16} color="#FFFFFF" />
             </View>
           </Marker>
@@ -571,6 +727,61 @@ export default function Tracking() {
             </View>
           </Marker>
         )}
+
+        {/* 👥 Banderas de inicio de patinadores en vivo */}
+        {visibleLiveSkaters.map((skater) => {
+          const skaterPaths = livePaths[skater.userId];
+          if (!skaterPaths?.start) return null;
+
+          return (
+            <Marker
+              key={`flag-${skater.userId}`}
+              coordinate={skaterPaths.start}
+            >
+              <View style={[styles.startMarker, { backgroundColor: '#34C759' }]}>
+                <Ionicons name="flag" size={16} color="#FFFFFF" />
+              </View>
+            </Marker>
+          );
+        })}
+
+        {/* 📜 Polylines de rutas de patinadores en vivo */}
+        {Object.keys(livePaths).map((userId) => {
+          const pathData = livePaths[userId];
+          if (!pathData?.points || pathData.points.length < 2) return null;
+
+          return (
+            <Polyline
+              key={`path-${userId}`}
+              coordinates={pathData.points}
+              strokeColor="#19C37D"
+              strokeWidth={3}
+              lineCap="round"
+              lineJoin="round"
+            />
+          );
+        })}
+
+        {/* 👥 Patinadores en vivo (con icono de patín con ruedas) */}
+        {visibleLiveSkaters.map((skater) => (
+          <Marker
+            key={skater.userId}
+            coordinate={{
+              latitude: skater.lat,
+              longitude: skater.lng,
+            }}
+            rotation={skater.heading || 0}
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={[styles.currentPositionMarker, { backgroundColor: getSkaterColor(skater) }]}>
+              <MaterialCommunityIcons
+                name="roller-skate"
+                size={18}
+                color="#FFFFFF"
+              />
+            </View>
+          </Marker>
+        ))}
 
         {/* 🛼 Marcadores de Rodadas (salida) */}
         {rodadas.map((rodada) => {
@@ -669,6 +880,32 @@ export default function Tracking() {
             </React.Fragment>
           );
         })}
+
+        {/*  Markers de spots (lugares especiales para patinar) */}
+        {showSpotsOnMap && spots.map((spot) => (
+          <Marker
+            key={`spot-${spot.id}`}
+            coordinate={{
+              latitude: parseFloat(spot.latitud),
+              longitude: parseFloat(spot.longitud),
+            }}
+            title={spot.nombre}
+            description={spot.ciudad || 'Spot'}
+          >
+            <View
+              style={[
+                styles.spotMarker,
+                { backgroundColor: theme.colors.primary },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="skateboard-mountain"
+                size={16}
+                color="#FFFFFF"
+              />
+            </View>
+          </Marker>
+        ))}
       </MapView>
 
       {/* 📜 Badge de ruta histórica */}
@@ -794,6 +1031,27 @@ export default function Tracking() {
             name={mapType === "hybrid" ? "map-outline" : "earth-outline"}
             size={24}
             color={theme.colors.primary}
+          />
+        </TouchableOpacity>
+
+        {/* Botón toggle spots */}
+        <TouchableOpacity
+          onPress={() => setShowSpotsOnMap(!showSpotsOnMap)}
+          style={[
+            styles.headerButton,
+            {
+              backgroundColor: showSpotsOnMap
+                ? theme.colors.primary
+                : isDark
+                ? "rgba(255,255,255,0.1)"
+                : "rgba(0,0,0,0.08)",
+            },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="skateboard-mountain"
+            size={24}
+            color={showSpotsOnMap ? "#FFFFFF" : theme.colors.primary}
           />
         </TouchableOpacity>
 
@@ -2411,5 +2669,34 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+
+  // 👥 Estilos para patinadores en vivo
+  liveSkaterMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  // 🛹 Estilos para spots
+  spotMarker: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
   },
 });

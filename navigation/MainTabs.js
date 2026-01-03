@@ -9,7 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import Inicio from '../screens/Inicio';
 import Patinadores from '../screens/Patinadores';
 import Parches from '../screens/Parches';
-import Spots from '../screens/Spots';
+import Spots from '../screens/Spots'; // 🛒 Marketplace
 import Galeria from '../screens/Galeria';
 import Tracking from '../screens/Tracking';
 import RoutesHistory from '../screens/RoutesHistory';
@@ -151,8 +151,10 @@ export default function MainTabs() {
               IconComponent = FontAwesome5;
               iconName = 'users';
               return <IconComponent name={iconName} size={size - 2} color={color} />;
-            } else if (route.name === 'Spots') {
-              iconName = focused ? 'location' : 'location-outline';
+            } else if (route.name === 'MarketRollers') {
+              IconComponent = MaterialCommunityIcons;
+              iconName = focused ? 'shopping' : 'shopping-outline';
+              return <IconComponent name={iconName} size={size} color={color} />;
             } else if (route.name === 'Rutas') {
               iconName = focused ? 'navigate-circle' : 'navigate-circle-outline';
             } else if (route.name === 'Galería') {
@@ -181,9 +183,9 @@ export default function MainTabs() {
           options={{ title: t('nav.parches'), tabBarLabel: t('nav.parches') }}
         />
         <Tab.Screen
-          name="Spots"
+          name="MarketRollers"
           component={Spots}
-          options={{ title: t('nav.spots'), tabBarLabel: t('nav.spots') }}
+          options={{ title: '🛍️ MarketRollers', tabBarLabel: 'MarketRollers' }}
         />
         <Tab.Screen
           name="Rutas"

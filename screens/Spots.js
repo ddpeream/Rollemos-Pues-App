@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,1351 +9,1478 @@ import {
   Image,
   ScrollView,
   Dimensions,
-  ActivityIndicator,
-  RefreshControl,
-  Platform,
   SafeAreaView,
+  Linking,
+  Modal,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import * as Location from 'expo-location';
-import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import useAppStore from '../store/useAppStore';
-import { useSpots } from '../hooks/useSpots';
-import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
-import { theme as staticTheme } from '../theme';
-import { fetchTrackingLive, subscribeTrackingLive, unsubscribeTrackingLive } from '../services/tracking';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 42) / 2; // 2 columnas con padding perfecto
 
-export default function Spots() {
-  const { t } = useTranslation();
-  const { theme, user } = useAppStore();
-  
-  const {
-    spots,
-    loading,
-    refreshing,
-    loadSpots,
-    refreshSpots,
-  } = useSpots();
-  
+// 🛒 PRODUCTOS MARKETROLLERS - 100% PATINAJE
+const PRODUCTOS = [
+  {
+    id: 1,
+    nombre: 'Tabla Skateboard Maple 8.5"',
+    precio: 280000,
+    imagenes: ['https://images.unsplash.com/photo-1559056199-641a0ac8b3f4?w=400&h=300&fit=crop'],
+    categoria: 'Tablas',
+    vendedor: { nombre: 'Juan', ciudad: 'Medellín' },
+  },
+  {
+    id: 2,
+    nombre: 'Ruedas Bones STF 52mm',
+    precio: 150000,
+    imagenes: ['https://images.unsplash.com/photo-1494496195356-3d2569a1b27b?w=400&h=300&fit=crop'],
+    categoria: 'Ruedas',
+    vendedor: { nombre: 'María', ciudad: 'Bogotá' },
+  },
+  {
+    id: 3,
+    nombre: 'Bearings ABEC-7 Set',
+    precio: 120000,
+    imagenes: ['https://images.unsplash.com/photo-1595777712673-36e18cef9f33?w=400&h=300&fit=crop'],
+    categoria: 'Partes',
+    vendedor: { nombre: 'Carlos', ciudad: 'Cali' },
+  },
+  {
+    id: 4,
+    nombre: 'Protecciones 3 en 1 Pro',
+    precio: 95000,
+    imagenes: ['https://images.unsplash.com/photo-1517836357463-d25ddfcb3ef1?w=400&h=300&fit=crop'],
+    categoria: 'Protección',
+    vendedor: { nombre: 'Andrea', ciudad: 'Barranquilla' },
+  },
+  {
+    id: 5,
+    nombre: 'Grip Tape Negro Premium',
+    precio: 65000,
+    imagenes: ['https://images.unsplash.com/photo-1598306044893-c9f94dfe8297?w=400&h=300&fit=crop'],
+    categoria: 'Partes',
+    vendedor: { nombre: 'Roberto', ciudad: 'Medellín' },
+  },
+  {
+    id: 6,
+    nombre: 'Trucks Aluminio 139mm',
+    precio: 185000,
+    imagenes: ['https://images.unsplash.com/photo-1606611013016-969c19d4a42f?w=400&h=300&fit=crop'],
+    categoria: 'Partes',
+    vendedor: { nombre: 'Laura', ciudad: 'Bogotá' },
+  },
+  {
+    id: 7,
+    nombre: 'Casco Skateboard Certificado',
+    precio: 220000,
+    imagenes: ['https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=400&h=300&fit=crop'],
+    categoria: 'Protección',
+    vendedor: { nombre: 'Miguel', ciudad: 'Cali' },
+  },
+  {
+    id: 8,
+    nombre: 'Mochila Skate Impermeable',
+    precio: 135000,
+    imagenes: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop'],
+    categoria: 'Accesorios',
+    vendedor: { nombre: 'Sophia', ciudad: 'Medellín' },
+  },
+  {
+    id: 9,
+    nombre: 'Zapatillas Skate Vulc',
+    precio: 250000,
+    imagenes: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop'],
+    categoria: 'Accesorios',
+    vendedor: { nombre: 'David', ciudad: 'Barranquilla' },
+  },
+  {
+    id: 10,
+    nombre: 'Set Pernos Titanio M8',
+    precio: 45000,
+    imagenes: ['https://images.unsplash.com/photo-1565884409695-7b5ef63df2efb?w=400&h=300&fit=crop'],
+    categoria: 'Partes',
+    vendedor: { nombre: 'Alex', ciudad: 'Bogotá' },
+  },
+  {
+    id: 11,
+    nombre: 'Tabla Concave Pro Shape',
+    precio: 320000,
+    imagenes: ['https://images.unsplash.com/photo-1559056199-641a0ac8b3f4?w=400&h=300&fit=crop'],
+    categoria: 'Tablas',
+    vendedor: { nombre: 'Diego', ciudad: 'Medellín' },
+  },
+  {
+    id: 12,
+    nombre: 'Rodillos Entrenamiento',
+    precio: 180000,
+    imagenes: ['https://images.unsplash.com/photo-1596394516093-501ba290603f?w=400&h=300&fit=crop'],
+    categoria: 'Accesorios',
+    vendedor: { nombre: 'Valentina', ciudad: 'Cali' },
+  },
+];
+
+export default function MarketRollers({ navigation }) {
+  const { theme } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('Todos');
-  const [selectedType, setSelectedType] = useState('Todos');
-  const [activeFilter, setActiveFilter] = useState(null);
-  const [liveSkaters, setLiveSkaters] = useState([]);
-  const [livePaths, setLivePaths] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [products, setProducts] = useState(PRODUCTOS);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+  const [currentUser] = useState('Yo'); // Usuario actual (simulado)
+  
+  // Form state para crear producto
+  const [formData, setFormData] = useState({
+    nombre: '',
+    precio: '',
+    categoria: 'Tablas',
+    imagenes: [],
+  });
 
-  const translateOption = (option) => {
-    if (option === 'Todos') return t('filters.all');
-    return option;
-  };
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
-  const [selectedSpot, setSelectedSpot] = useState(null);
-  const mapRef = useRef(null);
+  // Filtrar productos
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = product.nombre
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesCategory =
+        selectedCategory === 'Todos' || product.categoria === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory, products]);
 
-  // Pedir permisos de ubicación al montar la pantalla
-  useEffect(() => {
-    const requestPermissions = async () => {
-      try {
-        console.log('🔐 Solicitando permisos en Spots...');
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.warn('⚠️ Permiso de ubicación denegado en Spots');
-        } else {
-          console.log('✅ Permisos concedidos en Spots');
-        }
-      } catch (error) {
-        console.error('❌ Error solicitando permisos en Spots:', error);
-      }
+  const categories = ['Todos', 'Tablas', 'Ruedas', 'Protección', 'Accesorios', 'Partes'];
+
+  // Crear nuevo producto
+  const handleCreateProduct = () => {
+    if (!formData.nombre.trim() || !formData.precio.trim() || formData.imagenes.length === 0) {
+      Alert.alert('Error', 'Por favor completa todos los campos y agrega al menos una imagen');
+      return;
+    }
+
+    const newProduct = {
+      id: products.length + 1,
+      nombre: formData.nombre,
+      precio: parseInt(formData.precio),
+      imagenes: formData.imagenes,
+      categoria: formData.categoria,
+      vendedor: { nombre: 'Tu Nombre', ciudad: 'Tu Ciudad' },
     };
-    requestPermissions();
-  }, []);
 
-  // Cargar spots al entrar a la pantalla
-  useFocusEffect(
-    React.useCallback(() => {
-      loadSpots();
-    }, [loadSpots])
+    setProducts([newProduct, ...products]);
+    setFormData({
+      nombre: '',
+      precio: '',
+      categoria: 'Tablas',
+      imagenes: [],
+    });
+    setShowCreateModal(false);
+    Alert.alert('Éxito', 'Producto creado correctamente');
+  };
+
+  // Eliminar producto
+  const handleDeleteProduct = (id) => {
+    Alert.alert(
+      'Eliminar Producto',
+      '¿Estás seguro de que deseas eliminar este producto?',
+      [
+        { text: 'Cancelar', onPress: () => {}, style: 'cancel' },
+        {
+          text: 'Eliminar',
+          onPress: () => {
+            setProducts(products.filter(p => p.id !== id));
+            setShowDetailModal(false);
+            Alert.alert('Éxito', 'Producto eliminado correctamente');
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
+  // Seleccionar imagen desde galería
+  const handleSelectImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+
+    if (!result.cancelled && result.assets && result.assets.length > 0) {
+      const imageUri = result.assets[0].uri;
+      setFormData({
+        ...formData,
+        imagenes: [...formData.imagenes, imageUri],
+      });
+    }
+  };
+
+  // Eliminar imagen de la selección
+  const handleRemoveImage = (index) => {
+    setFormData({
+      ...formData,
+      imagenes: formData.imagenes.filter((_, i) => i !== index),
+    });
+  };
+
+  // Favoritar/Desfavoritar producto
+  const handleToggleFavorite = (productId) => {
+    if (favorites.includes(productId)) {
+      setFavorites(favorites.filter(id => id !== productId));
+    } else {
+      setFavorites([...favorites, productId]);
+    }
+  };
+
+  // Compartir producto
+  const handleShareProduct = (product) => {
+    const mensaje = `Te comparto este producto:\n\n${product.nombre}\n\n💰 Precio: $${product.precio.toLocaleString('es-CO')}\n📍 Categoría: ${product.categoria}\n\n¿Te interesa?`;
+    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(mensaje)}`);
+  };
+  const handleContact = (product) => {
+    const mensaje = `Hola, me interesa el producto: ${product.nombre} por $${product.precio}. ¿Disponible?`;
+    const whatsappUrl = `https://wa.me/573001234567?text=${encodeURIComponent(mensaje)}`;
+    Linking.openURL(whatsappUrl);
+  };
+
+  // Tarjeta de producto
+  const renderProduct = ({ item }) => (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() => {
+        setSelectedProduct(item);
+        setShowDetailModal(true);
+      }}
+      style={[
+        styles.productCard,
+        {
+          backgroundColor: theme.colors.glass.background,
+          borderColor: theme.colors.border,
+          width: CARD_WIDTH,
+        },
+      ]}
+    >
+      {/* Imagen del Producto */}
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: item.imagenes[0] }}
+          style={styles.productImage}
+        />
+
+        {/* Badge Categoría */}
+        <View
+          style={[
+            styles.categoryBadge,
+            { backgroundColor: theme.colors.primary },
+          ]}
+        >
+          <Text style={styles.categoryBadgeText}>{item.categoria}</Text>
+        </View>
+      </View>
+
+      {/* Contenido */}
+      <View style={styles.productContent}>
+        {/* Nombre */}
+        <Text
+          style={[styles.productName, { color: theme.colors.text.primary }]}
+          numberOfLines={2}
+        >
+          {item.nombre}
+        </Text>
+
+        {/* Precio */}
+        <View style={styles.priceSection}>
+          <Text
+            style={[styles.priceLabel, { color: theme.colors.text.secondary }]}
+          >
+            Precio
+          </Text>
+          <Text style={[styles.price, { color: theme.colors.primary }]}>
+            ${item.precio.toLocaleString('es-CO')}
+          </Text>
+        </View>
+
+        {/* Divider */}
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+
+        {/* Vendedor */}
+        <View style={styles.vendorSection}>
+          <View style={styles.vendorHeader}>
+            <View
+              style={[
+                styles.vendorAvatar,
+                { backgroundColor: theme.colors.primary + '15' },
+              ]}
+            >
+              <Ionicons name="person" size={14} color={theme.colors.primary} />
+            </View>
+            <View style={styles.vendorInfo}>
+              <Text
+                style={[styles.vendorName, { color: theme.colors.text.primary }]}
+              >
+                {item.vendedor.nombre}
+              </Text>
+              <View style={styles.locationRow}>
+                <Ionicons
+                  name="location-outline"
+                  size={12}
+                  color={theme.colors.text.secondary}
+                />
+                <Text
+                  style={[
+                    styles.vendorCity,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  {item.vendedor.ciudad}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Botón Contactar */}
+        <TouchableOpacity
+          activeOpacity={0.75}
+          style={[
+            styles.contactButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
+          onPress={() => handleContact(item)}
+        >
+          <MaterialCommunityIcons name="whatsapp" size={16} color="#FFF" />
+          <Text style={styles.contactButtonText}>Contactar</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 
-  // 📡 Suscribirse a cambios en tiempo real de spots (callback estable)
-  const handleSpotsChange = React.useCallback(() => {
-    console.log('📍 Recargando spots por cambio en realtime');
-    loadSpots();
-  }, [loadSpots]);
-
-  useRealtimeSubscription('spots', handleSpotsChange);
-
-  const normalizeLiveRecord = (record) => {
-    if (!record) return null;
-    return {
-      userId: record.user_id,
-      lat: Number(record.lat),
-      lng: Number(record.lng),
-      speed: record.speed,
-      heading: record.heading,
-      isActive: record.is_active,
-      updatedAt: record.updated_at,
-      usuario: record.usuarios || null,
-    };
-  };
-
-  const getSkaterGender = (skater) => {
-    const raw =
-      skater?.usuario?.genero ||
-      skater?.usuario?.gender ||
-      skater?.usuario?.sexo ||
-      '';
-    const value = String(raw).toLowerCase();
-    if (value.startsWith('f') || value.includes('mujer')) return 'female';
-    if (value.startsWith('m') || value.includes('hombre')) return 'male';
-    return 'male';
-  };
-
-  const getSkaterColor = (skater) => {
-    return getSkaterGender(skater) === 'female' ? '#FF4FA3' : '#19C37D';
-  };
-
-  const appendLivePath = (userId, lat, lng) => {
-    setLivePaths((prev) => {
-      const current = prev[userId];
-      const nextPoint = { latitude: lat, longitude: lng };
-
-      if (!current) {
-        return {
-          ...prev,
-          [userId]: {
-            start: nextPoint,
-            points: [nextPoint],
-          },
-        };
-      }
-
-      const last = current.points[current.points.length - 1];
-      const moved =
-        Math.abs(last.latitude - lat) > 0.00001 ||
-        Math.abs(last.longitude - lng) > 0.00001;
-
-      if (!moved) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        [userId]: {
-          ...current,
-          points: [...current.points, nextPoint],
-        },
-      };
-    });
-  };
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadLiveSkaters = async () => {
-      console.log('🔍 Cargando skaters en vivo...');
-      const { data, error, ok } = await fetchTrackingLive();
-      console.log('📍 fetchTrackingLive result:', { ok, error, count: data?.length, data });
-      if (!isMounted) return;
-      const normalized = (data || []).map(normalizeLiveRecord).filter(Boolean);
-      console.log('📍 Skaters normalizados:', normalized);
-      setLiveSkaters(normalized);
-      normalized.forEach((item) => {
-        if (item.isActive && Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
-          appendLivePath(item.userId, item.lat, item.lng);
-        }
-      });
-    };
-
-    loadLiveSkaters();
-
-    const channel = subscribeTrackingLive((payload) => {
-      if (!isMounted) return;
-      const record = payload.new || payload.old;
-      const normalized = normalizeLiveRecord(record);
-      if (!normalized) return;
-
-      if (payload.eventType === 'DELETE' || normalized.isActive === false) {
-        setLiveSkaters((prev) => prev.filter((item) => item.userId !== normalized.userId));
-        setLivePaths((prev) => {
-          const next = { ...prev };
-          delete next[normalized.userId];
-          return next;
-        });
-        return;
-      }
-
-      setLiveSkaters((prev) => {
-        const index = prev.findIndex((item) => item.userId === normalized.userId);
-        if (index === -1) {
-          return [...prev, normalized];
-        }
-        const next = [...prev];
-        next[index] = { ...next[index], ...normalized };
-        return next;
-      });
-
-      appendLivePath(normalized.userId, normalized.lat, normalized.lng);
-    });
-
-    return () => {
-      isMounted = false;
-      unsubscribeTrackingLive(channel);
-    };
-  }, []);
-
-  // Extract unique values for filters
-  const cities = useMemo(() => {
-    const uniqueCities = [...new Set(spots.map(s => s.ciudad).filter(Boolean))];
-    return ['Todos', ...uniqueCities];
-  }, [spots]);
-
-  const types = useMemo(() => {
-    const uniqueTypes = [...new Set(spots.map(s => s.tipo).filter(Boolean))];
-    
-    // Si no hay tipos de los datos, usar los predeterminados
-    const defaultTypes = ['Skatepark', 'Street', 'Plaza', 'DIY', 'Bowl', 'Rampa'];
-    const finalTypes = uniqueTypes.length > 0 ? uniqueTypes : defaultTypes;
-    
-    return ['Todos', ...finalTypes];
-  }, [spots]);
-
-  // Filter spots
-  const filteredSpots = useMemo(() => {
-    return spots.filter(spot => {
-      const matchesSearch = spot.nombre?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           spot.direccion?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCity = selectedCity === 'Todos' || spot.ciudad === selectedCity;
-      const matchesType = selectedType === 'Todos' || spot.tipo === selectedType;
-      
-      return matchesSearch && matchesCity && matchesType;
-    });
-  }, [spots, searchQuery, selectedCity, selectedType]);
-
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchQuery('');
-    setSelectedCity('Todos');
-    setSelectedType('Todos');
-  };
-
-  const FilterButton = ({ id, label, value, options, onSelect, icon }) => {
-    const isActive = activeFilter === id;
-    const hasSelection = value !== 'Todos';
-    
-    // Mostrar el nombre del filtro cuando no hay selección
-    const displayText = hasSelection ? translateOption(value) : label;
-
-    return (
-      <View style={styles.filterButtonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            { 
-              backgroundColor: hasSelection ? theme.colors.primary : theme.colors.glass.background,
-              borderColor: hasSelection ? theme.colors.primary : theme.colors.glass.border,
-            }
-          ]}
-          onPress={() => setActiveFilter(isActive ? null : id)}
-        >
-          <Ionicons 
-            name={icon} 
-            size={16} 
-            color={hasSelection ? theme.colors.onPrimary : theme.colors.text.primary} 
-          />
-          <Text style={[
-            styles.filterButtonText,
-            { color: hasSelection ? theme.colors.onPrimary : theme.colors.text.primary }
-          ]}>
-            {displayText}
-          </Text>
-          <Ionicons 
-            name={isActive ? "chevron-up" : "chevron-down"} 
-            size={16} 
-            color={hasSelection ? theme.colors.onPrimary : theme.colors.text.secondary} 
-          />
-        </TouchableOpacity>
-
-        {isActive && (
-          <View style={[
-            styles.filterDropdown,
-            { 
-              backgroundColor: theme.colors.background.surface,
-              borderColor: theme.colors.glass.border,
-            }
-          ]}>
-            <ScrollView style={styles.filterDropdownScroll} nestedScrollEnabled>
-              {options.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[
-                    styles.filterOption,
-                    { borderBottomColor: theme.colors.glass.border }
-                  ]}
-                  onPress={() => {
-                    onSelect(option);
-                    setActiveFilter(null);
-                  }}
-                >
-                  <Text style={[
-                    styles.filterOptionText,
-                    { color: option === value ? theme.colors.primary : theme.colors.text.primary }
-                  ]}>
-                    {translateOption(option)}
-                  </Text>
-                  {option === value && (
-                    <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const hasActiveFilters = searchQuery || selectedCity !== 'Todos' || selectedType !== 'Todos';
-
-  // Get initial map region based on filtered spots
-  const mapRegion = useMemo(() => {
-    const spotsWithCoords = filteredSpots.filter(s => s.latitud && s.longitud);
-    
-    if (spotsWithCoords.length === 0) {
-      // Default to Colombia center
-      return {
-        latitude: 4.5709,
-        longitude: -74.2973,
-        latitudeDelta: 10,
-        longitudeDelta: 10,
-      };
-    }
-
-    const latitudes = spotsWithCoords.map(s => parseFloat(s.latitud));
-    const longitudes = spotsWithCoords.map(s => parseFloat(s.longitud));
-    
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-    
-    const centerLat = (minLat + maxLat) / 2;
-    const centerLng = (minLng + maxLng) / 2;
-    const deltaLat = (maxLat - minLat) * 1.5 || 0.1;
-    const deltaLng = (maxLng - minLng) * 1.5 || 0.1;
-
-    return {
-      latitude: centerLat,
-      longitude: centerLng,
-      latitudeDelta: Math.max(deltaLat, 0.1),
-      longitudeDelta: Math.max(deltaLng, 0.1),
-    };
-  }, [filteredSpots]);
-
-  const visibleLiveSkaters = useMemo(() => {
-    const visible = liveSkaters.filter((skater) => {
-      if (!skater.isActive) return false;
-      if (!Number.isFinite(skater.lat) || !Number.isFinite(skater.lng)) return false;
-      if (user?.id && skater.userId === user.id) return false;
-      return true;
-    });
-    console.log('👀 visibleLiveSkaters:', JSON.stringify({ total: liveSkaters.length, visible: visible.length, userId: user?.id, visible }, null, 2));
-    return visible;
-  }, [liveSkaters, user]);
-
-  // Focus on specific spot in map
-  const focusSpotOnMap = (spot) => {
-    if (spot.latitud && spot.longitud && mapRef.current) {
-      setSelectedSpot(spot);
-      setViewMode('map');
-      
-      setTimeout(() => {
-        mapRef.current.animateToRegion({
-          latitude: parseFloat(spot.latitud),
-          longitude: parseFloat(spot.longitud),
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }, 500);
-      }, 100);
-    }
-  };
-
-  // Get spot type icon
-  const getTypeIcon = (tipo) => {
-    const icons = {
-      'Skatepark': 'business',
-      'Street': 'map',
-      'Plaza': 'trail-sign',
-      'DIY': 'hammer',
-      'Bowl': 'disc',
-      'Rampa': 'triangle',
-    };
-    return icons[tipo] || 'location';
-  };
-
-  // Get difficulty color
-  const getDifficultyStyle = (dificultad, theme) => {
-    const colors = {
-      'fácil': { backgroundColor: theme.colors.success + '20', color: theme.colors.success },
-      'media': { backgroundColor: '#FFA500' + '20', color: '#FFA500' },
-      'difícil': { backgroundColor: theme.colors.error + '20', color: theme.colors.error },
-    };
-    return colors[dificultad?.toLowerCase()] || { backgroundColor: theme.colors.alpha.primary15, color: theme.colors.primary };
-  };
-
-  // Render spot card
-  const renderSpotCard = ({ item }) => {
-    const difficultyStyle = getDifficultyStyle(item.dificultad, theme);
-
-    return (
-      <TouchableOpacity 
-        style={[styles.spotCard, { 
-          backgroundColor: theme.colors.glass.background,
-          borderColor: theme.colors.border 
-        }]}
-        activeOpacity={0.7}
-      >
-        {/* Image */}
-        <Image 
-          source={{ uri: item.foto || item.imagen || 'https://via.placeholder.com/400x300' }} 
-          style={styles.spotImage} 
-        />
-        
-        {/* Type Badge */}
-        <View style={[styles.typeBadge, { backgroundColor: theme.colors.primary }]}>
-          <Ionicons name={getTypeIcon(item.tipo)} size={14} color={theme.colors.onPrimary} />
-          <Text style={[styles.typeText, { color: theme.colors.onPrimary }]}>{item.tipo}</Text>
-        </View>
-        
-        {/* Content */}
-        <View style={styles.spotContent}>
-          {/* Header */}
-          <View style={styles.spotHeader}>
-            <Text style={[styles.spotNombre, { color: theme.colors.text.primary }]}>
-              {item.nombre}
-            </Text>
-            {item.verificado && (
-              <View style={[styles.verifiedBadge, { backgroundColor: theme.colors.alpha.primary15 }]}>
-                <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
-              </View>
-            )}
-          </View>
-
-          {/* Location */}
-          {(item.ciudad || item.direccion) && (
-            <View style={styles.locationContainer}>
-              <Ionicons name="location-outline" size={16} color={theme.colors.text.secondary} />
-              <Text style={[styles.locationText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
-                {item.ciudad && item.direccion 
-                  ? `${item.ciudad} - ${item.direccion}`
-                  : item.ciudad || item.direccion
-                }
-              </Text>
-            </View>
-          )}
-
-          {/* Description */}
-          {item.descripcion && (
-            <Text style={[styles.descriptionText, { color: theme.colors.text.secondary }]} numberOfLines={2}>
-              {item.descripcion}
-            </Text>
-          )}
-
-          {/* Features */}
-          <View style={styles.featuresContainer}>
-            {/* Difficulty */}
-            {item.dificultad && (
-              <View style={[styles.featureBadge, { backgroundColor: difficultyStyle.backgroundColor }]}>
-                <Ionicons name="stats-chart" size={12} color={difficultyStyle.color} />
-                <Text style={[styles.featureText, { color: difficultyStyle.color }]}>
-                  {item.dificultad}
-                </Text>
-              </View>
-            )}
-
-            {/* Rating */}
-            {item.rating && (
-              <View style={[styles.featureBadge, { backgroundColor: theme.colors.alpha.primary15 }]}>
-                <Ionicons name="star" size={12} color={theme.colors.primary} />
-                <Text style={[styles.featureText, { color: theme.colors.primary }]}>
-                  {item.rating}/5
-                </Text>
-              </View>
-            )}
-
-            {/* Open 24/7 */}
-            {item.horario_24h && (
-              <View style={[styles.featureBadge, { backgroundColor: theme.colors.success + '20' }]}>
-                <Ionicons name="time-outline" size={12} color={theme.colors.success} />
-                <Text style={[styles.featureText, { color: theme.colors.success }]}>
-                  24/7
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Footer */}
-          <View style={styles.cardFooter}>
-            <TouchableOpacity 
-              style={[styles.mapButton, { borderColor: theme.colors.border }]}
-              onPress={() => focusSpotOnMap(item)}
-            >
-              <Ionicons name="map-outline" size={18} color={theme.colors.primary} />
-              <Text style={[styles.mapButtonText, { color: theme.colors.primary }]}>
-                {t('screens.spots.map')}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}>
-              <Text style={[styles.viewButtonText, { color: theme.colors.onPrimary }]}>{t('screens.spots.view')}</Text>
-              <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+    <>
+      <SafeAreaView
+        style={[
+          styles.container,
+          { backgroundColor: theme.colors.background.primary },
+        ]}
+      >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-            {t('nav.spots')}
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-            {t('screens.spots.count', { count: filteredSpots.length })}
-          </Text>
-        </View>
-        
-        {/* View Mode Toggle */}
-        <View style={[styles.viewToggle, { backgroundColor: theme.colors.glass.background, borderColor: theme.colors.border }]}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerLeft}>
+            <Text style={[styles.title, { color: theme.colors.text.primary }]}>
+              🛍️ MarketRollers
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
+              {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
           <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              viewMode === 'list' && { backgroundColor: theme.colors.primary }
-            ]}
-            onPress={() => setViewMode('list')}
+            style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => setShowCreateModal(true)}
           >
-            <Ionicons 
-              name="list" 
-              size={20} 
-              color={viewMode === 'list' ? theme.colors.onPrimary : theme.colors.text.secondary} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              viewMode === 'map' && { backgroundColor: theme.colors.primary }
-            ]}
-            onPress={() => setViewMode('map')}
-          >
-            <Ionicons 
-              name="map" 
-              size={20} 
-              color={viewMode === 'map' ? theme.colors.onPrimary : theme.colors.text.secondary} 
-            />
+            <Ionicons name="add" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchSection}>
-        <View style={[styles.searchBar, { 
-          backgroundColor: theme.colors.glass.background,
-          borderColor: theme.colors.border 
-        }]}>
-          <Ionicons name="search" size={20} color={theme.colors.text.secondary} />
+        <View
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: theme.colors.glass.background,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <Ionicons
+            name="search"
+            size={18}
+            color={theme.colors.text.secondary}
+          />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.text.primary }]}
-            placeholder={t('screens.spots.searchPlaceholder')}
+            placeholder="Buscar producto..."
             placeholderTextColor={theme.colors.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery !== '' && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={theme.colors.text.secondary} />
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color={theme.colors.text.secondary}
+              />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Filters */}
-      <View style={styles.filtersSection}>
-        <View style={styles.filterRow}>
-          <FilterButton
-            id="city"
-            label={t('filters.city')}
-            value={selectedCity}
-            options={cities}
-            onSelect={setSelectedCity}
-            icon="location-outline"
-          />
-          <FilterButton
-            id="type"
-            label={t('filters.type')}
-            value={selectedType}
-            options={types}
-            onSelect={setSelectedType}
-            icon="business-outline"
-          />
-        </View>
-
-        {/* Clear Filters Button */}
-        {hasActiveFilters && (
+      {/* Categorías */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoriesScroll}
+        contentContainerStyle={styles.categoriesContent}
+      >
+        {categories.map(cat => (
           <TouchableOpacity
-            style={[styles.clearFiltersButton, { backgroundColor: theme.colors.error + '20' }]}
-            onPress={clearFilters}
+            key={cat}
+            style={[
+              styles.categoryButton,
+              selectedCategory === cat
+                ? { backgroundColor: theme.colors.primary, borderWidth: 0 }
+                : {
+                    backgroundColor: theme.colors.glass.background,
+                    borderColor: theme.colors.border,
+                    borderWidth: 1,
+                  },
+            ]}
+            onPress={() => setSelectedCategory(cat)}
           >
-            <Ionicons name="close-circle" size={16} color={theme.colors.error} />
-            <Text style={[styles.clearFiltersText, { color: theme.colors.error }]}>
-              {t('filters.clear')}
+            <Text
+              style={[
+                styles.categoryButtonText,
+                {
+                  color:
+                    selectedCategory === cat
+                      ? theme.colors.onPrimary
+                      : theme.colors.text.primary,
+                },
+              ]}
+            >
+              {cat}
             </Text>
           </TouchableOpacity>
-        )}
-      </View>
+        ))}
+      </ScrollView>
 
-      {/* Content - List or Map */}
-      {viewMode === 'map' ? (
-        <View style={styles.mapContainer}>
-          <MapView
-            ref={mapRef}
-            provider={PROVIDER_GOOGLE}
-            style={styles.map}
-            mapType='satellite'
-            initialRegion={mapRegion}
-            customMapStyle={theme.colors.background.primary === '#0B0F14' ? darkMapStyle : []}
-            showsUserLocation
-            showsMyLocationButton
-            showsCompass
-            toolbarEnabled={false}
-            onError={(err) => {
-              console.error('❌ Error en MapView (Spots):', err);
-              Alert.alert(t('screens.spots.mapErrorTitle'), t('screens.spots.mapErrorMessage'));
-            }}
+      {/* Lista de Productos */}
+      <FlatList
+        data={filteredProducts}
+        renderItem={renderProduct}
+        keyExtractor={item => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={styles.listContent}
+        scrollEnabled={true}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons
+              name="shopping-outline"
+              size={56}
+              color={theme.colors.text.secondary}
+            />
+            <Text
+              style={[styles.emptyText, { color: theme.colors.text.secondary }]}
+            >
+              No hay productos disponibles
+            </Text>
+          </View>
+        }
+      />
+    </SafeAreaView>
+
+    {/* MODAL DE DETALLE DEL PRODUCTO */}
+    <Modal
+      visible={showDetailModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowDetailModal(false)}
+    >
+      <SafeAreaView
+        style={[
+          styles.detailContainer,
+          { backgroundColor: theme.colors.background.primary },
+        ]}
+      >
+        {/* Header Modal */}
+        <View
+          style={[
+            styles.detailHeader,
+            { borderBottomColor: theme.colors.border },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={() => setShowDetailModal(false)}
+            style={styles.backButton}
           >
-            {filteredSpots
-              .filter(spot => spot.latitud && spot.longitud)
-              .map((spot) => (
-                <Marker
-                  key={spot.id}
-                  coordinate={{
-                    latitude: parseFloat(spot.latitud),
-                    longitude: parseFloat(spot.longitud),
-                  }}
-                  title={spot.nombre}
-                  description={spot.direccion}
-                  onPress={() => setSelectedSpot(spot)}
-                >
-                  <View style={[
-                    styles.customMarker,
-                    { backgroundColor: selectedSpot?.id === spot.id ? theme.colors.primary : theme.colors.glass.background },
-                    { borderColor: selectedSpot?.id === spot.id ? theme.colors.primary : theme.colors.border }
-                  ]}>
-                    <Ionicons 
-                      name={getTypeIcon(spot.tipo)} 
-                      size={20} 
-                      color={selectedSpot?.id === spot.id ? theme.colors.onPrimary : theme.colors.primary} 
-                    />
-                  </View>
-                </Marker>
-              ))}
-            {visibleLiveSkaters.map((skater) => {
-              const path = livePaths[skater.userId];
-              const skaterColor = getSkaterColor(skater);
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={[styles.detailTitle, { color: theme.colors.text.primary }]}>
+            Detalles
+          </Text>
+          <View style={styles.backButton} />
+        </View>
 
-              return (
-                <React.Fragment key={`live-${skater.userId}`}>
-                  {path?.points?.length > 1 && (
-                    <Polyline
-                      coordinates={path.points}
-                      strokeColor={skaterColor}
-                      strokeWidth={3}
-                    />
-                  )}
-                  {path?.start && (
-                    <Marker
-                      key={`live-start-${skater.userId}`}
-                      coordinate={path.start}
-                      title="Inicio"
-                    >
-                      <View style={styles.startFlagMarker}>
-                        <Ionicons name="flag" size={16} color="#FF3B30" />
-                      </View>
-                    </Marker>
-                  )}
-                  <Marker
-                    coordinate={{
-                      latitude: skater.lat,
-                      longitude: skater.lng,
-                    }}
-                    title={skater.usuario?.nombre || 'Skater'}
-                  >
-                    <View style={[styles.liveMarker, { borderColor: skaterColor }]}>
-                      <MaterialCommunityIcons name="roller-skate" size={18} color={skaterColor} />
-                    </View>
-                  </Marker>
-                </React.Fragment>
-              );
-            })}
-          </MapView>
-
-          {/* Selected Spot Card Overlay */}
-          {selectedSpot && (
-            <View style={[styles.mapOverlayCard, { backgroundColor: theme.colors.background.primary }]}>
-              <TouchableOpacity
-                style={styles.closeOverlay}
-                onPress={() => setSelectedSpot(null)}
+        <ScrollView
+          style={styles.detailContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {selectedProduct && (
+            <>
+              {/* Carrusel de Imagenes */}
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                style={styles.imageCarousel}
               >
-                <Ionicons name="close-circle" size={24} color={theme.colors.text.secondary} />
-              </TouchableOpacity>
-
-              <View style={styles.overlayContent}>
-                <Image 
-                  source={{ uri: selectedSpot.foto || selectedSpot.imagen || 'https://via.placeholder.com/400x300' }} 
-                  style={styles.overlayImage}
-                />
-                
-                <View style={styles.overlayInfo}>
-                  <View style={[styles.overlayTypeBadge, { backgroundColor: theme.colors.primary }]}>
-                    <Ionicons name={getTypeIcon(selectedSpot.tipo)} size={12} color={theme.colors.onPrimary} />
-                    <Text style={[styles.overlayTypeText, { color: theme.colors.onPrimary }]}>{selectedSpot.tipo}</Text>
-                  </View>
-                  
-                  <Text style={[styles.overlayTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                    {selectedSpot.nombre}
-                  </Text>
-                  
-                  {selectedSpot.ciudad && (
-                    <View style={styles.overlayLocation}>
-                      <Ionicons name="location-outline" size={14} color={theme.colors.text.secondary} />
-                      <Text style={[styles.overlayLocationText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
-                        {selectedSpot.ciudad}
+                {selectedProduct.imagenes.map((image, index) => (
+                  <View key={index} style={styles.carouselImageWrapper}>
+                    <Image
+                      source={{ uri: image }}
+                      style={styles.detailImage}
+                    />
+                    <View style={styles.imageCounter}>
+                      <Text style={styles.imageCounterText}>
+                        {index + 1}/{selectedProduct.imagenes.length}
                       </Text>
                     </View>
-                  )}
+                  </View>
+                ))}
+              </ScrollView>
 
-                  <TouchableOpacity 
-                    style={[styles.overlayButton, { backgroundColor: theme.colors.primary }]}
-                    onPress={() => {
-                      // Navigate to spot details
-                      setViewMode('list');
-                      setSelectedSpot(null);
-                    }}
+              {/* Info Producto */}
+              <View style={styles.detailInfo}>
+                {/* Categoría Badge */}
+                <View style={[styles.categoryBadgeLarge]}>
+                  <Text
+                    style={[
+                      styles.categoryBadgeTextLarge,
+                      { backgroundColor: theme.colors.primary },
+                    ]}
                   >
-                    <Text style={[styles.overlayButtonText, { color: theme.colors.onPrimary }]}>{t('screens.spots.viewDetails')}</Text>
-                    <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
-                  </TouchableOpacity>
+                    {selectedProduct.categoria}
+                  </Text>
                 </View>
-              </View>
-            </View>
-          )}
 
-          {/* Map Controls */}
-          <View style={styles.mapControls}>
+                {/* Nombre */}
+                <Text
+                  style={[
+                    styles.detailProductName,
+                    { color: theme.colors.text.primary },
+                  ]}
+                >
+                  {selectedProduct.nombre}
+                </Text>
+
+                {/* Precio Grande */}
+                <Text
+                  style={[styles.detailPrice, { color: theme.colors.primary }]}
+                >
+                  ${selectedProduct.precio.toLocaleString('es-CO')}
+                </Text>
+
+                {/* Divider */}
+                <View
+                  style={[
+                    styles.detailDivider,
+                    { backgroundColor: theme.colors.border },
+                  ]}
+                />
+
+                {/* Info Vendedor */}
+                <View style={styles.vendorDetailSection}>
+                  <Text
+                    style={[
+                      styles.sectionLabel,
+                      { color: theme.colors.text.secondary },
+                    ]}
+                  >
+                    Vendedor
+                  </Text>
+                  <View style={styles.vendorDetailCard}>
+                    <View
+                      style={[
+                        styles.vendorAvatarLarge,
+                        { backgroundColor: theme.colors.primary + '15' },
+                      ]}
+                    >
+                      <Ionicons
+                        name="person"
+                        size={20}
+                        color={theme.colors.primary}
+                      />
+                    </View>
+                    <View style={styles.vendorDetailInfo}>
+                      <Text
+                        style={[
+                          styles.vendorDetailName,
+                          { color: theme.colors.text.primary },
+                        ]}
+                      >
+                        {selectedProduct.vendedor.nombre}
+                      </Text>
+                      <View style={styles.locationDetailRow}>
+                        <Ionicons
+                          name="location-outline"
+                          size={14}
+                          color={theme.colors.text.secondary}
+                        />
+                        <Text
+                          style={[
+                            styles.vendorDetailCity,
+                            { color: theme.colors.text.secondary },
+                          ]}
+                        >
+                          {selectedProduct.vendedor.ciudad}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Spacer */}
+                <View style={{ height: 20 }} />
+              </View>
+            </>
+          )}
+        </ScrollView>
+
+        {/* Botones Acciones */}
+        <View style={[styles.detailFooter, { borderTopColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.detailActionButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => {
+              if (selectedProduct) {
+                handleContact(selectedProduct);
+              }
+            }}
+          >
+            <MaterialCommunityIcons name="whatsapp" size={20} color="#FFF" />
+            <Text style={styles.detailActionButtonText}>Contactar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.detailActionButton,
+              { backgroundColor: favorites.includes(selectedProduct?.id) ? '#FF6B9D' : '#95989A' },
+            ]}
+            onPress={() => {
+              if (selectedProduct) {
+                handleToggleFavorite(selectedProduct.id);
+              }
+            }}
+          >
+            <Ionicons 
+              name={favorites.includes(selectedProduct?.id) ? 'heart' : 'heart-outline'} 
+              size={20} 
+              color="#FFF" 
+            />
+            <Text style={styles.detailActionButtonText}>
+              {favorites.includes(selectedProduct?.id) ? 'Guardado' : 'Guardar'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.detailActionButton,
+              { backgroundColor: '#2196F3' },
+            ]}
+            onPress={() => {
+              if (selectedProduct) {
+                handleShareProduct(selectedProduct);
+              }
+            }}
+          >
+            <MaterialCommunityIcons name="share-variant" size={20} color="#FFF" />
+            <Text style={styles.detailActionButtonText}>Compartir</Text>
+          </TouchableOpacity>
+
+          {/* Botón Eliminar - Solo si eres el vendedor */}
+          {selectedProduct && selectedProduct.vendedor.nombre === currentUser && (
             <TouchableOpacity
-              style={[styles.mapControlButton, { backgroundColor: theme.colors.background.primary, borderColor: theme.colors.border }]}
+              style={[
+                styles.detailActionButton,
+                { backgroundColor: '#FF4757' },
+              ]}
               onPress={() => {
-                if (mapRef.current) {
-                  mapRef.current.animateToRegion(mapRegion, 500);
+                if (selectedProduct) {
+                  handleDeleteProduct(selectedProduct.id);
                 }
               }}
             >
-              <Ionicons name="contract-outline" size={20} color={theme.colors.text.primary} />
+              <Ionicons name="trash" size={20} color="#FFF" />
+              <Text style={styles.detailActionButtonText}>Eliminar</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </SafeAreaView>
+    </Modal>
+
+    {/* MODAL CREAR PRODUCTO */}
+    <Modal
+      visible={showCreateModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowCreateModal(false)}
+    >
+      <SafeAreaView
+        style={[
+          styles.createContainer,
+          { backgroundColor: theme.colors.background.primary },
+        ]}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.createContent}
+        >
+          {/* Header */}
+          <View
+            style={[
+              styles.createHeader,
+              { borderBottomColor: theme.colors.border },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => setShowCreateModal(false)}
+              style={styles.createCloseButton}
+            >
+              <Ionicons name="close" size={24} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+            <Text style={[styles.createTitle, { color: theme.colors.text.primary }]}>
+              Crear Producto
+            </Text>
+            <View style={styles.createCloseButton} />
+          </View>
+
+          <ScrollView style={styles.createFormScroll} showsVerticalScrollIndicator={false}>
+            {/* Form */}
+            <View style={styles.createForm}>
+              {/* Nombre */}
+              <View style={styles.createFieldGroup}>
+                <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
+                  Nombre del Producto
+                </Text>
+                <TextInput
+                  style={[
+                    styles.createInput,
+                    {
+                      backgroundColor: theme.colors.glass.background,
+                      borderColor: theme.colors.border,
+                      color: theme.colors.text.primary,
+                    },
+                  ]}
+                  placeholder="Ej: Tabla Skateboard"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  value={formData.nombre}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, nombre: text })
+                  }
+                />
+              </View>
+
+              {/* Precio */}
+              <View style={styles.createFieldGroup}>
+                <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
+                  Precio (COP)
+                </Text>
+                <TextInput
+                  style={[
+                    styles.createInput,
+                    {
+                      backgroundColor: theme.colors.glass.background,
+                      borderColor: theme.colors.border,
+                      color: theme.colors.text.primary,
+                    },
+                  ]}
+                  placeholder="Ej: 280000"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  keyboardType="numeric"
+                  value={formData.precio}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, precio: text })
+                  }
+                />
+              </View>
+
+              {/* Categoría */}
+              <View style={styles.createFieldGroup}>
+                <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
+                  Categoría
+                </Text>
+                <View style={styles.categorySelectWrapper}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.categorySelectScroll}
+                  >
+                    {categories.slice(1).map(cat => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[
+                          styles.categorySelectButton,
+                          formData.categoria === cat
+                            ? { backgroundColor: theme.colors.primary }
+                            : {
+                                backgroundColor: theme.colors.glass.background,
+                                borderColor: theme.colors.border,
+                                borderWidth: 1,
+                              },
+                        ]}
+                        onPress={() => setFormData({ ...formData, categoria: cat })}
+                      >
+                        <Text
+                          style={[
+                            styles.categorySelectText,
+                            {
+                              color:
+                                formData.categoria === cat
+                                  ? '#FFF'
+                                  : theme.colors.text.primary,
+                            },
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+
+              {/* Imagenes */}
+              <View style={styles.createFieldGroup}>
+                <View style={styles.imagesHeaderRow}>
+                  <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
+                    Imágenes ({formData.imagenes.length})
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.addImageButton, { backgroundColor: theme.colors.primary }]}
+                    onPress={handleSelectImage}
+                  >
+                    <Ionicons name="add" size={20} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Preview de Imagenes */}
+                {formData.imagenes.length > 0 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.imagesPreviewScroll}
+                  >
+                    {formData.imagenes.map((image, index) => (
+                      <View key={index} style={styles.imagePreviewWrapper}>
+                        <Image
+                          source={{ uri: image }}
+                          style={styles.imagePreview}
+                        />
+                        <TouchableOpacity
+                          style={styles.removeImageButton}
+                          onPress={() => handleRemoveImage(index)}
+                        >
+                          <Ionicons name="close-circle" size={24} color="#FF4757" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Botones Acciones */}
+          <View style={[styles.createFooter, { borderTopColor: theme.colors.border }]}>
+            <TouchableOpacity
+              style={[
+                styles.createActionButton,
+                {
+                  backgroundColor: theme.colors.glass.background,
+                  borderColor: theme.colors.border,
+                  borderWidth: 1,
+                },
+              ]}
+              onPress={() => setShowCreateModal(false)}
+            >
+              <Text style={[styles.createActionButtonText, { color: theme.colors.text.primary }]}>
+                Cancelar
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.createActionButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
+              onPress={handleCreateProduct}
+            >
+              <Ionicons name="add" size={20} color="#FFF" />
+              <Text style={[styles.createActionButtonText, { color: '#FFF' }]}>
+                Crear
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      ) : (
-        <FlatList
-        data={filteredSpots}
-        renderItem={renderSpotCard}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={refreshSpots}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-                {t('screens.spots.loading')}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="map-outline" size={64} color={theme.colors.text.secondary} />
-              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-                {hasActiveFilters ? t('screens.spots.emptyFiltered') : t('screens.spots.empty')}
-              </Text>
-              <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
-                {hasActiveFilters 
-                  ? t('screens.spots.emptyHintFiltered')
-                  : t('screens.spots.emptyHint')
-                }
-              </Text>
-            </View>
-          )
-        }
-        />
-      )}
-    </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Modal>
+    </>
   );
 }
 
-// Dark mode map style
-const darkMapStyle = [
-  {
-    "elementType": "geometry",
-    "stylers": [{ "color": "#1d2c4d" }]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#8ec3b9" }]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#1a3646" }]
-  },
-  {
-    "featureType": "administrative.country",
-    "elementType": "geometry.stroke",
-    "stylers": [{ "color": "#4b6878" }]
-  },
-  {
-    "featureType": "administrative.land_parcel",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#64779e" }]
-  },
-  {
-    "featureType": "administrative.province",
-    "elementType": "geometry.stroke",
-    "stylers": [{ "color": "#4b6878" }]
-  },
-  {
-    "featureType": "landscape.man_made",
-    "elementType": "geometry.stroke",
-    "stylers": [{ "color": "#334e87" }]
-  },
-  {
-    "featureType": "landscape.natural",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#023e58" }]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#283d6a" }]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#6f9ba5" }]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#1d2c4d" }]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "geometry.fill",
-    "stylers": [{ "color": "#023e58" }]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#3C7680" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#304a7d" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#98a5be" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#1d2c4d" }]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#2c6675" }]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry.stroke",
-    "stylers": [{ "color": "#255763" }]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#b0d5ce" }]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#023e58" }]
-  },
-  {
-    "featureType": "transit",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#98a5be" }]
-  },
-  {
-    "featureType": "transit",
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#1d2c4d" }]
-  },
-  {
-    "featureType": "transit.line",
-    "elementType": "geometry.fill",
-    "stylers": [{ "color": "#283d6a" }]
-  },
-  {
-    "featureType": "transit.station",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#3a4762" }]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#0e1626" }]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#4e6d70" }]
-  }
-];
-
 const styles = StyleSheet.create({
+  // ========== CONTAINER ==========
   container: {
     flex: 1,
   },
+
+  // ========== HEADER ==========
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: staticTheme.spacing.lg,
-    paddingTop: staticTheme.spacing.md,
-    paddingBottom: staticTheme.spacing.md,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerLeft: {
+    flex: 1,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: staticTheme.spacing.xs,
+    fontSize: 34,
+    fontWeight: '900',
+    marginBottom: 5,
+    letterSpacing: -0.6,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13.5,
+    fontWeight: '600',
+    opacity: 0.8,
   },
+  createButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  // ========== SEARCH SECTION ==========
   searchSection: {
-    paddingHorizontal: staticTheme.spacing.lg,
-    paddingVertical: staticTheme.spacing.md,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: staticTheme.spacing.md,
-    paddingVertical: staticTheme.spacing.sm,
-    borderRadius: staticTheme.borderRadius.lg,
-    borderWidth: 1,
-    gap: staticTheme.spacing.sm,
+    paddingHorizontal: 15,
+    borderRadius: 18,
+    borderWidth: 1.2,
+    height: 52,
+    gap: 11,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    paddingVertical: staticTheme.spacing.xs,
-  },
-  filtersSection: {
-    paddingHorizontal: staticTheme.spacing.lg,
-    paddingBottom: staticTheme.spacing.md,
-    gap: staticTheme.spacing.sm,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: staticTheme.spacing.xs,
-  },
-  filterButtonContainer: {
-    flex: 1,
-    position: 'relative',
-    zIndex: 1,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: staticTheme.spacing.sm,
-    paddingVertical: staticTheme.spacing.sm,
-    borderRadius: staticTheme.borderRadius.md,
-    borderWidth: 1,
-    gap: staticTheme.spacing.xs,
-  },
-  filterButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
-    textAlign: 'center',
-  },
-  filterDropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: staticTheme.spacing.xs,
-    borderRadius: staticTheme.borderRadius.md,
-    borderWidth: 1,
-    maxHeight: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-    zIndex: 1000,
-  },
-  filterDropdownScroll: {
-    maxHeight: 200,
-  },
-  filterOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: staticTheme.spacing.md,
-    paddingVertical: staticTheme.spacing.sm,
-    borderBottomWidth: 1,
-  },
-  filterOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    textTransform: 'capitalize',
-  },
-  clearFiltersButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: staticTheme.spacing.md,
-    paddingVertical: staticTheme.spacing.sm,
-    borderRadius: staticTheme.borderRadius.md,
-    gap: staticTheme.spacing.xs,
-  },
-  clearFiltersText: {
-    fontSize: 14,
+    fontSize: 16.5,
     fontWeight: '600',
   },
-  listContent: {
-    padding: staticTheme.spacing.lg,
+
+  // ========== CATEGORIES SECTION ==========
+  categoriesScroll: {
+    paddingVertical: 14,
+    paddingBottom: 35,
   },
-  spotCard: {
-    borderRadius: staticTheme.borderRadius.lg,
-    borderWidth: 1,
-    marginBottom: staticTheme.spacing.lg,
+  categoriesContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  categoryButton: {
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    borderRadius: 26,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryButtonText: {
+    fontWeight: '800',
+    fontSize: 13.5,
+    letterSpacing: 0.4,
+  },
+
+  // ========== LIST CONTENT ==========
+  listContent: {
+    paddingHorizontal: 11,
+    paddingVertical: 14,
+    paddingBottom: 28,
+  },
+  columnWrapper: {
+    gap: 14,
+    paddingHorizontal: 7,
+    marginBottom: 5,
+  },
+
+  // ========== PRODUCT CARD ==========
+  productCard: {
+    borderRadius: 20,
+    borderWidth: 1.2,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+
+  // Image Container
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 160,
+    backgroundColor: '#f5f5f5',
     overflow: 'hidden',
   },
-  spotImage: {
+  productImage: {
     width: '100%',
-    height: 200,
+    height: '100%',
+    backgroundColor: '#f5f5f5',
     resizeMode: 'cover',
   },
-  typeBadge: {
+  categoryBadge: {
     position: 'absolute',
-    top: staticTheme.spacing.md,
-    right: staticTheme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: staticTheme.spacing.sm,
-    paddingVertical: 6,
-    borderRadius: staticTheme.borderRadius.md,
-    gap: 4,
-  },
-  typeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  spotContent: {
-    padding: staticTheme.spacing.md,
-  },
-  spotHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: staticTheme.spacing.xs,
-  },
-  spotNombre: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  verifiedBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: staticTheme.spacing.sm,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: staticTheme.spacing.sm,
-  },
-  locationText: {
-    fontSize: 14,
-    flex: 1,
-  },
-  descriptionText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: staticTheme.spacing.md,
-  },
-  featuresContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: staticTheme.spacing.xs,
-    marginBottom: staticTheme.spacing.md,
-  },
-  featureBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: staticTheme.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: staticTheme.borderRadius.sm,
-    gap: 4,
-  },
-  featureText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: staticTheme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: staticTheme.colors.alpha.white08,
-    gap: staticTheme.spacing.sm,
-  },
-  mapButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: staticTheme.spacing.md,
-    paddingVertical: staticTheme.spacing.sm,
-    borderRadius: staticTheme.borderRadius.md,
-    borderWidth: 1,
-    gap: staticTheme.spacing.xs,
-  },
-  mapButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  viewButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: staticTheme.spacing.md,
-    paddingVertical: staticTheme.spacing.sm,
-    borderRadius: staticTheme.borderRadius.md,
-    gap: staticTheme.spacing.xs,
-  },
-  viewButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: staticTheme.spacing.xxl * 2,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: staticTheme.spacing.md,
-    marginBottom: staticTheme.spacing.xs,
-  },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: staticTheme.spacing.xxl * 2,
-  },
-  loadingText: {
-    fontSize: 14,
-    marginTop: staticTheme.spacing.md,
-  },
-  // Map styles
-  mapContainer: {
-    flex: 1,
-    position: 'relative',
-  },
-  map: {
-    flex: 1,
-  },
-  customMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
+    top: 12,
+    right: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  liveMarker: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    backgroundColor: '#FFFFFF',
+  categoryBadgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
-  startFlagMarker: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#FF3B30',
+
+  // Product Content
+  productContent: {
+    padding: 15,
+    gap: 11,
   },
-  mapOverlayCard: {
-    position: 'absolute',
-    bottom: staticTheme.spacing.lg,
-    left: staticTheme.spacing.lg,
-    right: staticTheme.spacing.lg,
-    borderRadius: staticTheme.borderRadius.xl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+  productName: {
+    fontSize: 15.5,
+    fontWeight: '800',
+    lineHeight: 21,
   },
-  closeOverlay: {
-    position: 'absolute',
-    top: staticTheme.spacing.sm,
-    right: staticTheme.spacing.sm,
-    zIndex: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  overlayContent: {
-    flexDirection: 'row',
-    padding: staticTheme.spacing.md,
-    gap: staticTheme.spacing.md,
-  },
-  overlayImage: {
-    width: 100,
-    height: 100,
-    borderRadius: staticTheme.borderRadius.md,
-  },
-  overlayInfo: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  overlayTypeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: staticTheme.spacing.xs,
-    paddingVertical: 4,
-    borderRadius: staticTheme.borderRadius.sm,
+
+  // Price Section
+  priceSection: {
     gap: 4,
   },
-  overlayTypeText: {
-    fontSize: 10,
-    fontWeight: '600',
+  priceLabel: {
+    fontSize: 12,
+    fontWeight: '800',
     textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    opacity: 0.85,
   },
-  overlayTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  price: {
+    fontSize: 19,
+    fontWeight: '900',
+    letterSpacing: -0.4,
   },
-  overlayLocation: {
+
+  // Divider
+  divider: {
+    height: 1.2,
+    marginVertical: 9,
+    opacity: 0.35,
+  },
+
+  // Vendor Section
+  vendorSection: {
+    paddingVertical: 6,
+  },
+  vendorHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    alignItems: 'flex-start',
+    gap: 11,
   },
-  overlayLocationText: {
-    fontSize: 12,
-    flex: 1,
-  },
-  overlayButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  vendorAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
-    paddingHorizontal: staticTheme.spacing.md,
-    paddingVertical: staticTheme.spacing.xs,
-    borderRadius: staticTheme.borderRadius.md,
-    gap: staticTheme.spacing.xs,
+    alignItems: 'center',
   },
-  overlayButtonText: {
+  vendorInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 3,
+  },
+  vendorName: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    lineHeight: 17,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  vendorCity: {
     fontSize: 12,
     fontWeight: '600',
   },
-  mapControls: {
-    position: 'absolute',
-    top: staticTheme.spacing.lg,
-    right: staticTheme.spacing.lg,
-    gap: staticTheme.spacing.sm,
+
+  // Contact Button
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 15,
+    borderRadius: 14,
+    marginTop: 11,
+    gap: 7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  mapControlButton: {
+  contactButtonText: {
+    color: '#FFF',
+    fontSize: 13.5,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+
+  // ========== EMPTY STATE ==========
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 90,
+    gap: 18,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  // ========== DETAIL MODAL ==========
+  detailContainer: {
+    flex: 1,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  detailTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailContent: {
+    flex: 1,
+  },
+  imageCarousel: {
+    width: '100%',
+  },
+  carouselImageWrapper: {
+    width: width,
+    position: 'relative',
+  },
+  detailImage: {
+    width: '100%',
+    height: 350,
+    backgroundColor: '#f5f5f5',
+  },
+  imageCounter: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  detailInfo: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  categoryBadgeLarge: {
+    marginBottom: 14,
+  },
+  categoryBadgeTextLarge: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '800',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
+  },
+  detailProductName: {
+    fontSize: 26,
+    fontWeight: '900',
+    marginBottom: 14,
+    lineHeight: 32,
+  },
+  detailPrice: {
+    fontSize: 28,
+    fontWeight: '900',
+    marginBottom: 18,
+    letterSpacing: -0.5,
+  },
+  detailDivider: {
+    height: 1.2,
+    marginVertical: 18,
+    opacity: 0.35,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 12,
+  },
+  vendorDetailSection: {
+    marginTop: 8,
+  },
+  vendorDetailCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    paddingVertical: 12,
+  },
+  vendorAvatarLarge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vendorDetailInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 4,
+  },
+  vendorDetailName: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  locationDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vendorDetailCity: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  detailFooter: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    flexWrap: 'wrap',
+  },
+  detailActionButton: {
+    flex: 1,
+    minWidth: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  detailActionButtonText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  // ========== CREATE MODAL ==========
+  createContainer: {
+    flex: 1,
+  },
+  createContent: {
+    flex: 1,
+  },
+  createHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  createTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    flex: 1,
+    textAlign: 'center',
+  },
+  createCloseButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createFormScroll: {
+    flex: 1,
+  },
+  createForm: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    gap: 18,
+  },
+  createFieldGroup: {
+    gap: 10,
+  },
+  createLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  createInput: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  categorySelectWrapper: {
+    marginTop: 8,
+  },
+  categorySelectScroll: {
+    marginHorizontal: -4,
+    paddingHorizontal: 4,
+  },
+  categorySelectButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    borderWidth: 1.2,
+    minHeight: 42,
+    justifyContent: 'center',
+  },
+  categorySelectText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  imagesHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  addImageButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  headerLeft: {
-    flex: 1,
+  imagesPreviewScroll: {
+    marginHorizontal: -4,
   },
-  viewToggle: {
+  imagePreviewWrapper: {
+    position: 'relative',
+    marginHorizontal: 8,
+    marginBottom: 12,
+  },
+  imagePreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  createFooter: {
     flexDirection: 'row',
-    borderRadius: staticTheme.borderRadius.md,
-    borderWidth: 1,
-    padding: 2,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: 1,
   },
-  toggleButton: {
-    width: 44,
-    height: 36,
-    justifyContent: 'center',
+  createActionButton: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: staticTheme.borderRadius.sm,
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  createActionButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
 });
