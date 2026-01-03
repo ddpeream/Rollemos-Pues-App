@@ -16,12 +16,14 @@ import EditarPerfil from './screens/EditarPerfil';
 import Configuracion from './screens/Configuracion';
 import useAppStore from './store/useAppStore';
 import { cleanupOrphanedTracking } from './services/trackingAutoStop';
+import { usePushNotifications } from "./hooks/usePushNotifications";
 import "./tasks/trackingLiveTask";
 
 const RootStack = createNativeStackNavigator();
 
 export default function App() {
   const { isDark, theme, isAuthenticated, authLoading, initializeApp } = useAppStore();
+  usePushNotifications();
 
   useEffect(() => {
     initializeApp();
