@@ -73,6 +73,7 @@ export const createProducto = async (productData, userId) => {
         categoria: productData.categoria,
         imagenes: imageUrls,
         descripcion: productData.descripcion?.trim() || null,
+        whatsapp: productData.whatsapp?.trim() || null,
         vendedor_id: userId,
       },
     ])

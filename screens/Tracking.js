@@ -84,6 +84,7 @@ export default function Tracking() {
   const [isUserJoined, setIsUserJoined] = useState(false); // Si el usuario está unido a la rodada seleccionada
   const [checkingJoin, setCheckingJoin] = useState(false); // Verificando participación
   const [ mapType, setMapType ] = useState('hybrid');
+  const [isMapAutoCenter, setIsMapAutoCenter] = useState(true);
 
   // 👥 Live Skaters (Otros patinadores en tiempo real)
   const [liveSkaters, setLiveSkaters] = useState([]);
@@ -134,6 +135,16 @@ export default function Tracking() {
       }
     }
   }, [route.params?.historicalRoute]);
+
+  useEffect(() => {
+    if (route.params?.historicalRoute) return;
+    if (!historicalRoute?.coordinates?.length || !mapRef.current) return;
+
+    mapRef.current.fitToCoordinates(historicalRoute.coordinates, {
+      edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
+      animated: true,
+    });
+  }, [historicalRoute, route.params?.historicalRoute]);
 
   useEffect(() => {
     const rodadaId = route.params?.rodadaId;
@@ -203,62 +214,48 @@ export default function Tracking() {
     return visible;
   }, [liveSkaters, user]);
 
-  // 👥 Agregar punto a la ruta de un patinador
+  // ?? Agregar punto a la ruta de un patinador
   const appendLivePath = (userId, lat, lng) => {
+    if (!userId) return;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (user?.id && userId === user.id) return;
     setLivePaths((prev) => {
-      const current = prev[userId];
-      const nextPoint = { latitude: lat, longitude: lng };
-
-      if (!current) {
-        return {
-          ...prev,
-          [userId]: {
-            start: nextPoint,
-            points: [nextPoint],
-          },
-        };
-      }
-
-      const last = current.points[current.points.length - 1];
-      const moved =
-        Math.abs(last.latitude - lat) > 0.00001 ||
-        Math.abs(last.longitude - lng) > 0.00001;
-
-      if (!moved) {
+      const prevPoints = prev[userId]?.points || [];
+      const last = prevPoints[prevPoints.length - 1];
+      if (last && last.latitude === lat && last.longitude === lng) {
         return prev;
       }
-
+      const nextPoints = [...prevPoints, { latitude: lat, longitude: lng }];
+      const maxPoints = 200;
+      if (nextPoints.length > maxPoints) {
+        nextPoints.splice(0, nextPoints.length - maxPoints);
+      }
       return {
         ...prev,
-        [userId]: {
-          ...current,
-          points: [...current.points, nextPoint],
-        },
+        [userId]: { points: nextPoints },
       };
     });
   };
 
-  // 👥 Cargar patinadores en vivo inicial
+  // ?? Cargar patinadores en vivo inicial
   useEffect(() => {
     let isMounted = true;
-    
+
     const loadLiveSkaters = async () => {
-      console.log('👥 Cargando patinadores en vivo...');
-      const { data, error, ok } = await fetchTrackingLive();
+      console.log('?? Cargando patinadores en vivo...');
+      const { data } = await fetchTrackingLive();
       if (!isMounted) return;
       const normalized = (data || []).map(normalizeLiveRecord).filter(Boolean);
-      console.log('👥 Patinadores normalizados:', normalized);
+      console.log('?? Patinadores normalizados:', normalized);
       setLiveSkaters(normalized);
-      normalized.forEach((item) => {
-        if (item.isActive && Number.isFinite(item.lat) && Number.isFinite(item.lng)) {
-          appendLivePath(item.userId, item.lat, item.lng);
-        }
+      normalized.forEach((skater) => {
+        appendLivePath(skater.userId, skater.lat, skater.lng);
       });
     };
 
     loadLiveSkaters();
 
-    // 📡 Suscribirse a cambios en tiempo real
+    // ?? Suscribirse a cambios en tiempo real
     const channel = subscribeTrackingLive((payload) => {
       if (!isMounted) return;
       const record = payload.new || payload.old;
@@ -284,7 +281,6 @@ export default function Tracking() {
         next[index] = { ...next[index], ...normalized };
         return next;
       });
-
       appendLivePath(normalized.userId, normalized.lat, normalized.lng);
     });
 
@@ -433,10 +429,12 @@ export default function Tracking() {
               },
               1000
             );
+                setIsMapAutoCenter(true);
             console.log('✅ Mapa centrado en:', location.coords.latitude, location.coords.longitude);
           }
         } catch (error) {
           console.error('❌ Error obteniendo ubicación inicial:', error);
+                setIsMapAutoCenter(true);
         }
       };
 
@@ -471,7 +469,7 @@ export default function Tracking() {
 
   // Centrar mapa en ubicación actual
   useEffect(() => {
-    if (currentLocation && mapRef.current) {
+    if (currentLocation && mapRef.current && isMapAutoCenter) {
       mapRef.current.animateToRegion(
         {
           latitude: currentLocation.latitude,
@@ -482,7 +480,7 @@ export default function Tracking() {
         1000
       );
     }
-  }, [currentLocation]);
+  }, [currentLocation, isMapAutoCenter]);
 
   // Formatear tiempo (segundos -> HH:MM:SS)
   const formatDuration = (seconds) => {
@@ -640,129 +638,28 @@ export default function Tracking() {
     >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-      {/* Mapa */}
+
+
+
       <MapView
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
         style={styles.map}
+        provider={PROVIDER_GOOGLE}
         mapType={mapType}
-        customMapStyle={isDark ? darkMapStyle : []}
-        showsUserLocation
-        showsMyLocationButton={false}
-        followsUserLocation={status === TRACKER_STATUS.TRACKING}
-        initialRegion={{
-          latitude: currentLocation?.latitude || 4.711,
-          longitude: currentLocation?.longitude || -74.0055,
-          latitudeDelta: 0.015,
-          longitudeDelta: 0.015,
-        }}
-        onError={(err) => {
-          console.error("❌ Error en MapView:", err);
-          Alert.alert(
-            t("screens.tracking.mapErrorTitle"),
-            t("screens.tracking.mapErrorMessage")
-          );
-        }}
+        onPanDrag={() => setIsMapAutoCenter(false)}
       >
-        {/* 📜 Polyline de la ruta HISTÓRICA (gris) */}
-        {historicalRoute?.coordinates?.length > 1 && (
-          <Polyline
-            coordinates={historicalRoute.coordinates}
-            strokeColor="#888888"
-            strokeWidth={4}
-            lineCap="round"
-            lineJoin="round"
-            lineDashPattern={[0]} // Línea sólida
-          />
-        )}
-
-        {/* 📜 Marcador de inicio de ruta histórica */}
-        {historicalRoute?.coordinates?.length > 0 && (
-          <Marker coordinate={historicalRoute.coordinates[0]}>
-            <View
-              style={[styles.historicalMarker, { backgroundColor: "#888888" }]}
-            >
-              <Ionicons name="flag" size={16} color="#FFFFFF" />
-            </View>
-          </Marker>
-        )}
-
-        {/* 📜 Marcador de fin de ruta histórica */}
-        {historicalRoute?.coordinates?.length > 1 && (
-          <Marker
-            coordinate={
-              historicalRoute.coordinates[
-                historicalRoute.coordinates.length - 1
-              ]
-            }
-          >
-            <View
-              style={[styles.historicalMarker, { backgroundColor: "#666666" }]}
-            >
-              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-            </View>
-          </Marker>
-        )}
-
-        {/* Polyline de la ruta ACTUAL (color primario) */}
+        {/* Ruta actual */}
         {routeCoordinates.length > 1 && (
           <Polyline
             coordinates={routeCoordinates}
             strokeColor={theme.colors.primary}
-            strokeWidth={5}
+            strokeWidth={4}
             lineCap="round"
             lineJoin="round"
           />
         )}
 
-        {/* 🚩 Marcador de inicio de ruta actual (rojo, solo si avanzó 10m) */}
-        {showStartFlag && (
-          <Marker coordinate={routeCoordinates[0]}>
-            <View style={[styles.startMarker, { backgroundColor: "#DC3545" }]}>
-              <Ionicons name="flag" size={16} color="#FFFFFF" />
-            </View>
-          </Marker>
-        )}
-
-        {/* 🛼 Marcador de posición actual (patín que se mueve) */}
-        {routeCoordinates.length > 0 && status !== TRACKER_STATUS.IDLE && (
-          <Marker
-            coordinate={routeCoordinates[routeCoordinates.length - 1]}
-            anchor={{ x: 0.5, y: 0.5 }}
-          >
-            <View
-              style={[
-                styles.currentPositionMarker,
-                { backgroundColor: theme.colors.primary },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="roller-skate"
-                size={18}
-                color={theme.colors.onPrimary}
-              />
-            </View>
-          </Marker>
-        )}
-
-        {/* 👥 Banderas de inicio de patinadores en vivo */}
-        {visibleLiveSkaters.map((skater) => {
-          const skaterPaths = livePaths[skater.userId];
-          if (!skaterPaths?.start) return null;
-
-          return (
-            <Marker
-              key={`flag-${skater.userId}`}
-              coordinate={skaterPaths.start}
-            >
-              <View style={[styles.startMarker, { backgroundColor: '#34C759' }]}>
-                <Ionicons name="flag" size={16} color="#FFFFFF" />
-              </View>
-            </Marker>
-          );
-        })}
-
-        {/* 📜 Polylines de rutas de patinadores en vivo */}
+        {/* Rutas en vivo de otros usuarios */}
         {Object.keys(livePaths).map((userId) => {
           const pathData = livePaths[userId];
           if (!pathData?.points || pathData.points.length < 2) return null;
@@ -779,6 +676,20 @@ export default function Tracking() {
           );
         })}
 
+        {/* Tu posicion */}
+        {currentLocation && (
+          <Marker
+            coordinate={{
+              latitude: currentLocation.latitude,
+              longitude: currentLocation.longitude,
+            }}
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={[styles.currentPositionMarker, { backgroundColor: theme.colors.primary }]}>
+              <MaterialCommunityIcons name="roller-skate" size={18} color="#FFFFFF" />
+            </View>
+          </Marker>
+        )}
         {/* 👥 Patinadores en vivo (con icono de patín con ruedas) */}
         {visibleLiveSkaters.map((skater) => (
           <Marker
@@ -1095,6 +1006,7 @@ export default function Tracking() {
                   },
                   500
                 );
+                setIsMapAutoCenter(true);
               }
             } catch (err) {
               console.log("Error obteniendo ubicación:", err);
@@ -1109,6 +1021,7 @@ export default function Tracking() {
                   },
                   500
                 );
+                setIsMapAutoCenter(true);
               }
             }
           }}
@@ -1578,6 +1491,7 @@ export default function Tracking() {
             `"${rodada.nombre}" ha sido programada. Los patinadores podrán verla en el mapa.`,
             [{ text: "Genial!" }]
           );
+                setIsMapAutoCenter(true);
           fetchRodadas(); // Recargar lista
         }}
       />
@@ -2766,6 +2680,13 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 });
+
+
+
+
+
+
+
 
 
 

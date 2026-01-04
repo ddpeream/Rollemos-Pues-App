@@ -469,7 +469,8 @@ export default function Galeria() {
         >
           <TouchableOpacity style={styles.commentsModalOverlay} onPress={closeCommentsModal} activeOpacity={1}>
             <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'position'}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 24}
               style={styles.commentsModalKeyboard}
             >
               <TouchableOpacity

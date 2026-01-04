@@ -13,6 +13,7 @@ import {
   Linking,
   Modal,
   Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -53,6 +54,8 @@ export default function MarketRollers({ navigation }) {
     precio: '',
     categoria: 'Tablas',
     imagenes: [],
+    descripcion: '',
+    whatsapp: '',
   });
 
   // Filtrar productos
@@ -68,8 +71,39 @@ export default function MarketRollers({ navigation }) {
 
   const categories = ['Todos', 'Tablas', 'Ruedas', 'Proteccion', 'Accesorios', 'Partes'];
   const formatPrice = (value) => Number(value || 0).toLocaleString('es-CO');
+  const normalizeWhatsapp = (value) => String(value || '').replace(/[^\d]/g, '');
+  const getWhatsappLink = (value, message) => {
+    const number = normalizeWhatsapp(value);
+    if (!number) return null;
+    return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+  };
+  const parseImages = (imagenes) => {
+    if (Array.isArray(imagenes)) return imagenes.filter(Boolean);
+    if (typeof imagenes === 'string') {
+      const trimmed = imagenes.trim();
+      if (!trimmed) return [];
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch {
+          return [];
+        }
+      }
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        const inner = trimmed.slice(1, -1).trim();
+        if (!inner) return [];
+        return inner
+          .split(',')
+          .map((value) => value.trim().replace(/^"|"$/g, ''))
+          .filter(Boolean);
+      }
+      return [trimmed];
+    }
+    return [];
+  };
   const getProductImages = (product) => {
-    const images = product?.imagenes || [];
+    const images = parseImages(product?.imagenes);
     return images.length > 0 ? images : ['https://via.placeholder.com/400x300'];
   };
   const getVendedorNombre = (product) => product?.vendedor?.nombre || 'Vendedor';
@@ -82,8 +116,14 @@ export default function MarketRollers({ navigation }) {
       return;
     }
 
-    if (!formData.nombre.trim() || !formData.precio.trim() || formData.imagenes.length === 0) {
-      Alert.alert('Error', 'Por favor completa todos los campos y agrega al menos una imagen');
+    if (
+      !formData.nombre.trim() ||
+      !formData.precio.trim() ||
+      !formData.descripcion.trim() ||
+      !formData.whatsapp.trim() ||
+      formData.imagenes.length === 0
+    ) {
+      Alert.alert('Error', 'Completa nombre, precio, descripcion, WhatsApp y al menos una imagen');
       return;
     }
 
@@ -96,6 +136,8 @@ export default function MarketRollers({ navigation }) {
           precio: '',
           categoria: 'Tablas',
           imagenes: [],
+          descripcion: '',
+          whatsapp: '',
         });
         setShowCreateModal(false);
         Alert.alert('Exito', 'Producto creado correctamente');
@@ -179,15 +221,21 @@ export default function MarketRollers({ navigation }) {
 
   const handleContact = (product) => {
     const mensaje = `Hola, me interesa el producto: ${product.nombre} por $${formatPrice(product.precio)}. Esta disponible?`;
-    const whatsappUrl = `https://wa.me/573001234567?text=${encodeURIComponent(mensaje)}`;
+    const whatsappUrl = getWhatsappLink(product?.whatsapp, mensaje);
+    if (!whatsappUrl) {
+      Alert.alert('WhatsApp no disponible', 'El vendedor no tiene WhatsApp configurado');
+      return;
+    }
     Linking.openURL(whatsappUrl);
   };
 
   // Tarjeta de producto
   const renderProduct = ({ item }) => {
-    const firstImage = item.imagenes?.[0] || 'https://via.placeholder.com/400x300';
+    const images = getProductImages(item);
+    const firstImage = images[0] || 'https://via.placeholder.com/400x300';
     const vendedorNombre = item.vendedor?.nombre || 'Vendedor';
     const vendedorCiudad = item.vendedor?.ciudad || '---';
+    const isOwner = item.vendedor_id === user?.id;
 
     return (
       <TouchableOpacity
@@ -285,19 +333,21 @@ export default function MarketRollers({ navigation }) {
         </View>
 
         {/* Botón Contactar */}
-        <TouchableOpacity
-          activeOpacity={0.75}
-          style={[
-            styles.contactButton,
-            { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={() => handleContact(item)}
-        >
-          <MaterialCommunityIcons name="whatsapp" size={16} color="#FFF" />
-          <Text style={styles.contactButtonText}>Contactar</Text>
-        </TouchableOpacity>
+        {!isOwner && (
+          <TouchableOpacity
+            activeOpacity={0.75}
+            style={[
+              styles.contactButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => handleContact(item)}
+          >
+            <MaterialCommunityIcons name="whatsapp" size={16} color="#FFF" />
+            <Text style={styles.contactButtonText}>Contactar</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      </TouchableOpacity>
+    </TouchableOpacity>
     );
   };
 
@@ -532,6 +582,17 @@ export default function MarketRollers({ navigation }) {
                   ${formatPrice(selectedProduct.precio)}
                 </Text>
 
+                {selectedProduct.descripcion ? (
+                  <Text
+                    style={[
+                      styles.detailDescription,
+                      { color: theme.colors.text.secondary },
+                    ]}
+                  >
+                    {selectedProduct.descripcion}
+                  </Text>
+                ) : null}
+
                 {/* Divider */}
                 <View
                   style={[
@@ -600,41 +661,45 @@ export default function MarketRollers({ navigation }) {
 
         {/* Botones Acciones */}
         <View style={[styles.detailFooter, { borderTopColor: theme.colors.border }]}>
-          <TouchableOpacity
-            style={[
-              styles.detailActionButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            onPress={() => {
-              if (selectedProduct) {
-                handleContact(selectedProduct);
-              }
-            }}
-          >
-            <MaterialCommunityIcons name="whatsapp" size={20} color="#FFF" />
-            <Text style={styles.detailActionButtonText}>Contactar</Text>
-          </TouchableOpacity>
+          {selectedProduct?.vendedor_id !== user?.id && (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.detailActionButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+                onPress={() => {
+                  if (selectedProduct) {
+                    handleContact(selectedProduct);
+                  }
+                }}
+              >
+                <MaterialCommunityIcons name="whatsapp" size={20} color="#FFF" />
+                <Text style={styles.detailActionButtonText}>Contactar</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.detailActionButton,
-              { backgroundColor: favorites.includes(selectedProduct?.id) ? '#FF6B9D' : '#95989A' },
-            ]}
-            onPress={() => {
-              if (selectedProduct) {
-                handleToggleFavorite(selectedProduct.id);
-              }
-            }}
-          >
-            <Ionicons 
-              name={favorites.includes(selectedProduct?.id) ? 'heart' : 'heart-outline'} 
-              size={20} 
-              color="#FFF" 
-            />
-            <Text style={styles.detailActionButtonText}>
-              {favorites.includes(selectedProduct?.id) ? 'Guardado' : 'Guardar'}
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.detailActionButton,
+                  { backgroundColor: favorites.includes(selectedProduct?.id) ? '#FF6B9D' : '#95989A' },
+                ]}
+                onPress={() => {
+                  if (selectedProduct) {
+                    handleToggleFavorite(selectedProduct.id);
+                  }
+                }}
+              >
+                <Ionicons
+                  name={favorites.includes(selectedProduct?.id) ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color="#FFF"
+                />
+                <Text style={styles.detailActionButtonText}>
+                  {favorites.includes(selectedProduct?.id) ? 'Guardado' : 'Guardar'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <TouchableOpacity
             style={[
@@ -754,6 +819,55 @@ export default function MarketRollers({ navigation }) {
                   value={formData.precio}
                   onChangeText={(text) =>
                     setFormData({ ...formData, precio: text })
+                  }
+                />
+              </View>
+
+              {/* Descripcion */}
+              <View style={styles.createFieldGroup}>
+                <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
+                  Descripcion
+                </Text>
+                <TextInput
+                  style={[
+                    styles.createInput,
+                    styles.createTextarea,
+                    {
+                      backgroundColor: theme.colors.glass.background,
+                      borderColor: theme.colors.border,
+                      color: theme.colors.text.primary,
+                    },
+                  ]}
+                  placeholder="Describe el producto"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  value={formData.descripcion}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, descripcion: text })
+                  }
+                  multiline
+                />
+              </View>
+
+              {/* WhatsApp */}
+              <View style={styles.createFieldGroup}>
+                <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
+                  WhatsApp (numero con codigo pais)
+                </Text>
+                <TextInput
+                  style={[
+                    styles.createInput,
+                    {
+                      backgroundColor: theme.colors.glass.background,
+                      borderColor: theme.colors.border,
+                      color: theme.colors.text.primary,
+                    },
+                  ]}
+                  placeholder="Ej: 573001234567"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  keyboardType="phone-pad"
+                  value={formData.whatsapp}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, whatsapp: text })
                   }
                 />
               </View>
@@ -1229,6 +1343,11 @@ const styles = StyleSheet.create({
     marginVertical: 18,
     opacity: 0.35,
   },
+  detailDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '800',
@@ -1351,6 +1470,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  createTextarea: {
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
   categorySelectWrapper: {
     marginTop: 8,
   },
@@ -1443,6 +1566,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
 });
+
 
 
 

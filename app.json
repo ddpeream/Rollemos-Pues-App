@@ -46,6 +46,10 @@
         }
       }
     },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#1a1a2e"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },

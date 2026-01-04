@@ -2,13 +2,11 @@
 -- Marketplace (productos) + storage bucket
 -- ============================================
 
--- Eliminar tabla si existe (solo para desarrollo)
-DROP TABLE IF EXISTS marketplace_productos CASCADE;
-
-CREATE TABLE marketplace_productos (
+CREATE TABLE IF NOT EXISTS marketplace_productos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre TEXT NOT NULL,
   descripcion TEXT,
+  whatsapp TEXT,
   precio NUMERIC NOT NULL,
   categoria TEXT NOT NULL,
   imagenes TEXT[] NOT NULL DEFAULT '{}',
@@ -17,9 +15,16 @@ CREATE TABLE marketplace_productos (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_marketplace_productos_vendedor ON marketplace_productos(vendedor_id);
-CREATE INDEX idx_marketplace_productos_categoria ON marketplace_productos(categoria);
-CREATE INDEX idx_marketplace_productos_created_at ON marketplace_productos(created_at DESC);
+ALTER TABLE marketplace_productos
+  ADD COLUMN IF NOT EXISTS descripcion TEXT;
+ALTER TABLE marketplace_productos
+  ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+ALTER TABLE marketplace_productos
+  ADD COLUMN IF NOT EXISTS imagenes TEXT[] DEFAULT '{}';
+
+CREATE INDEX IF NOT EXISTS idx_marketplace_productos_vendedor ON marketplace_productos(vendedor_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_productos_categoria ON marketplace_productos(categoria);
+CREATE INDEX IF NOT EXISTS idx_marketplace_productos_created_at ON marketplace_productos(created_at DESC);
 
 ALTER TABLE marketplace_productos ENABLE ROW LEVEL SECURITY;
 
