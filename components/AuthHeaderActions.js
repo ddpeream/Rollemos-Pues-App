@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Pressable, Modal, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text,  Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import ThemeToggle from './ThemeToggle';
 import useAppStore from '../store/useAppStore';
@@ -84,13 +84,13 @@ export default function AuthHeaderActions() {
         <View style={styles.themeWrapper}>
           <ThemeToggle />
         </View>
-        <Pressable
+        <TouchableOpacity
           onPress={openLanguage}
           style={styles.languageButton}
           hitSlop={8}
         >
           <Text style={styles.flagText}>{getFlag()}</Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       <Modal
@@ -134,3 +134,4 @@ export default function AuthHeaderActions() {
     </>
   );
 }
+

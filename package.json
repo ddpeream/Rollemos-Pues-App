@@ -18,11 +18,14 @@
     "@supabase/supabase-js": "^2.81.0",
     "base64-arraybuffer": "^1.0.2",
     "expo": "~54.0.30",
+    "expo-constants": "~18.0.12",
     "expo-dev-client": "~6.0.20",
+    "expo-device": "~8.0.10",
     "expo-file-system": "~19.0.21",
     "expo-image-picker": "~17.0.10",
     "expo-localization": "~17.0.8",
     "expo-location": "~19.0.8",
+    "expo-notifications": "~0.32.15",
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~3.0.9",
     "expo-task-manager": "~14.0.9",
@@ -38,6 +41,8 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2"
+    "@babel/core": "^7.25.2",
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
   }
 }

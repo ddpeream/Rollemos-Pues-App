@@ -16,7 +16,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../store/useAppStore';
@@ -251,18 +250,22 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => 
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
+      <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1}>
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
         >
-          <View style={[
-            styles.modalContent, 
-            { 
-              backgroundColor: glassBackground,
-              borderColor: glassBorder,
-            }
-          ]}>
+          <TouchableOpacity
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: glassBackground,
+                borderColor: glassBorder,
+              },
+            ]}
+            onPress={() => {}}
+            activeOpacity={1}
+          >
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: glassBorder }]}>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -583,9 +586,9 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => 
             {/* Espaciado inferior */}
             <View style={{ height: 40 }} />
           </ScrollView>
-          </View>
+          </TouchableOpacity>
         </KeyboardAvoidingView>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -755,3 +758,5 @@ const styles = StyleSheet.create({
 });
 
 export default CreateRodadaModal;
+
+

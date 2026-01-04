@@ -298,15 +298,15 @@ export const useGaleria = () => {
 
     try {
       console.log('💬 Agregando comentario...');
-      const data = await addComentario(postId, user.id, texto);
+      const result = await addComentario(postId, user.id, texto);
 
-      if (!data) {
-        setError('Error al agregar comentario');
-        return { success: false, error: 'Error al agregar comentario' };
+      if (!result?.success || !result.data) {
+        setError(result?.error || 'Error al agregar comentario');
+        return { success: false, error: result?.error || 'Error al agregar comentario' };
       }
 
       console.log('✅ Comentario agregado');
-      return { success: true, data };
+      return { success: true, data: result.data };
     } catch (err) {
       console.error('❌ Error agregando comentario:', err);
       setError(err.message || 'Error al agregar comentario');
