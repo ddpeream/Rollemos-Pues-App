@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,126 +13,40 @@ import {
   Linking,
   Modal,
   Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import useAppStore from '../store/useAppStore';
+import { useMarketplace } from '../hooks/useMarketplace';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 42) / 2; // 2 columnas con padding perfecto
 
-// 🛒 PRODUCTOS MARKETROLLERS - 100% PATINAJE
-const PRODUCTOS = [
-  {
-    id: 1,
-    nombre: 'Tabla Skateboard Maple 8.5"',
-    precio: 280000,
-    imagenes: ['https://images.unsplash.com/photo-1559056199-641a0ac8b3f4?w=400&h=300&fit=crop'],
-    categoria: 'Tablas',
-    vendedor: { nombre: 'Juan', ciudad: 'Medellín' },
-  },
-  {
-    id: 2,
-    nombre: 'Ruedas Bones STF 52mm',
-    precio: 150000,
-    imagenes: ['https://images.unsplash.com/photo-1494496195356-3d2569a1b27b?w=400&h=300&fit=crop'],
-    categoria: 'Ruedas',
-    vendedor: { nombre: 'María', ciudad: 'Bogotá' },
-  },
-  {
-    id: 3,
-    nombre: 'Bearings ABEC-7 Set',
-    precio: 120000,
-    imagenes: ['https://images.unsplash.com/photo-1595777712673-36e18cef9f33?w=400&h=300&fit=crop'],
-    categoria: 'Partes',
-    vendedor: { nombre: 'Carlos', ciudad: 'Cali' },
-  },
-  {
-    id: 4,
-    nombre: 'Protecciones 3 en 1 Pro',
-    precio: 95000,
-    imagenes: ['https://images.unsplash.com/photo-1517836357463-d25ddfcb3ef1?w=400&h=300&fit=crop'],
-    categoria: 'Protección',
-    vendedor: { nombre: 'Andrea', ciudad: 'Barranquilla' },
-  },
-  {
-    id: 5,
-    nombre: 'Grip Tape Negro Premium',
-    precio: 65000,
-    imagenes: ['https://images.unsplash.com/photo-1598306044893-c9f94dfe8297?w=400&h=300&fit=crop'],
-    categoria: 'Partes',
-    vendedor: { nombre: 'Roberto', ciudad: 'Medellín' },
-  },
-  {
-    id: 6,
-    nombre: 'Trucks Aluminio 139mm',
-    precio: 185000,
-    imagenes: ['https://images.unsplash.com/photo-1606611013016-969c19d4a42f?w=400&h=300&fit=crop'],
-    categoria: 'Partes',
-    vendedor: { nombre: 'Laura', ciudad: 'Bogotá' },
-  },
-  {
-    id: 7,
-    nombre: 'Casco Skateboard Certificado',
-    precio: 220000,
-    imagenes: ['https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=400&h=300&fit=crop'],
-    categoria: 'Protección',
-    vendedor: { nombre: 'Miguel', ciudad: 'Cali' },
-  },
-  {
-    id: 8,
-    nombre: 'Mochila Skate Impermeable',
-    precio: 135000,
-    imagenes: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop'],
-    categoria: 'Accesorios',
-    vendedor: { nombre: 'Sophia', ciudad: 'Medellín' },
-  },
-  {
-    id: 9,
-    nombre: 'Zapatillas Skate Vulc',
-    precio: 250000,
-    imagenes: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop'],
-    categoria: 'Accesorios',
-    vendedor: { nombre: 'David', ciudad: 'Barranquilla' },
-  },
-  {
-    id: 10,
-    nombre: 'Set Pernos Titanio M8',
-    precio: 45000,
-    imagenes: ['https://images.unsplash.com/photo-1565884409695-7b5ef63df2efb?w=400&h=300&fit=crop'],
-    categoria: 'Partes',
-    vendedor: { nombre: 'Alex', ciudad: 'Bogotá' },
-  },
-  {
-    id: 11,
-    nombre: 'Tabla Concave Pro Shape',
-    precio: 320000,
-    imagenes: ['https://images.unsplash.com/photo-1559056199-641a0ac8b3f4?w=400&h=300&fit=crop'],
-    categoria: 'Tablas',
-    vendedor: { nombre: 'Diego', ciudad: 'Medellín' },
-  },
-  {
-    id: 12,
-    nombre: 'Rodillos Entrenamiento',
-    precio: 180000,
-    imagenes: ['https://images.unsplash.com/photo-1596394516093-501ba290603f?w=400&h=300&fit=crop'],
-    categoria: 'Accesorios',
-    vendedor: { nombre: 'Valentina', ciudad: 'Cali' },
-  },
-];
-
 export default function MarketRollers({ navigation }) {
-  const { theme } = useAppStore();
+  const { theme, user } = useAppStore();
+  const {
+    products,
+    loading,
+    refreshing,
+    loadProducts,
+    refreshProducts,
+    addProduct,
+    removeProduct,
+  } = useMarketplace();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [products, setProducts] = useState(PRODUCTOS);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [favorites, setFavorites] = useState([]);
-  const [currentUser] = useState('Yo'); // Usuario actual (simulado)
+  const [creatingProduct, setCreatingProduct] = useState(false);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
   
   // Form state para crear producto
   const [formData, setFormData] = useState({
@@ -140,62 +54,123 @@ export default function MarketRollers({ navigation }) {
     precio: '',
     categoria: 'Tablas',
     imagenes: [],
+    descripcion: '',
+    whatsapp: '',
   });
 
   // Filtrar productos
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
-      const matchesSearch = product.nombre
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      const name = (product.nombre || '').toLowerCase();
+      const matchesSearch = name.includes(searchQuery.toLowerCase());
       const matchesCategory =
         selectedCategory === 'Todos' || product.categoria === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [searchQuery, selectedCategory, products]);
 
-  const categories = ['Todos', 'Tablas', 'Ruedas', 'Protección', 'Accesorios', 'Partes'];
+  const categories = ['Todos', 'Tablas', 'Ruedas', 'Proteccion', 'Accesorios', 'Partes'];
+  const formatPrice = (value) => Number(value || 0).toLocaleString('es-CO');
+  const normalizeWhatsapp = (value) => String(value || '').replace(/[^\d]/g, '');
+  const getWhatsappLink = (value, message) => {
+    const number = normalizeWhatsapp(value);
+    if (!number) return null;
+    return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+  };
+  const parseImages = (imagenes) => {
+    if (Array.isArray(imagenes)) return imagenes.filter(Boolean);
+    if (typeof imagenes === 'string') {
+      const trimmed = imagenes.trim();
+      if (!trimmed) return [];
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch {
+          return [];
+        }
+      }
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        const inner = trimmed.slice(1, -1).trim();
+        if (!inner) return [];
+        return inner
+          .split(',')
+          .map((value) => value.trim().replace(/^"|"$/g, ''))
+          .filter(Boolean);
+      }
+      return [trimmed];
+    }
+    return [];
+  };
+  const getProductImages = (product) => {
+    const images = parseImages(product?.imagenes);
+    return images.length > 0 ? images : ['https://via.placeholder.com/400x300'];
+  };
+  const getVendedorNombre = (product) => product?.vendedor?.nombre || 'Vendedor';
+  const getVendedorCiudad = (product) => product?.vendedor?.ciudad || '---';
 
   // Crear nuevo producto
-  const handleCreateProduct = () => {
-    if (!formData.nombre.trim() || !formData.precio.trim() || formData.imagenes.length === 0) {
-      Alert.alert('Error', 'Por favor completa todos los campos y agrega al menos una imagen');
+  const handleCreateProduct = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'Debes iniciar sesion para crear productos');
       return;
     }
 
-    const newProduct = {
-      id: products.length + 1,
-      nombre: formData.nombre,
-      precio: parseInt(formData.precio),
-      imagenes: formData.imagenes,
-      categoria: formData.categoria,
-      vendedor: { nombre: 'Tu Nombre', ciudad: 'Tu Ciudad' },
-    };
+    if (
+      !formData.nombre.trim() ||
+      !formData.precio.trim() ||
+      !formData.descripcion.trim() ||
+      !formData.whatsapp.trim() ||
+      formData.imagenes.length === 0
+    ) {
+      Alert.alert('Error', 'Completa nombre, precio, descripcion, WhatsApp y al menos una imagen');
+      return;
+    }
 
-    setProducts([newProduct, ...products]);
-    setFormData({
-      nombre: '',
-      precio: '',
-      categoria: 'Tablas',
-      imagenes: [],
-    });
-    setShowCreateModal(false);
-    Alert.alert('Éxito', 'Producto creado correctamente');
+    setCreatingProduct(true);
+    try {
+      const result = await addProduct(formData, user.id);
+      if (result?.success) {
+        setFormData({
+          nombre: '',
+          precio: '',
+          categoria: 'Tablas',
+          imagenes: [],
+          descripcion: '',
+          whatsapp: '',
+        });
+        setShowCreateModal(false);
+        Alert.alert('Exito', 'Producto creado correctamente');
+      } else {
+        Alert.alert('Error', result?.error || 'No se pudo crear el producto');
+      }
+    } finally {
+      setCreatingProduct(false);
+    }
   };
 
-  // Eliminar producto
+    // Eliminar producto
   const handleDeleteProduct = (id) => {
+    if (!user?.id) {
+      Alert.alert('Error', 'Debes iniciar sesion para eliminar productos');
+      return;
+    }
+
     Alert.alert(
       'Eliminar Producto',
-      '¿Estás seguro de que deseas eliminar este producto?',
+      'Estas seguro de que deseas eliminar este producto?',
       [
         { text: 'Cancelar', onPress: () => {}, style: 'cancel' },
         {
           text: 'Eliminar',
-          onPress: () => {
-            setProducts(products.filter(p => p.id !== id));
-            setShowDetailModal(false);
-            Alert.alert('Éxito', 'Producto eliminado correctamente');
+          onPress: async () => {
+            const result = await removeProduct(id, user.id);
+            if (result?.success) {
+              setShowDetailModal(false);
+              Alert.alert('Exito', 'Producto eliminado correctamente');
+            } else {
+              Alert.alert('Error', result?.error || 'No se pudo eliminar el producto');
+            }
           },
           style: 'destructive',
         },
@@ -203,7 +178,7 @@ export default function MarketRollers({ navigation }) {
     );
   };
 
-  // Seleccionar imagen desde galería
+  // Seleccionar imagen desde galeriaía
   const handleSelectImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -212,7 +187,7 @@ export default function MarketRollers({ navigation }) {
       quality: 0.7,
     });
 
-    if (!result.cancelled && result.assets && result.assets.length > 0) {
+    if (!result.canceled && result.assets && result.assets.length > 0) {
       const imageUri = result.assets[0].uri;
       setFormData({
         ...formData,
@@ -240,18 +215,30 @@ export default function MarketRollers({ navigation }) {
 
   // Compartir producto
   const handleShareProduct = (product) => {
-    const mensaje = `Te comparto este producto:\n\n${product.nombre}\n\n💰 Precio: $${product.precio.toLocaleString('es-CO')}\n📍 Categoría: ${product.categoria}\n\n¿Te interesa?`;
+    const mensaje = `Te comparto este producto:\n\n${product.nombre}\n\nPrecio: $${formatPrice(product.precio)}\nCategoria: ${product.categoria}\n\nTe interesa?`;
     Linking.openURL(`https://wa.me/?text=${encodeURIComponent(mensaje)}`);
   };
+
   const handleContact = (product) => {
-    const mensaje = `Hola, me interesa el producto: ${product.nombre} por $${product.precio}. ¿Disponible?`;
-    const whatsappUrl = `https://wa.me/573001234567?text=${encodeURIComponent(mensaje)}`;
+    const mensaje = `Hola, me interesa el producto: ${product.nombre} por $${formatPrice(product.precio)}. Esta disponible?`;
+    const whatsappUrl = getWhatsappLink(product?.whatsapp, mensaje);
+    if (!whatsappUrl) {
+      Alert.alert('WhatsApp no disponible', 'El vendedor no tiene WhatsApp configurado');
+      return;
+    }
     Linking.openURL(whatsappUrl);
   };
 
   // Tarjeta de producto
-  const renderProduct = ({ item }) => (
-    <TouchableOpacity
+  const renderProduct = ({ item }) => {
+    const images = getProductImages(item);
+    const firstImage = images[0] || 'https://via.placeholder.com/400x300';
+    const vendedorNombre = item.vendedor?.nombre || 'Vendedor';
+    const vendedorCiudad = item.vendedor?.ciudad || '---';
+    const isOwner = item.vendedor_id === user?.id;
+
+    return (
+      <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => {
         setSelectedProduct(item);
@@ -269,7 +256,7 @@ export default function MarketRollers({ navigation }) {
       {/* Imagen del Producto */}
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: item.imagenes[0] }}
+          source={{ uri: firstImage }}
           style={styles.productImage}
         />
 
@@ -302,7 +289,7 @@ export default function MarketRollers({ navigation }) {
             Precio
           </Text>
           <Text style={[styles.price, { color: theme.colors.primary }]}>
-            ${item.precio.toLocaleString('es-CO')}
+            ${formatPrice(item.precio)}
           </Text>
         </View>
 
@@ -324,7 +311,7 @@ export default function MarketRollers({ navigation }) {
               <Text
                 style={[styles.vendorName, { color: theme.colors.text.primary }]}
               >
-                {item.vendedor.nombre}
+                {vendedorNombre}
               </Text>
               <View style={styles.locationRow}>
                 <Ionicons
@@ -338,7 +325,7 @@ export default function MarketRollers({ navigation }) {
                     { color: theme.colors.text.secondary },
                   ]}
                 >
-                  {item.vendedor.ciudad}
+                  {vendedorCiudad}
                 </Text>
               </View>
             </View>
@@ -346,20 +333,23 @@ export default function MarketRollers({ navigation }) {
         </View>
 
         {/* Botón Contactar */}
-        <TouchableOpacity
-          activeOpacity={0.75}
-          style={[
-            styles.contactButton,
-            { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={() => handleContact(item)}
-        >
-          <MaterialCommunityIcons name="whatsapp" size={16} color="#FFF" />
-          <Text style={styles.contactButtonText}>Contactar</Text>
-        </TouchableOpacity>
+        {!isOwner && (
+          <TouchableOpacity
+            activeOpacity={0.75}
+            style={[
+              styles.contactButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => handleContact(item)}
+          >
+            <MaterialCommunityIcons name="whatsapp" size={16} color="#FFF" />
+            <Text style={styles.contactButtonText}>Contactar</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <>
@@ -467,24 +457,35 @@ export default function MarketRollers({ navigation }) {
       <FlatList
         data={filteredProducts}
         renderItem={renderProduct}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={item => item.id}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.listContent}
         scrollEnabled={true}
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={refreshProducts}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons
-              name="shopping-outline"
-              size={56}
-              color={theme.colors.text.secondary}
-            />
-            <Text
-              style={[styles.emptyText, { color: theme.colors.text.secondary }]}
-            >
-              No hay productos disponibles
-            </Text>
+            {loading ? (
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            ) : (
+              <>
+                <MaterialCommunityIcons
+                  name="shopping-outline"
+                  size={56}
+                  color={theme.colors.text.secondary}
+                />
+                <Text
+                  style={[
+                    styles.emptyText,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  No hay productos disponibles
+                </Text>
+              </>
+            )}
           </View>
         }
       />
@@ -535,7 +536,7 @@ export default function MarketRollers({ navigation }) {
                 showsHorizontalScrollIndicator={false}
                 style={styles.imageCarousel}
               >
-                {selectedProduct.imagenes.map((image, index) => (
+                {getProductImages(selectedProduct).map((image, index) => (
                   <View key={index} style={styles.carouselImageWrapper}>
                     <Image
                       source={{ uri: image }}
@@ -543,7 +544,7 @@ export default function MarketRollers({ navigation }) {
                     />
                     <View style={styles.imageCounter}>
                       <Text style={styles.imageCounterText}>
-                        {index + 1}/{selectedProduct.imagenes.length}
+                        {index + 1}/{getProductImages(selectedProduct).length}
                       </Text>
                     </View>
                   </View>
@@ -578,8 +579,19 @@ export default function MarketRollers({ navigation }) {
                 <Text
                   style={[styles.detailPrice, { color: theme.colors.primary }]}
                 >
-                  ${selectedProduct.precio.toLocaleString('es-CO')}
+                  ${formatPrice(selectedProduct.precio)}
                 </Text>
+
+                {selectedProduct.descripcion ? (
+                  <Text
+                    style={[
+                      styles.detailDescription,
+                      { color: theme.colors.text.secondary },
+                    ]}
+                  >
+                    {selectedProduct.descripcion}
+                  </Text>
+                ) : null}
 
                 {/* Divider */}
                 <View
@@ -614,31 +626,31 @@ export default function MarketRollers({ navigation }) {
                     </View>
                     <View style={styles.vendorDetailInfo}>
                       <Text
+                      style={[
+                        styles.vendorDetailName,
+                        { color: theme.colors.text.primary },
+                      ]}
+                    >
+                      {getVendedorNombre(selectedProduct)}
+                    </Text>
+                    <View style={styles.locationDetailRow}>
+                      <Ionicons
+                        name="location-outline"
+                        size={14}
+                        color={theme.colors.text.secondary}
+                      />
+                      <Text
                         style={[
-                          styles.vendorDetailName,
-                          { color: theme.colors.text.primary },
+                          styles.vendorDetailCity,
+                          { color: theme.colors.text.secondary },
                         ]}
                       >
-                        {selectedProduct.vendedor.nombre}
+                        {getVendedorCiudad(selectedProduct)}
                       </Text>
-                      <View style={styles.locationDetailRow}>
-                        <Ionicons
-                          name="location-outline"
-                          size={14}
-                          color={theme.colors.text.secondary}
-                        />
-                        <Text
-                          style={[
-                            styles.vendorDetailCity,
-                            { color: theme.colors.text.secondary },
-                          ]}
-                        >
-                          {selectedProduct.vendedor.ciudad}
-                        </Text>
-                      </View>
                     </View>
                   </View>
                 </View>
+              </View>
 
                 {/* Spacer */}
                 <View style={{ height: 20 }} />
@@ -649,41 +661,45 @@ export default function MarketRollers({ navigation }) {
 
         {/* Botones Acciones */}
         <View style={[styles.detailFooter, { borderTopColor: theme.colors.border }]}>
-          <TouchableOpacity
-            style={[
-              styles.detailActionButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            onPress={() => {
-              if (selectedProduct) {
-                handleContact(selectedProduct);
-              }
-            }}
-          >
-            <MaterialCommunityIcons name="whatsapp" size={20} color="#FFF" />
-            <Text style={styles.detailActionButtonText}>Contactar</Text>
-          </TouchableOpacity>
+          {selectedProduct?.vendedor_id !== user?.id && (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.detailActionButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+                onPress={() => {
+                  if (selectedProduct) {
+                    handleContact(selectedProduct);
+                  }
+                }}
+              >
+                <MaterialCommunityIcons name="whatsapp" size={20} color="#FFF" />
+                <Text style={styles.detailActionButtonText}>Contactar</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.detailActionButton,
-              { backgroundColor: favorites.includes(selectedProduct?.id) ? '#FF6B9D' : '#95989A' },
-            ]}
-            onPress={() => {
-              if (selectedProduct) {
-                handleToggleFavorite(selectedProduct.id);
-              }
-            }}
-          >
-            <Ionicons 
-              name={favorites.includes(selectedProduct?.id) ? 'heart' : 'heart-outline'} 
-              size={20} 
-              color="#FFF" 
-            />
-            <Text style={styles.detailActionButtonText}>
-              {favorites.includes(selectedProduct?.id) ? 'Guardado' : 'Guardar'}
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.detailActionButton,
+                  { backgroundColor: favorites.includes(selectedProduct?.id) ? '#FF6B9D' : '#95989A' },
+                ]}
+                onPress={() => {
+                  if (selectedProduct) {
+                    handleToggleFavorite(selectedProduct.id);
+                  }
+                }}
+              >
+                <Ionicons
+                  name={favorites.includes(selectedProduct?.id) ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color="#FFF"
+                />
+                <Text style={styles.detailActionButtonText}>
+                  {favorites.includes(selectedProduct?.id) ? 'Guardado' : 'Guardar'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <TouchableOpacity
             style={[
@@ -701,7 +717,7 @@ export default function MarketRollers({ navigation }) {
           </TouchableOpacity>
 
           {/* Botón Eliminar - Solo si eres el vendedor */}
-          {selectedProduct && selectedProduct.vendedor.nombre === currentUser && (
+          {selectedProduct && selectedProduct.vendedor_id === user?.id && (
             <TouchableOpacity
               style={[
                 styles.detailActionButton,
@@ -807,6 +823,55 @@ export default function MarketRollers({ navigation }) {
                 />
               </View>
 
+              {/* Descripcion */}
+              <View style={styles.createFieldGroup}>
+                <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
+                  Descripcion
+                </Text>
+                <TextInput
+                  style={[
+                    styles.createInput,
+                    styles.createTextarea,
+                    {
+                      backgroundColor: theme.colors.glass.background,
+                      borderColor: theme.colors.border,
+                      color: theme.colors.text.primary,
+                    },
+                  ]}
+                  placeholder="Describe el producto"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  value={formData.descripcion}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, descripcion: text })
+                  }
+                  multiline
+                />
+              </View>
+
+              {/* WhatsApp */}
+              <View style={styles.createFieldGroup}>
+                <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
+                  WhatsApp (numero con codigo pais)
+                </Text>
+                <TextInput
+                  style={[
+                    styles.createInput,
+                    {
+                      backgroundColor: theme.colors.glass.background,
+                      borderColor: theme.colors.border,
+                      color: theme.colors.text.primary,
+                    },
+                  ]}
+                  placeholder="Ej: 573001234567"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  keyboardType="phone-pad"
+                  value={formData.whatsapp}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, whatsapp: text })
+                  }
+                />
+              </View>
+
               {/* Categoría */}
               <View style={styles.createFieldGroup}>
                 <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
@@ -905,6 +970,7 @@ export default function MarketRollers({ navigation }) {
                 },
               ]}
               onPress={() => setShowCreateModal(false)}
+              disabled={creatingProduct}
             >
               <Text style={[styles.createActionButtonText, { color: theme.colors.text.primary }]}>
                 Cancelar
@@ -917,11 +983,18 @@ export default function MarketRollers({ navigation }) {
                 { backgroundColor: theme.colors.primary },
               ]}
               onPress={handleCreateProduct}
+              disabled={creatingProduct}
             >
-              <Ionicons name="add" size={20} color="#FFF" />
-              <Text style={[styles.createActionButtonText, { color: '#FFF' }]}>
-                Crear
-              </Text>
+              {creatingProduct ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="add" size={20} color="#FFF" />
+                  <Text style={[styles.createActionButtonText, { color: '#FFF' }]}>
+                    Crear
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -1270,6 +1343,11 @@ const styles = StyleSheet.create({
     marginVertical: 18,
     opacity: 0.35,
   },
+  detailDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
   sectionLabel: {
     fontSize: 13,
     fontWeight: '800',
@@ -1392,6 +1470,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  createTextarea: {
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
   categorySelectWrapper: {
     marginTop: 8,
   },
@@ -1484,3 +1566,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
 });
+
+
+
+
+
+
+
+
+

@@ -22,7 +22,12 @@ export const MIN_MOVEMENT_DISTANCE = 10; // metros mínimos para considerar movi
 /**
  * 💾 Guardar estado del tracking al iniciar
  */
-export const saveTrackingState = async (userId, startTime, lastLocation) => {
+export const saveTrackingState = async (
+  userId,
+  startTime,
+  lastLocation,
+  options = {}
+) => {
   try {
     const state = {
       userId,
@@ -30,6 +35,14 @@ export const saveTrackingState = async (userId, startTime, lastLocation) => {
       lastLocation,
       lastMovementTime: Date.now(),
       isActive: true,
+      isPaused: options.isPaused ?? false,
+      pausedAt: options.pausedAt ?? null,
+      totalPausedMs: options.totalPausedMs ?? 0,
+      routeCoordinates: options.routeCoordinates ?? null,
+      distance: options.distance ?? null,
+      avgSpeed: options.avgSpeed ?? null,
+      maxSpeed: options.maxSpeed ?? null,
+      calories: options.calories ?? null,
       savedAt: Date.now(),
     };
     await AsyncStorage.setItem(TRACKING_STATE_KEY, JSON.stringify(state));

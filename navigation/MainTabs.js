@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, TouchableOpacity, Text, View } from 'react-native';
+import { Alert, Modal,  TouchableOpacity, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -89,7 +89,7 @@ export default function MainTabs() {
         <View style={{ marginRight: 8 }}>
           <ThemeToggle />
         </View>
-        <Pressable
+        <TouchableOpacity
           onPress={openLanguage}
           style={{
             padding: 8,
@@ -103,8 +103,8 @@ export default function MainTabs() {
           hitSlop={8}
         >
           <Text style={{ fontSize: 24 }}>{getFlag()}</Text>
-        </Pressable>
-        <Pressable
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={openUserMenu}
           style={{
             padding: 8,
@@ -117,7 +117,7 @@ export default function MainTabs() {
           hitSlop={8}
         >
           <Ionicons name="ellipsis-horizontal" size={20} color={theme.colors.text.primary} />
-        </Pressable>
+        </TouchableOpacity>
       </View>
     ),
     [openLanguage, openUserMenu, currentLang, theme]
@@ -157,7 +157,7 @@ export default function MainTabs() {
               return <IconComponent name={iconName} size={size} color={color} />;
             } else if (route.name === 'Rutas') {
               iconName = focused ? 'navigate-circle' : 'navigate-circle-outline';
-            } else if (route.name === 'Galería') {
+            } else if (route.name === 'Galeria') {
               iconName = focused ? 'images' : 'images-outline';
             }
 
@@ -195,7 +195,7 @@ export default function MainTabs() {
           }}
         />
         <Tab.Screen
-          name="Galería"
+          name="Galeria"
           component={Galeria}
           options={{ title: t('nav.galeria'), tabBarLabel: t('nav.galeria') }}
         />
@@ -287,6 +287,14 @@ export default function MainTabs() {
               <Text style={{ fontSize: 16 }}>{t('screens.menu.profile')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              onPress={() => handleNavigate('Notificaciones')}
+              style={{ paddingHorizontal: 16, paddingVertical: 10 }}
+            >
+              <Text style={{ fontSize: 16 }}>
+                {t('screens.menu.notifications', 'Notificaciones')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => handleNavigate('Configuracion')}
               style={{ paddingHorizontal: 16, paddingVertical: 10 }}
             >
@@ -304,5 +312,8 @@ export default function MainTabs() {
     </>
   );
 }
+
+
+
 
 
