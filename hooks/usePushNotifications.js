@@ -5,10 +5,12 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { supabase } from "../config/supabase";
 import { useAppStore } from "../store/useAppStore";
+import { navigate } from "../navigation/navigationRef";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -20,6 +22,65 @@ export const usePushNotifications = () => {
   const [notification, setNotification] = useState(null);
   const notificationListener = useRef();
   const responseListener = useRef();
+
+  const markNotificationRead = async (notificationId) => {
+    if (!notificationId || !user?.id) return;
+
+    const { error } = await supabase
+      .from("notificaciones")
+      .update({ leida: true })
+      .eq("id", notificationId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error marcando notificacion como leida:", error);
+    }
+  };
+
+  const handleNotificationNavigation = (data) => {
+    if (!data) return;
+
+    const tipo = data.tipo;
+    const galeriaId = data.galeria_id;
+    const comentarioId = data.comentario_id;
+    const parcheId = data.parche_id;
+    const rodadaId = data.rodada_id;
+    const fromUserId = data.from_user_id;
+    const notificationId = data.notification_id;
+
+    markNotificationRead(notificationId);
+
+    if (tipo === "like" || tipo === "comentario") {
+      navigate("MainTabs", {
+        screen: "Galeria",
+        params: {
+          postId: galeriaId,
+          commentId: comentarioId,
+        },
+      });
+      return;
+    }
+
+    if (tipo === "seguidor") {
+      if (parcheId) {
+        navigate("DetalleParche", { parcheId });
+        return;
+      }
+      if (fromUserId) {
+        navigate("PerfilUsuario", { userId: fromUserId });
+      }
+    }
+
+    if (tipo === "rodada" && rodadaId) {
+      navigate("MainTabs", {
+        screen: "Rutas",
+        params: {
+          screen: "TrackingMain",
+          params: { rodadaId },
+        },
+      });
+    }
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -33,13 +94,21 @@ export const usePushNotifications = () => {
       notificationListener.current =
         Notifications.addNotificationReceivedListener((notification) => {
           setNotification(notification);
-          console.log("📬 Notificación recibida:", notification);
+          console.log("Notificacion recibida:", notification);
         });
 
       responseListener.current =
-        Notifications.addNotificationResponseReceivedListener((response) => {
-          console.log("👆 Notificación tocada:", response);
-        });
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log("Notificacion tocada:", response);
+        const data = response?.notification?.request?.content?.data;
+        handleNotificationNavigation(data);
+      });
+
+      Notifications.getLastNotificationResponseAsync().then((response) => {
+        if (!response) return;
+        const data = response?.notification?.request?.content?.data;
+        handleNotificationNavigation(data);
+      });
 
       return () => {
         notificationListener.current?.remove();
@@ -50,7 +119,7 @@ export const usePushNotifications = () => {
 
   const registerForPushNotificationsAsync = async () => {
     if (!Device.isDevice) {
-      console.log("⚠️ Push solo funciona en dispositivos físicos");
+      console.log("Push solo funciona en dispositivos fisicos");
       return null;
     }
 
@@ -65,7 +134,7 @@ export const usePushNotifications = () => {
       }
 
       if (finalStatus !== "granted") {
-        console.log("❌ Sin permisos para notificaciones");
+        console.log("Sin permisos para notificaciones");
         return null;
       }
 
@@ -73,7 +142,7 @@ export const usePushNotifications = () => {
       const tokenData = projectId
         ? await Notifications.getExpoPushTokenAsync({ projectId })
         : await Notifications.getExpoPushTokenAsync();
-      console.log("✅ Token obtenido:", tokenData.data);
+      console.log("Token obtenido:", tokenData.data);
 
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("default", {
@@ -86,7 +155,7 @@ export const usePushNotifications = () => {
 
       return tokenData.data;
     } catch (error) {
-      console.error("❌ Error obteniendo token:", error);
+      console.error("Error obteniendo token:", error);
       return null;
     }
   };
@@ -101,14 +170,15 @@ export const usePushNotifications = () => {
         .eq("id", user.id);
 
       if (error) {
-        console.error("❌ Error guardando token:", error);
+        console.error("Error guardando token:", error);
       } else {
-        console.log("✅ Token guardado en BD");
+        console.log("Token guardado en BD");
       }
     } catch (error) {
-      console.error("❌ Error:", error);
+      console.error("Error:", error);
     }
   };
 
   return { expoPushToken, notification };
 };
+

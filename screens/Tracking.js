@@ -79,6 +79,7 @@ export default function Tracking() {
   const [showRodadasList, setShowRodadasList] = useState(false);
   const [showRodadaDetail, setShowRodadaDetail] = useState(false);
   const [selectedRodada, setSelectedRodada] = useState(null);
+  const [showRodadaBadge, setShowRodadaBadge] = useState(true);
   const [joiningRodada, setJoiningRodada] = useState(null); // ID de rodada que se está uniendo
   const [isUserJoined, setIsUserJoined] = useState(false); // Si el usuario está unido a la rodada seleccionada
   const [checkingJoin, setCheckingJoin] = useState(false); // Verificando participación
@@ -133,6 +134,21 @@ export default function Tracking() {
       }
     }
   }, [route.params?.historicalRoute]);
+
+  useEffect(() => {
+    const rodadaId = route.params?.rodadaId;
+    if (!rodadaId) return;
+
+    const found = rodadas.find((rodada) => rodada.id === rodadaId);
+    if (!found) return;
+
+    setSelectedRodada(found);
+    setShowRodadasList(false);
+    setShowRodadaDetail(true);
+    setShowRodadaBadge(false);
+
+    navigation.setParams({ rodadaId: undefined });
+  }, [route.params?.rodadaId, rodadas, navigation]);
 
   // 🛼 Cargar rodadas al entrar a la pantalla
   useFocusEffect(
@@ -362,6 +378,7 @@ export default function Tracking() {
     setSelectedRodada(rodada);
     setShowRodadasList(false);
     setShowRodadaDetail(true);
+    setShowRodadaBadge(true);
     
     // Verificar si el usuario está unido
     if (user?.id && rodada.organizador_id !== user.id) {
@@ -798,7 +815,10 @@ export default function Tracking() {
                   latitude: parseFloat(rodada.punto_salida_lat),
                   longitude: parseFloat(rodada.punto_salida_lng),
                 }}
-                onPress={() => setSelectedRodada(rodada)}
+                onPress={() => {
+                  setSelectedRodada(rodada);
+                  setShowRodadaBadge(true);
+                }}
               >
                 <View style={styles.rodadaMarkerContainer}>
                   {/* Flecha/Callout con nombre */}
@@ -842,7 +862,10 @@ export default function Tracking() {
                     latitude: parseFloat(rodada.punto_llegada_lat),
                     longitude: parseFloat(rodada.punto_llegada_lng),
                   }}
-                  onPress={() => setSelectedRodada(rodada)}
+                  onPress={() => {
+                    setSelectedRodada(rodada);
+                    setShowRodadaBadge(true);
+                  }}
                 >
                   <View style={styles.rodadaMarkerContainer}>
                     {/* Flecha/Callout de llegada */}
@@ -1104,7 +1127,12 @@ export default function Tracking() {
 
       {/* 🛼 Panel de lista de rodadas */}
       {showRodadasList && (
-        <View
+        <TouchableOpacity
+          style={styles.rodadasListOverlay}
+          onPress={() => setShowRodadasList(false)}
+          activeOpacity={1}
+        >
+          <TouchableOpacity
           style={[
             styles.rodadasListPanel,
             {
@@ -1116,6 +1144,8 @@ export default function Tracking() {
                 : "rgba(0, 0, 0, 0.08)",
             },
           ]}
+          onPress={() => {}}
+          activeOpacity={1}
         >
           <View style={styles.rodadasListHeader}>
             <Text
@@ -1193,6 +1223,7 @@ export default function Tracking() {
                       style={styles.rodadaListItemMain}
                       onPress={() => {
                         setSelectedRodada(rodada);
+                        setShowRodadaBadge(true);
                         setShowRodadasList(false);
                         // Centrar mapa en la rodada
                         if (mapRef.current && rodada.punto_salida_lat) {
@@ -1287,56 +1318,74 @@ export default function Tracking() {
               })}
             </ScrollView>
           )}
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       )}
 
       {/* 🛼 Badge de rodada seleccionada */}
-      {selectedRodada && (
-        <View
-          style={[
-            styles.rodadaBadge,
-            {
-              backgroundColor: isDark
-                ? "rgba(52, 199, 89, 0.95)"
-                : "rgba(52, 199, 89, 0.95)",
-            },
-          ]}
+      {selectedRodada && showRodadaBadge && (
+        <TouchableOpacity
+          style={styles.rodadaBadgeOverlay}
+          onPress={() => {
+            setShowRodadaBadge(false);
+            if (!showRodadaDetail) {
+              setSelectedRodada(null);
+            }
+          }}
+          activeOpacity={1}
         >
-          <View style={styles.rodadaBadgeContent}>
-            <MaterialCommunityIcons
-              name="account-group"
-              size={20}
-              color="#FFFFFF"
-            />
-            <View style={styles.rodadaBadgeText}>
-              <Text style={styles.rodadaBadgeTitle} numberOfLines={1}>
-                {selectedRodada.nombre}
-              </Text>
-              <Text style={styles.rodadaBadgeStats}>
-                📍 {selectedRodada.punto_salida_nombre?.substring(0, 30)}...
-              </Text>
-              <Text style={styles.rodadaBadgeStats}>
-                📅{" "}
-                {new Date(selectedRodada.fecha_inicio).toLocaleDateString(
-                  "es-CO"
-                )}{" "}
-                • {selectedRodada.hora_encuentro || "---"}
-              </Text>
-              <Text style={styles.rodadaBadgeStats}>
-                👥 {selectedRodada.participantes_count || 0} participantes •{" "}
-                {selectedRodada.nivel_requerido || "Todos"}
-              </Text>
-            </View>
-          </View>
           <TouchableOpacity
-            onPress={() => setSelectedRodada(null)}
-            style={styles.rodadaBadgeClose}
+            style={[
+              styles.rodadaBadge,
+              {
+                backgroundColor: isDark
+                  ? "rgba(52, 199, 89, 0.95)"
+                  : "rgba(52, 199, 89, 0.95)",
+              },
+            ]}
+            onPress={() => {}}
+            activeOpacity={1}
           >
-            <Ionicons name="close" size={20} color="#FFFFFF" />
+            <View style={styles.rodadaBadgeContent}>
+              <MaterialCommunityIcons
+                name="account-group"
+                size={20}
+                color="#FFFFFF"
+              />
+              <View style={styles.rodadaBadgeText}>
+                <Text style={styles.rodadaBadgeTitle} numberOfLines={1}>
+                  {selectedRodada.nombre}
+                </Text>
+                <Text style={styles.rodadaBadgeStats}>
+                  ?? {selectedRodada.punto_salida_nombre?.substring(0, 30)}...
+                </Text>
+                <Text style={styles.rodadaBadgeStats}>
+                  ??{" "}
+                  {new Date(selectedRodada.fecha_inicio).toLocaleDateString(
+                    "es-CO"
+                  )}{" "}
+                  - {selectedRodada.hora_encuentro || "---"}
+                </Text>
+                <Text style={styles.rodadaBadgeStats}>
+                  ?? {selectedRodada.participantes_count || 0} participantes -{" "}
+                  {selectedRodada.nivel_requerido || "Todos"}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                setShowRodadaBadge(false);
+                if (!showRodadaDetail) {
+                  setSelectedRodada(null);
+                }
+              }}
+              style={styles.rodadaBadgeClose}
+            >
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       )}
-
       {/* Stats Overlay - Diseño compacto horizontal */}
       {status !== TRACKER_STATUS.IDLE && (
         <Animated.View
@@ -2435,6 +2484,15 @@ const styles = StyleSheet.create({
   },
 
   // 🛼 Badge de rodada seleccionada
+  rodadaBadgeOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+    elevation: 20,
+  },
   rodadaBadge: {
     position: 'absolute',
     top: 130,
@@ -2451,6 +2509,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+    zIndex: 21,
   },
   rodadaBadgeContent: {
     flex: 1,
@@ -2483,6 +2542,13 @@ const styles = StyleSheet.create({
   },
 
   // 🛼 Panel de lista de rodadas
+  rodadasListOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   rodadasListPanel: {
     position: 'absolute',
     top: 80,
@@ -2700,3 +2766,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 });
+
+
+
+

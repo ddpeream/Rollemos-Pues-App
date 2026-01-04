@@ -9,7 +9,7 @@
  * - Diseño moderno con glassmorphism
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -27,17 +27,20 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useGaleria } from '../hooks/useGaleria';
 import { useAppStore } from '../store/useAppStore';
 import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { Ionicons } from '@expo/vector-icons';
 import CreatePostModal from '../components/CreatePostModal';
+import { spacing, typography, borderRadius } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Galeria() {
+  const navigation = useNavigation();
+  const route = useRoute();
   const { user, theme } = useAppStore();
   const { t } = useTranslation();
   const {
@@ -52,13 +55,17 @@ export default function Galeria() {
     loadComments,
   } = useGaleria();
 
-  const [expandedComments, setExpandedComments] = useState({});
-  const [loadedComments, setLoadedComments] = useState({});
-  const [commentText, setCommentText] = useState({});
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [activePostId, setActivePostId] = useState(null);
+  const [commentsList, setCommentsList] = useState([]);
+  const [commentText, setCommentText] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [sendingComment, setSendingComment] = useState({});
+  const [sendingComment, setSendingComment] = useState(false);
   const [showPostMenu, setShowPostMenu] = useState(false);
   const [menuPost, setMenuPost] = useState(null);
+  const listRef = useRef(null);
+  const handledNotificationRef = useRef(null);
 
   // Cargar posts al entrar a la pantalla
   useFocusEffect(
@@ -86,6 +93,39 @@ export default function Galeria() {
   }, [loadPosts]);
 
   useRealtimeSubscription('galeria_comentarios', handleCommentsChange);
+
+  const openCommentsModal = React.useCallback(
+    async (postId) => {
+      if (!postId) return;
+      setActivePostId(postId);
+      setShowCommentsModal(true);
+      setLoadingComments(true);
+
+      const result = await loadComments(postId);
+      if (result.success) {
+        setCommentsList(result.data);
+      } else {
+        setCommentsList([]);
+      }
+      setLoadingComments(false);
+    },
+    [loadComments]
+  );
+
+  useEffect(() => {
+    const postId = route.params?.postId;
+    if (!postId || posts.length === 0) return;
+    if (handledNotificationRef.current === postId) return;
+
+    const index = posts.findIndex((post) => post.id === postId);
+    if (index >= 0) {
+      listRef.current?.scrollToIndex({ index, animated: true });
+    }
+
+    openCommentsModal(postId);
+    handledNotificationRef.current = postId;
+    navigation.setParams({ postId: undefined, commentId: undefined });
+  }, [posts, route.params?.postId, navigation, openCommentsModal]);
 
   // Toggle like
   const handleLike = async (postId) => {
@@ -156,51 +196,29 @@ export default function Galeria() {
     );
   };
 
-  // Toggle mostrar comentarios y cargar desde Supabase
-  const toggleComments = async (postId) => {
-    const isExpanding = !expandedComments[postId];
-    
-    setExpandedComments(prev => ({
-      ...prev,
-      [postId]: isExpanding
-    }));
-
-    // Si estamos expandiendo y no tenemos comentarios cargados, cargarlos
-    if (isExpanding && !loadedComments[postId]) {
-      const result = await loadComments(postId);
-      if (result.success) {
-        setLoadedComments(prev => ({
-          ...prev,
-          [postId]: result.data
-        }));
-      }
-    }
+  const closeCommentsModal = () => {
+    setShowCommentsModal(false);
+    setActivePostId(null);
+    setCommentsList([]);
+    setCommentText('');
   };
 
   // Enviar comentario
-  const handleSendComment = async (postId) => {
-    const texto = commentText[postId]?.trim();
-    if (!texto || !user) return;
+  const handleSendComment = async () => {
+    const texto = commentText.trim();
+    if (!texto || !user || !activePostId) return;
 
-    setSendingComment(prev => ({ ...prev, [postId]: true }));
-    
-    const result = await addComment(postId, texto);
-    
+    setSendingComment(true);
+
+    const result = await addComment(activePostId, texto);
+
     if (result.success) {
-      // Limpiar el texto
-      setCommentText(prev => ({ ...prev, [postId]: '' }));
-      
-      // Agregar el nuevo comentario a la lista local
-      setLoadedComments(prev => ({
-        ...prev,
-        [postId]: [...(prev[postId] || []), result.data]
-      }));
-      
-      // Recargar posts para actualizar el contador
+      setCommentText('');
+      setCommentsList((prev) => [...prev, result.data]);
       loadPosts();
     }
-    
-    setSendingComment(prev => ({ ...prev, [postId]: false }));
+
+    setSendingComment(false);
   };
 
   // Formatear tiempo relativo
@@ -258,8 +276,6 @@ export default function Galeria() {
     const userLiked = item.userLiked || false;
     const likesCount = item.likes_count || 0;
     const commentsCount = item.comentarios_count || 0;
-    const isCommentsExpanded = expandedComments[item.id];
-    const postComments = loadedComments[item.id] || [];
 
     return (
       <View style={[styles.postContainer, { backgroundColor: theme.colors.background.primary }]}>
@@ -310,7 +326,7 @@ export default function Galeria() {
               />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => toggleComments(item.id)}
+              onPress={() => openCommentsModal(item.id)}
               style={styles.actionButton}
             >
               <Ionicons
@@ -346,67 +362,12 @@ export default function Galeria() {
         )}
 
         {/* Ver comentarios */}
-        {commentsCount > 0 && !isCommentsExpanded && (
-          <TouchableOpacity onPress={() => toggleComments(item.id)}>
+        {commentsCount > 0 && (
+          <TouchableOpacity onPress={() => openCommentsModal(item.id)}>
               <Text style={[styles.viewCommentsText, { color: theme.colors.text.tertiary }]}>
                 {t('screens.galeria.viewComments', { count: commentsCount })}
               </Text>
           </TouchableOpacity>
-        )}
-
-        {/* Comentarios expandidos */}
-        {isCommentsExpanded && (
-          <View style={styles.commentsSection}>
-            {postComments.length > 0 ? (
-              postComments.map((comment, index) => (
-                <View key={comment.id || `comment-${index}`} style={styles.commentItem}>
-                  <Text style={[styles.commentText, { color: theme.colors.text.primary }]}>
-                    <Text style={styles.boldText}>{comment.usuario?.nombre || 'Usuario'} </Text>
-                    {comment.texto}
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={[styles.noCommentsText, { color: theme.colors.text.tertiary }]}>
-                No hay comentarios aún
-              </Text>
-            )}
-            
-            {/* Input para nuevo comentario */}
-            {user && (
-              <View style={[styles.commentInputContainer, { borderTopColor: theme.colors.border }]}>
-                <TextInput
-                  style={[styles.commentInput, { color: theme.colors.text.primary }]}
-                  placeholder="Escribe un comentario..."
-                  placeholderTextColor={theme.colors.text.tertiary}
-                  value={commentText[item.id] || ''}
-                  onChangeText={(text) => setCommentText(prev => ({ ...prev, [item.id]: text }))}
-                  multiline
-                />
-                <TouchableOpacity 
-                  onPress={() => handleSendComment(item.id)}
-                  disabled={sendingComment[item.id] || !commentText[item.id]?.trim()}
-                  style={styles.sendButton}
-                >
-                  {sendingComment[item.id] ? (
-                    <ActivityIndicator size="small" color={theme.colors.primary} />
-                  ) : (
-                    <Ionicons 
-                      name="send" 
-                      size={20} 
-                      color={commentText[item.id]?.trim() ? theme.colors.primary : theme.colors.text.tertiary} 
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-            
-            <TouchableOpacity onPress={() => toggleComments(item.id)}>
-              <Text style={[styles.hideCommentsText, { color: theme.colors.text.tertiary }]}>
-                {t('screens.galeria.hideComments')}
-              </Text>
-            </TouchableOpacity>
-          </View>
         )}
 
         {/* Tiempo */}
@@ -450,10 +411,15 @@ export default function Galeria() {
         </View>
       ) : (
         <FlatList
+          ref={listRef}
           data={posts}
           renderItem={renderPost}
           keyExtractor={(item) => item.id.toString()}
           showsVerticalScrollIndicator={false}
+          onScrollToIndexFailed={(info) => {
+            const fallbackOffset = info.averageItemLength * info.index;
+            listRef.current?.scrollToOffset({ offset: fallbackOffset, animated: true });
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -492,6 +458,97 @@ export default function Galeria() {
             </View>
           }
         />
+      )}
+
+      {showCommentsModal && (
+        <Modal
+          visible={showCommentsModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeCommentsModal}
+        >
+          <TouchableOpacity style={styles.commentsModalOverlay} onPress={closeCommentsModal} activeOpacity={1}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.commentsModalKeyboard}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.commentsModalContainer,
+                  { backgroundColor: theme.colors.background.secondary },
+                ]}
+                onPress={() => {}}
+                activeOpacity={1}
+              >
+              <View style={styles.commentsModalHeader}>
+                <Text style={[styles.commentsModalTitle, { color: theme.colors.text.primary }]}>
+                  Comentarios
+                </Text>
+                <TouchableOpacity onPress={closeCommentsModal}>
+                  <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+
+              {loadingComments ? (
+                <View style={styles.commentsLoading}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Text style={[styles.loadingText, { color: theme.colors.text.tertiary }]}>
+                    Cargando comentarios...
+                  </Text>
+                </View>
+              ) : commentsList.length > 0 ? (
+                <FlatList
+                  data={commentsList}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <View style={styles.commentItem}>
+                      <Text style={[styles.commentText, { color: theme.colors.text.primary }]}>
+                        <Text style={styles.boldText}>{item.usuario?.nombre || 'Usuario'} </Text>
+                        {item.texto}
+                      </Text>
+                    </View>
+                  )}
+                  contentContainerStyle={styles.commentsList}
+                />
+              ) : (
+                <View style={styles.commentsEmpty}>
+                  <Text style={[styles.noCommentsText, { color: theme.colors.text.tertiary }]}>
+                    No hay comentarios aun
+                  </Text>
+                </View>
+              )}
+
+              {user && (
+                <View style={[styles.commentInputContainer, { borderTopColor: theme.colors.border }]}>
+                  <TextInput
+                    style={[styles.commentInput, { color: theme.colors.text.primary }]}
+                    placeholder="Escribe un comentario..."
+                    placeholderTextColor={theme.colors.text.tertiary}
+                    value={commentText}
+                    onChangeText={setCommentText}
+                    multiline
+                  />
+                  <TouchableOpacity
+                    onPress={handleSendComment}
+                    disabled={sendingComment || !commentText.trim()}
+                    style={styles.sendButton}
+                  >
+                    {sendingComment ? (
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                    ) : (
+                      <Ionicons
+                        name="send"
+                        size={20}
+                        color={commentText.trim() ? theme.colors.primary : theme.colors.text.tertiary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+              </TouchableOpacity>
+            </KeyboardAvoidingView>
+          </TouchableOpacity>
+        </Modal>
       )}
 
       {/* Modal para crear post */}
@@ -815,6 +872,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  commentsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  commentsModalKeyboard: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  commentsModalContainer: {
+    maxHeight: '85%',
+    borderTopLeftRadius: borderRadius.lg,
+    borderTopRightRadius: borderRadius.lg,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  commentsModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.sm,
+  },
+  commentsModalTitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+  },
+  commentsLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.xs,
+  },
+  commentsList: {
+    paddingBottom: spacing.sm,
+  },
+  commentsEmpty: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
   menuContainer: {
     borderRadius: 16,
     paddingVertical: 12,
@@ -839,3 +936,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+
+
+
+
+
+

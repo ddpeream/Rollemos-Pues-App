@@ -125,6 +125,11 @@ export default function CreateParcheModal({
       justifyContent: 'center',
       alignItems: 'center',
     },
+    keyboard: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     modalContainer: {
       width: '95%',
       maxHeight: '90%',
@@ -456,11 +461,12 @@ export default function CreateParcheModal({
       transparent
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}
-      >
-        <View style={styles.modalContainer}>
+      <TouchableOpacity style={styles.overlay} onPress={onClose} activeOpacity={1}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboard}
+        >
+          <TouchableOpacity style={styles.modalContainer} onPress={() => {}} activeOpacity={1}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>
@@ -778,8 +784,11 @@ export default function CreateParcheModal({
               </View>
             </>
           )}
-        </View>
-      </KeyboardAvoidingView>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </TouchableOpacity>
     </Modal>
   );
 }
+
+

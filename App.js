@@ -14,10 +14,12 @@ import PerfilUsuario from './screens/PerfilUsuario';
 import DetalleParche from './screens/DetalleParche';
 import EditarPerfil from './screens/EditarPerfil';
 import Configuracion from './screens/Configuracion';
+import Notificaciones from './screens/Notificaciones';
 import useAppStore from './store/useAppStore';
 import { cleanupOrphanedTracking } from './services/trackingAutoStop';
 import { usePushNotifications } from "./hooks/usePushNotifications";
 import "./tasks/trackingLiveTask";
+import { navigationRef } from './navigation/navigationRef';
 
 const RootStack = createNativeStackNavigator();
 
@@ -62,7 +64,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <PaperProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef}>
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
             {isAuthenticated ? (
               <>
@@ -72,6 +74,7 @@ export default function App() {
                 <RootStack.Screen name="DetalleParche" component={DetalleParche} />
                 <RootStack.Screen name="EditarPerfil" component={EditarPerfil} />
                 <RootStack.Screen name="Configuracion" component={Configuracion} />
+                <RootStack.Screen name="Notificaciones" component={Notificaciones} />
               </>
             ) : (
               <RootStack.Screen name="AuthStack" component={AuthStack} />
