@@ -16,7 +16,7 @@ const TRACKING_STATE_KEY = '@rollemos_tracking_state';
 const LAST_MOVEMENT_KEY = '@rollemos_last_movement';
 
 // Configuración de tiempos (en milisegundos)
-export const INACTIVITY_TIMEOUT = 20 * 60 * 1000; // 20 minutos
+export const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 20 minutos
 export const MIN_MOVEMENT_DISTANCE = 10; // metros mínimos para considerar movimiento
 
 /**
@@ -134,10 +134,20 @@ export const checkOrphanedTracking = async () => {
       return null; // No hay tracking activo
     }
 
+    if (state.isPaused) {
+      return {
+        shouldStop: false,
+        inactiveMinutes: 0,
+        userId: state.userId,
+        pauseAt: state.pausedAt || state.savedAt,
+      };
+    }
+
     const now = Date.now();
     const lastMovement = state.lastMovementTime || state.savedAt;
     const inactiveTime = now - lastMovement;
     const inactiveMinutes = Math.floor(inactiveTime / 60000);
+    const pauseAt = lastMovement + INACTIVITY_TIMEOUT;
 
     console.log(`⏱️ Tracking inactivo por ${inactiveMinutes} minutos`);
 
@@ -148,6 +158,7 @@ export const checkOrphanedTracking = async () => {
         inactiveMinutes,
         userId: state.userId,
         startTime: state.startTime,
+        pauseAt,
       };
     }
 
@@ -155,6 +166,7 @@ export const checkOrphanedTracking = async () => {
       shouldStop: false,
       inactiveMinutes,
       userId: state.userId,
+      pauseAt,
     };
   } catch (error) {
     console.error('❌ Error verificando tracking huérfano:', error);
@@ -195,6 +207,36 @@ export const markTrackingInactive = async (userId) => {
 };
 
 /**
+ * ?? Pausar tracking por inactividad (no borra el estado)
+ */
+export const pauseTrackingState = async (pauseAt) => {
+  try {
+    const state = await getTrackingState();
+    if (!state || !state.isActive) return false;
+
+    const pausedAt = pauseAt || Date.now();
+    if (state.isPaused && state.pausedAt === pausedAt) {
+      return true;
+    }
+
+    const nextState = {
+      ...state,
+      isPaused: true,
+      pausedAt,
+      savedAt: Date.now(),
+    };
+
+    await AsyncStorage.setItem(TRACKING_STATE_KEY, JSON.stringify(nextState));
+    console.log('?? Tracking pausado por inactividad');
+    return true;
+  } catch (error) {
+    console.error('? Error pausando tracking:', error);
+    return false;
+  }
+};
+
+
+/**
  * 🔄 Limpiar tracking huérfano si es necesario
  * 
  * Llamar al iniciar la app para verificar y limpiar tracking abandonado
@@ -209,23 +251,24 @@ export const cleanupOrphanedTracking = async () => {
     }
 
     if (check.shouldStop) {
-      console.log(`🛑 Limpiando tracking huérfano (${check.inactiveMinutes} min inactivo)`);
+      console.log(`🛑 Pausando tracking huérfano (${check.inactiveMinutes} min inactivo)`);
       
       // Marcar como inactivo en Supabase
       await markTrackingInactive(check.userId);
       
-      // Limpiar estado local
-      await clearTrackingState();
+      // Pausar estado local
+      await pauseTrackingState(check.pauseAt);
       
       return { 
-        cleaned: true, 
+        cleaned: true,
+        action: 'paused',
         reason: check.reason,
         inactiveMinutes: check.inactiveMinutes 
       };
     }
 
     console.log(`✅ Tracking válido (${check.inactiveMinutes} min inactivo, < 20 min)`);
-    return { cleaned: false, reason: 'still_valid' };
+    return { cleaned: false, reason: 'still_valid', action: 'none' };
   } catch (error) {
     console.error('❌ Error en cleanup de tracking:', error);
     return { cleaned: false, reason: 'error', error: error.message };
