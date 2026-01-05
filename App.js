@@ -34,16 +34,18 @@ export default function App() {
     const checkOrphanedTracking = async () => {
       try {
         const result = await cleanupOrphanedTracking();
-        
         if (result.cleaned) {
-          console.log(`🛑 Tracking huérfano limpiado: ${result.inactiveMinutes} min de inactividad`);
-          
+          const action = result.action || 'paused';
+          console.log(`?? Tracking huerfano ${action}: ${result.inactiveMinutes} min de inactividad`);
+
           // Notificar al usuario
-          Alert.alert(
-            'Tracking detenido',
-            `El tracking se detuvo automáticamente después de ${result.inactiveMinutes} minutos de inactividad.`,
-            [{ text: 'Entendido', style: 'default' }]
-          );
+          const title = action === 'paused' ? 'Tracking pausado' : 'Tracking detenido';
+          const message =
+            action === 'paused'
+              ? `El tracking se pauso automaticamente despues de ${result.inactiveMinutes} minutos de inactividad.`
+              : `El tracking se detuvo automaticamente despues de ${result.inactiveMinutes} minutos de inactividad.`;
+
+          Alert.alert(title, message, [{ text: 'Entendido', style: 'default' }]);
         }
       } catch (error) {
         console.error('Error verificando tracking huérfano:', error);

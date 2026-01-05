@@ -30,6 +30,7 @@ import {
   getLastMovement,
   checkOrphanedTracking,
   markTrackingInactive,
+  pauseTrackingState,
   INACTIVITY_TIMEOUT,
   MIN_MOVEMENT_DISTANCE,
 } from '../services/trackingAutoStop';
@@ -284,6 +285,43 @@ export const useRouteTracker = () => {
   }, []);
 
   /**
+   * ?? Auto-pausar tracking por inactividad
+   */
+  const autoPauseTracking = useCallback(async (pauseAt) => {
+    console.log('?? Auto-pausando tracking...');
+
+    if (authUserIdRef.current) {
+      await markTrackingInactive(authUserIdRef.current);
+    }
+
+    if (locationSubscription.current) {
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
+    }
+
+    // Detener timer
+    stopTimer();
+
+    // Detener chequeo de inactividad
+    if (inactivityCheckInterval.current) {
+      clearInterval(inactivityCheckInterval.current);
+      inactivityCheckInterval.current = null;
+    }
+
+    await stopBackgroundTracking();
+
+    const effectivePauseAt = pauseAt || Date.now();
+    pausedAtRef.current = effectivePauseAt;
+    setStatus(TRACKER_STATUS.PAUSED);
+    await pauseTrackingState(effectivePauseAt);
+    syncDuration();
+
+    console.log('? Tracking auto-pausado');
+  }, [stopTimer, syncDuration]);
+
+
+
+  /**
    * 🔄 Manejar cambios de estado de la app (background/foreground)
    * Cuando la app vuelve al foreground, verificar si el tracking debe detenerse
    */
@@ -305,11 +343,11 @@ export const useRouteTracker = () => {
           : null;
 
         if (check && check.shouldStop) {
-          console.log(`?? Auto-stop por inactividad (${check.inactiveMinutes} min)`);
-          setError(`Tracking detenido automaticamente por ${check.inactiveMinutes} minutos de inactividad`);
+          console.log(`?? Auto-pausa por inactividad (${check.inactiveMinutes} min)`);
+          setError(`Tracking pausado automaticamente por ${check.inactiveMinutes} minutos de inactividad`);
 
-          // Detener tracking automaticamente
-          await autoStopTracking();
+          // Pausar tracking automaticamente
+          await autoPauseTracking(check.pauseAt);
         }
       }
 
@@ -330,7 +368,9 @@ export const useRouteTracker = () => {
     return () => {
       subscription?.remove();
     };
-  }, [currentLocation, persistTrackingState, status, syncDuration]);
+  }, [autoPauseTracking, currentLocation, persistTrackingState, status, syncDuration]);
+
+
 
   /**
    * 🛑 Auto-stop tracking por inactividad
@@ -384,17 +424,22 @@ export const useRouteTracker = () => {
    */
   const startInactivityCheck = useCallback(() => {
     // Verificar cada minuto
+    if (inactivityCheckInterval.current) {
+      clearInterval(inactivityCheckInterval.current);
+    }
+
     inactivityCheckInterval.current = setInterval(async () => {
       const lastMove = await getLastMovement();
       const now = Date.now();
+      const pauseAt = lastMove ? lastMove + INACTIVITY_TIMEOUT : now;
       
-      if (lastMove && (now - lastMove) >= INACTIVITY_TIMEOUT) {
-        console.log('⏱️ Inactividad detectada por timer interno');
-        setError('Tracking detenido: 20 minutos sin movimiento');
-        await autoStopTracking();
+      if (now >= pauseAt) {
+        console.log('?? Inactividad detectada por timer interno');
+        setError('Tracking pausado: 20 minutos sin movimiento');
+        await autoPauseTracking(pauseAt);
       }
     }, 60000); // Cada 60 segundos
-  }, [autoStopTracking]);
+  }, [autoPauseTracking]);
   useEffect(() => {
     if (authUid && status === TRACKER_STATUS.TRACKING && currentLocation) {
       sendLiveUpdate(currentLocation, true);
@@ -637,7 +682,7 @@ export const useRouteTracker = () => {
   /**
    * ?? Reanudar tracking
    */
-  const resumeTracking = useCallback(() => {
+  const resumeTracking = useCallback(async () => {
     console.log('?? Reanudando tracking...');
     setStatus(TRACKER_STATUS.TRACKING);
 
@@ -646,8 +691,27 @@ export const useRouteTracker = () => {
       pausedAtRef.current = null;
     }
 
+    if (authUserIdRef.current) {
+      try {
+        await startBackgroundTracking(authUserIdRef.current);
+      } catch (bgErr) {
+        console.warn('?? Error reanudando background tracking:', bgErr.message);
+      }
+    }
+
     // Reanudar timer
     startTimer();
+
+    // Reiniciar chequeo de inactividad
+    startInactivityCheck();
+
+    if (!locationSubscription.current) {
+      try {
+        await startLocationWatcher();
+      } catch (watchErr) {
+        console.error('? Error reanudando watcher:', watchErr);
+      }
+    }
 
     saveTrackingState(
       authUserIdRef.current,
@@ -659,7 +723,7 @@ export const useRouteTracker = () => {
         totalPausedMs: totalPausedMsRef.current,
       }
     ).catch(console.error);
-  }, [currentLocation, startTimer]);
+  }, [currentLocation, startInactivityCheck, startLocationWatcher, startTimer]);
 
   /**
    * ?? Detener tracking y guardar ruta
@@ -804,8 +868,16 @@ export const useRouteTracker = () => {
       if (state.calories != null) setCalories(state.calories);
       if (state.lastLocation) setCurrentLocation(state.lastLocation);
 
-      setStatus(state.isPaused ? TRACKER_STATUS.PAUSED : TRACKER_STATUS.TRACKING);
       setDuration(computeElapsedSeconds());
+
+      const check = !state.isPaused ? await checkOrphanedTracking() : null;
+      if (check && check.shouldStop) {
+        setError(`Tracking pausado automaticamente por ${check.inactiveMinutes} minutos de inactividad`);
+        await autoPauseTracking(check.pauseAt);
+        return;
+      }
+
+      setStatus(state.isPaused ? TRACKER_STATUS.PAUSED : TRACKER_STATUS.TRACKING);
 
       if (!state.isPaused) {
         startTimer();
@@ -818,7 +890,7 @@ export const useRouteTracker = () => {
     };
 
     restoreTrackingState();
-  }, [computeElapsedSeconds, startLocationWatcher, startTimer]);
+  }, [autoPauseTracking, checkOrphanedTracking, computeElapsedSeconds, startLocationWatcher, startTimer]);
 
   /**
    * 🧹 Limpiar en unmount
