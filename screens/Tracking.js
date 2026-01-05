@@ -572,19 +572,22 @@ export default function Tracking() {
       case TRACKER_STATUS.TRACKING:
         return {
           icon: 'pause',
-          color: '#FF9500',
+          color: theme.colors.warning,
+          glow: theme.colors.warning,
           label: t('screens.tracking.pause'),
         };
       case TRACKER_STATUS.PAUSED:
         return {
           icon: 'play',
-          color: '#4DD7D0',
+          color: theme.colors.primary,
+          glow: theme.colors.primary,
           label: t('screens.tracking.resume'),
         };
       default:
         return {
           icon: 'play',
-          color: '#34C759',
+          color: theme.colors.primary,
+          glow: theme.colors.primary,
           label: t('screens.tracking.start'),
         };
     }
@@ -1404,6 +1407,9 @@ export default function Tracking() {
               backgroundColor: isDark
                 ? "rgba(12, 16, 24, 0.85)"
                 : "rgba(255, 255, 255, 0.9)",
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.12)"
+                : "rgba(15, 23, 42, 0.12)",
             },
           ]}
         >
@@ -1414,11 +1420,21 @@ export default function Tracking() {
               style={styles.stopButton}
               activeOpacity={0.7}
             >
-              <View style={styles.stopButtonInner}>
+              <View
+                style={[
+                  styles.stopButtonInner,
+                  {
+                    borderColor: theme.colors.error,
+                    backgroundColor: isDark
+                      ? "rgba(255, 255, 255, 0.04)"
+                      : "rgba(255, 255, 255, 0.6)",
+                  },
+                ]}
+              >
                 <Ionicons
                   name="stop"
-                  size={20}
-                  color={theme.colors.onSecondary}
+                  size={16}
+                  color={theme.colors.error}
                 />
               </View>
             </TouchableOpacity>
@@ -1430,14 +1446,20 @@ export default function Tracking() {
               onPress={handleMainButton}
               style={[
                 styles.mainButton,
-                { backgroundColor: buttonConfig.color },
+                {
+                  backgroundColor: buttonConfig.color,
+                  shadowColor: buttonConfig.glow,
+                  borderColor: isDark
+                    ? "rgba(255, 255, 255, 0.18)"
+                    : "rgba(15, 23, 42, 0.12)",
+                },
                 status === TRACKER_STATUS.IDLE && styles.mainButtonLarge,
               ]}
               activeOpacity={0.8}
             >
               <Ionicons
                 name={buttonConfig.icon}
-                size={status === TRACKER_STATUS.IDLE ? 32 : 28}
+                size={status === TRACKER_STATUS.IDLE ? 28 : 24}
                 color={theme.colors.onPrimary}
               />
             </TouchableOpacity>
@@ -2123,8 +2145,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 10,
+    elevation: 6,
   },
   mainStatsRow: {
     flexDirection: 'row',
@@ -2150,7 +2172,7 @@ const styles = StyleSheet.create({
   },
   statDividerVertical: {
     width: 1,
-    height: 36,
+    height: 30,
     opacity: 0.3,
   },
   secondaryStatsRow: {
@@ -2176,7 +2198,7 @@ const styles = StyleSheet.create({
   // Controls - Nuevo diseño elegante
   controlsContainer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 26,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -2185,51 +2207,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 40,
-    gap: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 28,
+    gap: 12,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 6,
   },
   mainButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
     elevation: 4,
   },
   mainButtonLarge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   stopButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
   stopButtonInner: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#FF3B30',
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   placeholderButton: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
   },
 
   // Marker
@@ -2263,12 +2287,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.16,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -2339,7 +2363,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 6,
   },
 
@@ -2352,12 +2376,12 @@ const styles = StyleSheet.create({
   rodadaCallout: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 4,
     maxWidth: 150,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.16,
     shadowRadius: 2,
     elevation: 3,
   },
@@ -2393,7 +2417,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 5,
   },
 
@@ -2415,12 +2439,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.16,
     shadowRadius: 8,
     elevation: 4,
     zIndex: 21,
@@ -2473,8 +2497,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
     elevation: 10,
     overflow: 'hidden',
   },
@@ -2483,7 +2507,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.1)',
   },
@@ -2511,7 +2535,7 @@ const styles = StyleSheet.create({
   rodadaListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     marginHorizontal: 8,
     marginVertical: 4,
@@ -2583,7 +2607,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
@@ -2632,7 +2656,7 @@ const styles = StyleSheet.create({
   rodadaDetailActions: {
     flexDirection: 'row',
     gap: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingBottom: 32,
     paddingTop: 8,
   },
@@ -2661,8 +2685,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
     elevation: 5,
   },
 
@@ -2676,7 +2700,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 6,
   },
 });
