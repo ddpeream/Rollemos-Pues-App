@@ -1302,11 +1302,11 @@ export default function Tracking() {
           </TouchableOpacity>
         </TouchableOpacity>
       )}
-      {/* Stats Overlay - Diseño compacto horizontal */}
+      {/* Stats Overlay - Secciones separadas */}
       {status !== TRACKER_STATUS.IDLE && (
         <Animated.View
           style={[
-            styles.statsContainer,
+            styles.statsTopContainer,
             statsContainerStyle,
             { opacity: statsOpacity },
           ]}
@@ -1363,9 +1363,20 @@ export default function Tracking() {
               </Text>
             </View>
           </View>
+        </Animated.View>
+      )}
 
-          {/* Fila secundaria compacta */}
-          <View style={styles.secondaryStatsRow}>
+      {status !== TRACKER_STATUS.IDLE && (
+        <Animated.View
+          style={[
+            styles.statsSideContainer,
+            statsContainerStyle,
+            { opacity: statsOpacity },
+          ]}
+          pointerEvents={showStats ? "auto" : "none"}
+        >
+          {/* Columna secundaria */}
+          <View style={styles.secondaryStatsColumn}>
             <View style={styles.miniStatItem}>
               <Ionicons
                 name="trending-up"
@@ -1379,7 +1390,7 @@ export default function Tracking() {
               </Text>
             </View>
             <View style={styles.miniStatItem}>
-              <Ionicons name="flash" size={12} color="#FF9500" />
+              <Ionicons name="flash" size={12} color={theme.colors.warning} />
               <Text
                 style={[styles.miniStatValue, { color: statsTextSecondary }]}
               >
@@ -1387,7 +1398,7 @@ export default function Tracking() {
               </Text>
             </View>
             <View style={styles.miniStatItem}>
-              <Ionicons name="flame" size={12} color="#FF3B30" />
+              <Ionicons name="flame" size={12} color={theme.colors.error} />
               <Text
                 style={[styles.miniStatValue, { color: statsTextSecondary }]}
               >
@@ -2134,13 +2145,29 @@ const styles = StyleSheet.create({
   },
 
   // Stats Overlay - Nuevo diseño compacto
-  statsContainer: {
+  statsTopContainer: {
     position: 'absolute',
-    bottom: 140,
+    top: 110,
     left: 16,
     right: 16,
     borderRadius: 16,
-    padding: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  statsSideContainer: {
+    position: 'absolute',
+    top: 200,
+    right: 16,
+    minWidth: 86,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -2193,6 +2220,11 @@ const styles = StyleSheet.create({
   miniStatValue: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  secondaryStatsColumn: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 10,
   },
 
   // Controls - Nuevo diseño elegante
