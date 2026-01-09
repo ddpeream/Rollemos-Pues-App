@@ -34,7 +34,7 @@ import { useParches } from '../hooks/useParches';
 import { useRodadas } from '../hooks/useRodadas';
 import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { spacing, typography, borderRadius } from '../theme';
-import CreateRodadaModal from '../components/CreateRodadaModal';
+import CreateRodadaModal from '../components/tracking/CreateRodadaModal';
 import FollowersModal from '../components/FollowersModal';
 import RodadasModal from '../components/RodadasModal';
 

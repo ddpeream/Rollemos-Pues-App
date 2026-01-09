@@ -18,9 +18,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../store/useAppStore';
-import { useRodadas } from '../hooks/useRodadas';
-import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../../store/useAppStore';
+import { useRodadas } from '../../hooks/useRodadas';
+import { useAuth } from '../../hooks/useAuth';
 
 // Debounce helper
 const useDebounce = (callback, delay) => {

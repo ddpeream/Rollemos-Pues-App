@@ -22,7 +22,7 @@ import useAppStore from '../store/useAppStore';
 import { useComunidades } from '../hooks/useComunidades';
 import { getComunidadById } from '../services/comunidades';
 import { useRodadas } from '../hooks/useRodadas';
-import CreateRodadaModal from '../components/CreateRodadaModal';
+import CreateRodadaModal from '../components/tracking/CreateRodadaModal';
 import * as ImagePicker from 'expo-image-picker';
 import { usePatinadores } from '../hooks/usePatinadores';
 

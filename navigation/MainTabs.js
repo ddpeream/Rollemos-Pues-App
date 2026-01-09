@@ -11,7 +11,7 @@ import Patinadores from '../screens/Patinadores';
 import Comunidad from '../screens/Comunidad';
 import Spots from '../screens/Spots'; // 🛒 Marketplace
 import Galeria from '../screens/Galeria';
-import Tracking from '../screens/Tracking';
+import Tracking from '../screens/tracking/Tracking';
 import RoutesHistory from '../screens/RoutesHistory';
 import ThemeToggle from '../components/ThemeToggle';
 import useAppStore from '../store/useAppStore';
