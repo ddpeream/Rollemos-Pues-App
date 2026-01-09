@@ -57,6 +57,7 @@ export default function DetalleParche() {
     joinParche, 
     leaveParche, 
     addParcheImages,
+    deleteParcheImage,
     refreshParches 
   } = useParches();
   
@@ -70,6 +71,7 @@ export default function DetalleParche() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [showCreateRodadaModal, setShowCreateRodadaModal] = useState(false);
+  const [rodadaTipo, setRodadaTipo] = useState('rodada');
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [viewerImageIndex, setViewerImageIndex] = useState(0);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
@@ -287,6 +289,44 @@ export default function DetalleParche() {
   const onViewerScroll = (event) => {
     const slideIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
     setViewerImageIndex(slideIndex);
+  };
+
+  const isDeletableImage = useCallback((imageUrl) => {
+    if (!imageUrl) return false;
+    return imageUrl === parche?.foto || (parche?.fotos || []).includes(imageUrl);
+  }, [parche]);
+
+  const handleRemoveImage = async () => {
+    if (!isCreator) {
+      Alert.alert('Sin permisos', 'Solo el creador puede eliminar fotos');
+      return;
+    }
+
+    const imageUrl = allImages[viewerImageIndex];
+    if (!isDeletableImage(imageUrl)) {
+      return;
+    }
+
+    Alert.alert(
+      'Eliminar foto',
+      '¿Quieres eliminar esta foto?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await deleteParcheImage(parcheId, imageUrl);
+            if (result.success) {
+              await fetchParche();
+              setViewerImageIndex(0);
+            } else {
+              Alert.alert('Error', result.error || 'No se pudo eliminar la foto');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Abrir contacto
@@ -723,19 +763,34 @@ export default function DetalleParche() {
           <View style={styles.creatorActions}>
             <TouchableOpacity
               style={[styles.creatorButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => setShowCreateRodadaModal(true)}
+              onPress={() => {
+                setRodadaTipo('rodada');
+                setShowCreateRodadaModal(true);
+              }}
             >
               <Ionicons name="bicycle" size={20} color="#000" />
               <Text style={[styles.creatorButtonText, { color: '#000' }]}>
                 Crear rodada
               </Text>
             </TouchableOpacity>
-            <View style={[styles.creatorBadge, { backgroundColor: theme.colors.alpha.primary15 }]}>
-              <Ionicons name="star" size={16} color={theme.colors.primary} />
-              <Text style={[styles.creatorBadgeText, { color: theme.colors.primary }]}>
-                Creador
+            <TouchableOpacity
+              style={[styles.creatorButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => {
+                setRodadaTipo('entreno');
+                setShowCreateRodadaModal(true);
+              }}
+            >
+              <Ionicons name="barbell-outline" size={20} color="#000" />
+              <Text style={[styles.creatorButtonText, { color: '#000' }]}>
+                Crear entreno
               </Text>
-            </View>
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.creatorBadge, { backgroundColor: theme.colors.alpha.primary15 }]}>
+            <Ionicons name="star" size={16} color={theme.colors.primary} />
+            <Text style={[styles.creatorBadgeText, { color: theme.colors.primary }]}>
+              Creador
+            </Text>
           </View>
         </View>
       )}
@@ -743,8 +798,12 @@ export default function DetalleParche() {
       {/* Modal para crear rodada del parche */}
       <CreateRodadaModal
         visible={showCreateRodadaModal}
-        onClose={() => setShowCreateRodadaModal(false)}
+        onClose={() => {
+          setShowCreateRodadaModal(false);
+          setRodadaTipo('rodada');
+        }}
         parcheId={parcheId}
+        rodadaTipo={rodadaTipo}
         onSuccess={(rodada) => {
           fetchRodadas({ parcheId }); // Recargar lista de rodadas
           Alert.alert(
@@ -774,6 +833,16 @@ export default function DetalleParche() {
             <Text style={styles.imageViewerCounter}>
               {viewerImageIndex + 1} / {allImages.length}
             </Text>
+            {isCreator && isDeletableImage(allImages[viewerImageIndex]) ? (
+              <TouchableOpacity
+                style={styles.imageViewerCloseButton}
+                onPress={handleRemoveImage}
+              >
+                <Ionicons name="trash-outline" size={24} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 36 }} />
+            )}
           </View>
           
           {/* Carrusel de imágenes */}

@@ -53,6 +53,7 @@ export default function Galeria() {
     createNewPost,
     addComment,
     loadComments,
+    deleteComment,
   } = useGaleria();
 
   const [showCommentsModal, setShowCommentsModal] = useState(false);
@@ -203,6 +204,33 @@ export default function Galeria() {
     setCommentText('');
   };
 
+  const activePost = activePostId
+    ? posts.find((post) => post.id === activePostId)
+    : null;
+
+  const handleDeleteComment = async (comentario) => {
+    Alert.alert(
+      'Eliminar comentario',
+      '¿Quieres eliminar este comentario?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await deleteComment(comentario.id);
+            if (result.success) {
+              setCommentsList((prev) => prev.filter((item) => item.id !== comentario.id));
+              loadPosts();
+            } else {
+              Alert.alert('Error', result.error || 'No se pudo eliminar el comentario');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Enviar comentario
   const handleSendComment = async () => {
     const texto = commentText.trim();
@@ -300,9 +328,11 @@ export default function Galeria() {
               )}
             </View>
           </View>
-          <TouchableOpacity onPress={() => handleShowPostMenu(item)}>
-            <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
+          {user?.id && item.usuario_id === user.id && (
+            <TouchableOpacity onPress={() => handleShowPostMenu(item)}>
+              <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Imagen del Post */}
@@ -501,14 +531,29 @@ export default function Galeria() {
                 <FlatList
                   data={commentsList}
                   keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => (
-                    <View style={styles.commentItem}>
-                      <Text style={[styles.commentText, { color: theme.colors.text.primary }]}>
-                        <Text style={styles.boldText}>{item.usuario?.nombre || 'Usuario'} </Text>
-                        {item.texto}
-                      </Text>
-                    </View>
-                  )}
+                  renderItem={({ item }) => {
+                    const isCommentOwner = user?.id && item.usuario_id === user.id;
+                    const postOwnerId = activePost?.usuario_id || activePost?.usuario?.id;
+                    const isPostOwner = user?.id && postOwnerId === user.id;
+                    const canDelete = isCommentOwner || isPostOwner;
+
+                    return (
+                      <View style={styles.commentItem}>
+                        <Text style={[styles.commentText, { color: theme.colors.text.primary }]}>
+                          <Text style={styles.boldText}>{item.usuario?.nombre || 'Usuario'} </Text>
+                          {item.texto}
+                        </Text>
+                        {canDelete && (
+                          <TouchableOpacity
+                            style={styles.commentDeleteButton}
+                            onPress={() => handleDeleteComment(item)}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={theme.colors.text.secondary} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  }}
                   contentContainerStyle={styles.commentsList}
                 />
               ) : (
@@ -780,10 +825,19 @@ const styles = StyleSheet.create({
   },
   commentItem: {
     paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   commentText: {
     fontSize: 14,
     lineHeight: 18,
+    flex: 1,
+  },
+  commentDeleteButton: {
+    padding: 4,
+    marginTop: 2,
   },
   hideCommentsText: {
     fontSize: 14,

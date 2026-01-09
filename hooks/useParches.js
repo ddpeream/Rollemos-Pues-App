@@ -22,6 +22,7 @@ import {
   joinParche as joinParcheService,
   leaveParche as leaveParcheService,
   uploadMultipleParcheImages,
+  removeParcheImage,
   getParcheMiembros,
 } from "../services/parches";
 import { useAppStore } from '../store/useAppStore';
@@ -289,6 +290,28 @@ export const useParches = () => {
   }, [user]);
 
   /**
+   * 🗑️ Eliminar una imagen del parche
+   */
+  const deleteParcheImage = useCallback(async (parcheId, imageUrl) => {
+    if (!user?.id) {
+      setError('Debes iniciar sesi¢n');
+      return { success: false, error: 'Debes iniciar sesi¢n' };
+    }
+
+    try {
+      const result = await removeParcheImage(parcheId, imageUrl);
+      if (!result.success) {
+        setError(result.error);
+      }
+      return result;
+    } catch (err) {
+      console.error('💥 Error eliminando imagen:', err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    }
+  }, [user]);
+
+  /**
    * 🏙️ Obtener lista de ciudades únicas
    */
   const loadCiudades = useCallback(async () => {
@@ -357,6 +380,7 @@ export const useParches = () => {
     joinParche,
     leaveParche,
     addParcheImages,
+    deleteParcheImage,
 
     // Métodos de filtros
     applyFilters,

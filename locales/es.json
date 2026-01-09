@@ -4,7 +4,8 @@
     "patinadores": "Patinadores",
     "parches": "Parches",
     "spots": "Spots",
-    "galeria": "Galería"
+    "galeria": "Galería",
+    "comunidad": "Comunidad"
   },
   "filters": {
     "all": "Todos",
@@ -256,6 +257,15 @@
     "settings": {
       "title": "Configuración",
       "placeholder": "Pantalla de configuración en construcción."
+    },
+    "comunidad": {
+      "title": "Comunidad",
+      "count_one": "{{count}} comunidad",
+      "count_other": "{{count}} comunidades",
+      "searchPlaceholder": "Buscar comunidad o parche...",
+      "loading": "Cargando comunidad...",
+      "empty": "No hay comunidades disponibles",
+      "emptyHint": "Aun no hay comunidades o parches"
     }
   },
   "home": {

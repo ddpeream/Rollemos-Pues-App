@@ -4,7 +4,8 @@
     "patinadores": "Skaters",
     "parches": "Crews",
     "spots": "Spots",
-    "galeria": "Gallery"
+    "galeria": "Gallery",
+    "comunidad": "Community"
   },
   "filters": {
     "all": "All",
@@ -256,6 +257,15 @@
     "settings": {
       "title": "Settings",
       "placeholder": "Settings screen under construction."
+    },
+    "comunidad": {
+      "title": "Community",
+      "count_one": "{{count}} community",
+      "count_other": "{{count}} communities",
+      "searchPlaceholder": "Search community or crew...",
+      "loading": "Loading community...",
+      "empty": "No communities available",
+      "emptyHint": "No communities or crews yet"
     }
   },
   "home": {

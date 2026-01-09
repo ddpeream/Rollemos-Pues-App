@@ -140,6 +140,8 @@ export const createRodada = async (rodadaData) => {
         hora_encuentro: rodadaData.horaEncuentro || null,
         organizador_id: rodadaData.organizadorId,
         parche_id: rodadaData.parcheId || null,
+        comunidad_id: rodadaData.comunidadId || null,
+        tipo: rodadaData.tipo || 'rodada',
         nivel_requerido: rodadaData.nivelRequerido || 'todos',
         distancia_estimada: rodadaData.distanciaEstimada || null,
         duracion_estimada: rodadaData.duracionEstimada || null,
@@ -174,7 +176,8 @@ export const getRodadas = async (filters = {}) => {
       .select(`
         *,
         organizador:usuarios!organizador_id(id, nombre, avatar_url),
-        parche:parches(id, nombre, foto)
+        parche:parches(id, nombre, foto),
+        comunidad:comunidades!comunidad_id(id, nombre, foto)
       `)
       .order('fecha_inicio', { ascending: true });
 
@@ -194,6 +197,11 @@ export const getRodadas = async (filters = {}) => {
     // Filtrar por parche
     if (filters.parcheId) {
       query = query.eq('parche_id', filters.parcheId);
+    }
+
+    // Filtrar por comunidad
+    if (filters.comunidadId) {
+      query = query.eq('comunidad_id', filters.comunidadId);
     }
 
     // Filtrar por organizador
@@ -233,6 +241,7 @@ export const getRodadaById = async (rodadaId) => {
         *,
         organizador:usuarios!organizador_id(id, nombre, avatar_url),
         parche:parches(id, nombre, foto),
+        comunidad:comunidades(id, nombre, foto),
         participantes:rodadas_participantes(
           id,
           estado,

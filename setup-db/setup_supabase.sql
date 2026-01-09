@@ -247,7 +247,14 @@ CREATE POLICY "Usuario edita comentario" ON galeria_comentarios
 
 -- Usuario puede eliminar su comentario
 CREATE POLICY "Usuario elimina comentario" ON galeria_comentarios
-  FOR DELETE USING (true);
+  FOR DELETE USING (
+    auth.uid() = usuario_id
+    OR auth.uid() IN (
+      SELECT usuario_id
+      FROM galeria
+      WHERE id = galeria_comentarios.galeria_id
+    )
+  );
 
 -- =============================================
 -- RLS POLICIES - PARCHES

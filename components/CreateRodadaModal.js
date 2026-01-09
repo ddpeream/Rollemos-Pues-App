@@ -36,7 +36,7 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => {
+const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comunidadId = null, rodadaTipo = 'rodada' }) => {
   const { theme, isDark } = useTheme();
   const { user } = useAuth();
   const { 
@@ -171,6 +171,8 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => 
       horaEncuentro: horaCompleta,
       organizadorId: user.id,
       parcheId: parcheId,
+      comunidadId: comunidadId,
+      tipo: rodadaTipo,
       nivelRequerido: nivelRequerido,
     };
 
