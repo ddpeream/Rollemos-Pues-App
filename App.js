@@ -4,6 +4,7 @@ import { ActivityIndicator, View, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider as PaperProvider } from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import './i18n';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -66,27 +67,29 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <PaperProvider>
-        <NavigationContainer ref={navigationRef}>
-          <RootStack.Navigator screenOptions={{ headerShown: false }}>
-            {isAuthenticated ? (
-              <>
-                <RootStack.Screen name="MainTabs" component={MainTabs} />
-                <RootStack.Screen name="Perfil" component={Perfil} />
-                <RootStack.Screen name="PerfilUsuario" component={PerfilUsuario} />
-                <RootStack.Screen name="DetalleParche" component={DetalleParche} />
-                <RootStack.Screen name="DetalleComunidad" component={DetalleComunidad} />
-                <RootStack.Screen name="EditarPerfil" component={EditarPerfil} />
-                <RootStack.Screen name="Configuracion" component={Configuracion} />
-                <RootStack.Screen name="Notificaciones" component={Notificaciones} />
-              </>
-            ) : (
-              <RootStack.Screen name="AuthStack" component={AuthStack} />
-            )}
-          </RootStack.Navigator>
-          <StatusBar style={isDark ? 'light' : 'dark'} />
-        </NavigationContainer>
-      </PaperProvider>
+      <SafeAreaProvider>
+        <PaperProvider>
+          <NavigationContainer ref={navigationRef}>
+            <RootStack.Navigator screenOptions={{ headerShown: false }}>
+              {isAuthenticated ? (
+                <>
+                  <RootStack.Screen name="MainTabs" component={MainTabs} />
+                  <RootStack.Screen name="Perfil" component={Perfil} />
+                  <RootStack.Screen name="PerfilUsuario" component={PerfilUsuario} />
+                  <RootStack.Screen name="DetalleParche" component={DetalleParche} />
+                  <RootStack.Screen name="DetalleComunidad" component={DetalleComunidad} />
+                  <RootStack.Screen name="EditarPerfil" component={EditarPerfil} />
+                  <RootStack.Screen name="Configuracion" component={Configuracion} />
+                  <RootStack.Screen name="Notificaciones" component={Notificaciones} />
+                </>
+              ) : (
+                <RootStack.Screen name="AuthStack" component={AuthStack} />
+              )}
+            </RootStack.Navigator>
+            <StatusBar style={isDark ? 'light' : 'dark'} />
+          </NavigationContainer>
+        </PaperProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }

@@ -207,15 +207,18 @@
     "tracking": {
       "permissionsTitle": "Permissions required",
       "permissionsMessage": "We need access to your location to track your route.",
+      "startingTitle": "Starting tracking",
+      "startingMessage": "We are recording your route now.",
+      
       "discardTitle": "Discard route?",
       "discardMessage": "The route is very short. Do you want to discard it?",
-      "finishTitle": "Finish route?",
-      "finishMessage": "You traveled {{distance}} in {{duration}}. Do you want to save this route?",
+      "finishTitle": "Finish your route?",
+      "finishMessage": "You went {{distance}} in {{duration}}. Do you want to save it?",
       "cancel": "Cancel",
       "discard": "Discard",
       "save": "Save",
       "savedTitle": "Route saved",
-      "savedMessage": "Your route has been saved successfully",
+      "savedMessage": "Nice, your route is saved.",
       "pause": "Pause",
       "resume": "Resume",
       "start": "Start",
@@ -429,3 +432,9 @@
     }
   }
 }
+
+
+
+
+
+

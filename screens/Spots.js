@@ -9,7 +9,6 @@ import {
   Image,
   ScrollView,
   Dimensions,
-  SafeAreaView,
   Linking,
   Modal,
   Alert,
@@ -17,6 +16,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import useAppStore from '../store/useAppStore';
@@ -27,6 +28,7 @@ const CARD_WIDTH = (width - 42) / 2; // 2 columnas con padding perfecto
 
 export default function MarketRollers({ navigation }) {
   const { theme, user } = useAppStore();
+  const tabBarHeight = useBottomTabBarHeight();
   const {
     products,
     loading,
@@ -354,6 +356,7 @@ export default function MarketRollers({ navigation }) {
   return (
     <>
       <SafeAreaView
+        edges={['top', 'left', 'right']}
         style={[
           styles.container,
           { backgroundColor: theme.colors.background.primary },
@@ -460,7 +463,7 @@ export default function MarketRollers({ navigation }) {
         keyExtractor={item => item.id}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight + 16 }]}
         scrollEnabled={true}
         showsVerticalScrollIndicator={false}
         refreshing={refreshing}

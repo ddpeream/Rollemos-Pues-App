@@ -45,7 +45,6 @@ export default function DetalleComunidad() {
   } = useComunidades();
   const { rodadas, fetchRodadas, isLoading: loadingRodadas } = useRodadas();
   const {
-    patinadores,
     loadPatinadoresFiltered,
     loading: loadingPatinadores,
   } = usePatinadores();
@@ -59,8 +58,12 @@ export default function DetalleComunidad() {
   const [viewerImageIndex, setViewerImageIndex] = useState(0);
   const [showLeaderModal, setShowLeaderModal] = useState(false);
   const [leaderSearch, setLeaderSearch] = useState('');
+  const [leaderResults, setLeaderResults] = useState([]);
+  const [isAddingLeader, setIsAddingLeader] = useState(false);
 
   const imageViewerRef = useRef(null);
+  const searchDebounceRef = useRef(null);
+  const leaderSearchRequestId = useRef(0);
 
   const loadComunidad = useCallback(async () => {
     if (!comunidadId) return;
@@ -195,8 +198,30 @@ export default function DetalleComunidad() {
 
   const handleLeaderSearch = async (value) => {
     setLeaderSearch(value);
-    if (value.trim().length < 2) return;
-    await loadPatinadoresFiltered({ text: value.trim(), limit: 20 });
+    const trimmedValue = value.trim();
+    if (trimmedValue.length === 0) {
+      setLeaderResults([]);
+      return;
+    }
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    setLeaderResults([]);
+    searchDebounceRef.current = setTimeout(async () => {
+      const requestId = ++leaderSearchRequestId.current;
+      const result = await loadPatinadoresFiltered({ text: trimmedValue, limit: 20 });
+      if (leaderSearchRequestId.current !== requestId) return;
+
+      const normalizedQuery = trimmedValue.toLowerCase();
+      const data = result?.success ? result.data || [] : [];
+      const filteredResults = data.filter((patinador) =>
+        (patinador?.nombre || '').toLowerCase().includes(normalizedQuery)
+      );
+
+      setLeaderResults(filteredResults);
+    }, 250);
   };
 
   const handleAddLeader = async (leaderUser) => {
@@ -205,18 +230,33 @@ export default function DetalleComunidad() {
       return;
     }
 
+    if (isAddingLeader) {
+      return;
+    }
+    setIsAddingLeader(true);
+
     const result = await addLeader(comunidadId, leaderUser.id);
     if (result.success) {
       if (result.alreadyLeader) {
         Alert.alert('Info', 'Este usuario ya es lider');
+        setIsAddingLeader(false);
         return;
       }
       await loadComunidad();
-      setShowLeaderModal(false);
-      setLeaderSearch('');
+      closeLeaderModal();
     } else {
       Alert.alert('Error', result.error || 'No se pudo agregar');
     }
+    setIsAddingLeader(false);
+  };
+
+  const closeLeaderModal = () => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    setShowLeaderModal(false);
+    setLeaderSearch('');
+    setLeaderResults([]);
   };
 
   if (loading || !comunidad) {
@@ -521,64 +561,101 @@ export default function DetalleComunidad() {
       </Modal>
 
       <Modal visible={showLeaderModal} transparent animationType="fade">
-        <View style={styles.leaderModalBackdrop}>
+        <TouchableOpacity
+          style={styles.leaderModalBackdrop}
+          activeOpacity={1}
+          onPress={closeLeaderModal}
+        >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 20}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 16}
+            style={styles.leaderModalContainer}
           >
-            <View style={[styles.leaderModal, { backgroundColor: theme.colors.background.primary }]}>
-            <View style={styles.leaderModalHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-                Agregar lider
-              </Text>
-              <TouchableOpacity onPress={() => setShowLeaderModal(false)}>
-                <Ionicons name="close" size={22} color={theme.colors.text.primary} />
-              </TouchableOpacity>
-            </View>
-            <TextInput
+            <TouchableOpacity
               style={[
-                styles.searchInput,
+                styles.leaderModalCard,
                 {
-                  backgroundColor: theme.colors.glass.background,
-                  borderColor: theme.colors.glass.border,
-                  color: theme.colors.text.primary,
+                  backgroundColor: theme.colors.background.primary,
+                  borderColor: theme.colors.border,
                 },
               ]}
-              placeholder="Buscar usuario"
-              placeholderTextColor={theme.colors.text.secondary}
-              value={leaderSearch}
-              onChangeText={handleLeaderSearch}
-            />
-            {loadingPatinadores ? (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-                <Text style={[styles.sectionText, { color: theme.colors.text.secondary }]}>
-                  Buscando...
+              activeOpacity={1}
+              onPress={() => {}}
+            >
+              <View style={styles.leaderModalHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
+                  Agregar lider
                 </Text>
+                <TouchableOpacity onPress={closeLeaderModal}>
+                  <Ionicons name="close" size={22} color={theme.colors.text.primary} />
+                </TouchableOpacity>
               </View>
-            ) : (
-              <ScrollView style={styles.leaderList}>
-                {patinadores.map((patinador) => (
-                  <TouchableOpacity
-                    key={patinador.id}
-                    style={styles.leaderItem}
-                    onPress={() => handleAddLeader(patinador)}
-                  >
-                    <Text style={[styles.sectionText, { color: theme.colors.text.primary }]}>
-                      {patinador.nombre}
+              <View
+                style={[
+                  styles.searchBox,
+                  {
+                    backgroundColor: theme.colors.background.secondary,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+              >
+                <Ionicons name="search-outline" size={18} color={theme.colors.text.secondary} />
+                <TextInput
+                  style={[styles.searchInput, { color: theme.colors.text.primary }]}
+                  placeholder="Buscar usuario"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  value={leaderSearch}
+                  onChangeText={handleLeaderSearch}
+                />
+              </View>
+              <View
+                style={[
+                  styles.leaderListWrapper,
+                  {
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.background.secondary,
+                  },
+                ]}
+              >
+                {loadingPatinadores ? (
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                    <Text style={[styles.sectionText, { color: theme.colors.text.secondary }]}>
+                      Buscando...
                     </Text>
-                  </TouchableOpacity>
-                ))}
-                {leaderSearch.trim().length >= 2 && patinadores.length === 0 && (
-                  <Text style={[styles.sectionText, { color: theme.colors.text.secondary }]}>
-                    Sin resultados
-                  </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={leaderResults}
+                    keyExtractor={(item) => item.id}
+                    keyboardShouldPersistTaps="handled"
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[styles.leaderItem, { borderBottomColor: theme.colors.border }]}
+                        onPress={() => handleAddLeader(item)}
+                        disabled={isAddingLeader}
+                      >
+                        <Text style={[styles.leaderName, { color: theme.colors.text.primary }]}>
+                          {item.nombre}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    ListEmptyComponent={() => {
+                      const emptyText = leaderSearch.trim().length === 0
+                        ? 'Escribe para buscar'
+                        : 'Sin resultados';
+                      return (
+                        <Text style={[styles.emptyResultsText, { color: theme.colors.text.secondary }]}>
+                          {emptyText}
+                        </Text>
+                      );
+                    }}
+                  />
                 )}
-              </ScrollView>
-            )}
-          </View>
+              </View>
+            </TouchableOpacity>
           </KeyboardAvoidingView>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -787,14 +864,19 @@ const styles = StyleSheet.create({
   },
   leaderModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
   },
-  leaderModal: {
-    borderRadius: 16,
+  leaderModalContainer: {
+    width: '100%',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  leaderModalCard: {
+    borderWidth: 1,
+    borderRadius: 18,
     padding: 16,
-    maxHeight: '70%',
+    maxHeight: '80%',
   },
   leaderModalHeader: {
     flexDirection: 'row',
@@ -802,20 +884,40 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  searchInput: {
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
+    height: 44,
   },
-  leaderList: {
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  leaderListWrapper: {
     marginTop: 12,
+    maxHeight: 320,
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   leaderItem: {
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
+  },
+  leaderName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyResultsText: {
+    paddingVertical: 16,
+    textAlign: 'center',
+    fontSize: 13,
   },
   loadingRow: {
     flexDirection: 'row',

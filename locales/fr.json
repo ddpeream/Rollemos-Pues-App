@@ -206,16 +206,18 @@
     },
     "tracking": {
       "permissionsTitle": "Permissions requises",
-      "permissionsMessage": "Nous avons besoin de votre localisation pour suivre votre itinéraire.",
+      "permissionsMessage": "Nous avons besoin de votre position pour suivre votre trajet.",
+      "startingTitle": "Demarrage du suivi",
+      "startingMessage": "On enregistre votre trajet.",
       "discardTitle": "Supprimer l'itinéraire ?",
       "discardMessage": "L'itinéraire est trop court. Voulez-vous le supprimer ?",
-      "finishTitle": "Terminer l'itinéraire ?",
-      "finishMessage": "Vous avez parcouru {{distance}} en {{duration}}. Voulez-vous enregistrer cet itinéraire ?",
+      "finishTitle": "Terminer votre trajet ?",
+      "finishMessage": "Vous avez parcouru {{distance}} en {{duration}}. Voulez-vous enregistrer ce trajet?",
       "cancel": "Annuler",
       "discard": "Supprimer",
       "save": "Enregistrer",
       "savedTitle": "Itinéraire enregistré",
-      "savedMessage": "Votre itinéraire a été enregistré avec succès",
+      "savedMessage": "Bien joue, votre trajet est enregistre.",
       "pause": "Pause",
       "resume": "Reprendre",
       "start": "Démarrer",
@@ -429,3 +431,4 @@
     }
   }
 }
+

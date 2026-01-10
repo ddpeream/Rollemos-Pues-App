@@ -121,7 +121,7 @@ export const styles = StyleSheet.create({
   // Controls - Nuevo diseño elegante
   controlsContainer: {
     position: 'absolute',
-    bottom: 26,
+    bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -165,6 +165,14 @@ export const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  auxButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
   },
   stopButtonInner: {
     width: 30,

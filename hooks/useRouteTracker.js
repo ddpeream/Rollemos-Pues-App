@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../config/supabase';
@@ -34,6 +34,7 @@ import {
   INACTIVITY_TIMEOUT,
   MIN_MOVEMENT_DISTANCE,
 } from '../services/trackingAutoStop';
+import { setTrackingPrivacy } from '../services/trackingPrivacy';
 
 const STORAGE_KEY = '@rollemos_routes';
 
@@ -44,7 +45,8 @@ export const TRACKER_STATUS = {
   PAUSED: 'paused',
 };
 
-export const useRouteTracker = () => {
+export const useRouteTracker = (options = {}) => {
+  const { isPrivateTracking = false, skipRestore = false } = options;
   const user = useAppStore((state) => state.user);
 
   // Estados
@@ -60,20 +62,50 @@ export const useRouteTracker = () => {
   const [hasPermission, setHasPermission] = useState(false);
   const [error, setError] = useState(null);
   const [authUid, setAuthUid] = useState(null);
+  const isStoppingRef = useRef(false);
 
   // Refs para tracking
   const locationSubscription = useRef(null);
   const startTime = useRef(null);
   const timerInterval = useRef(null);
   const speedHistory = useRef([]);
+  const speedSumRef = useRef(0);
+  const speedCountRef = useRef(0);
   const lastLiveUpdateRef = useRef(0);
   const lastPersistRef = useRef(0);
+  const lastStatsUpdateRef = useRef(0);
   const authUserIdRef = useRef(null);
   const inactivityCheckInterval = useRef(null);
   const lastMovementTime = useRef(Date.now());
   const totalPausedMsRef = useRef(0);
   const pausedAtRef = useRef(null);
   const appState = useRef(AppState.currentState);
+  const routeCoordinatesRef = useRef([]);
+  const distanceRef = useRef(0);
+  const avgSpeedRef = useRef(0);
+  const maxSpeedRef = useRef(0);
+  const caloriesRef = useRef(0);
+
+  useEffect(() => {
+    routeCoordinatesRef.current = routeCoordinates;
+  }, [routeCoordinates]);
+
+  useEffect(() => {
+    distanceRef.current = distance;
+  }, [distance]);
+
+  useEffect(() => {
+    avgSpeedRef.current = avgSpeed;
+  }, [avgSpeed]);
+
+  useEffect(() => {
+    maxSpeedRef.current = maxSpeed;
+  }, [maxSpeed]);
+
+  useEffect(() => {
+    caloriesRef.current = calories;
+  }, [calories]);
+
 
   const computeElapsedSeconds = useCallback((now = Date.now()) => {
     if (!startTime.current) return 0;
@@ -106,6 +138,9 @@ export const useRouteTracker = () => {
   const sendLiveUpdate = useCallback(
     async (coord, isActive = true) => {
       if (!coord) {
+        return;
+      }
+      if (isPrivateTracking) {
         return;
       }
 
@@ -146,7 +181,7 @@ export const useRouteTracker = () => {
         console.error('❌ Error updating tracking_live:', err);
       }
     },
-    [user]
+    [isPrivateTracking, user]
   );
 
   const persistTrackingState = useCallback(
@@ -170,14 +205,26 @@ export const useRouteTracker = () => {
   const startLocationWatcher = useCallback(async () => {
     if (locationSubscription.current) return;
 
+    const persistIntervalMs = Platform.OS === 'android' ? 30000 : 10000;
+    const statsIntervalMs = Platform.OS === 'android' ? 5000 : 0;
+    const watchOptions =
+      Platform.OS === 'android'
+        ? {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 3000,
+            distanceInterval: 8,
+          }
+        : {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 1000,
+            distanceInterval: 5,
+          };
+
     locationSubscription.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 1000,
-        distanceInterval: 5,
-      },
+      watchOptions,
       (location) => {
         try {
+          if (isStoppingRef.current) return;
           const newCoord = {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
@@ -187,62 +234,73 @@ export const useRouteTracker = () => {
 
           setCurrentLocation(newCoord);
 
-          setRouteCoordinates((prev) => {
-            if (prev.length === 0) return [newCoord];
+          const prevCoords = routeCoordinatesRef.current;
+          if (prevCoords.length === 0) {
+            const seeded = [newCoord];
+            routeCoordinatesRef.current = seeded;
+            setRouteCoordinates(seeded);
+            return;
+          }
 
-            const lastCoord = prev[prev.length - 1];
-            const distanceFromLast = calculateDistance(
-              lastCoord.latitude,
-              lastCoord.longitude,
-              newCoord.latitude,
-              newCoord.longitude
-            );
+          const lastCoord = prevCoords[prevCoords.length - 1];
+          const distanceFromLast = calculateDistance(
+            lastCoord.latitude,
+            lastCoord.longitude,
+            newCoord.latitude,
+            newCoord.longitude
+          );
 
-            if (distanceFromLast > 3) {
-              lastMovementTime.current = Date.now();
-              updateLastMovement().catch(console.error);
+          if (distanceFromLast > 3) {
+            lastMovementTime.current = Date.now();
+            updateLastMovement().catch(console.error);
 
-              setDistance((prevDist) => prevDist + distanceFromLast);
+            const nextDistance = distanceRef.current + distanceFromLast;
+            distanceRef.current = nextDistance;
+            setDistance(nextDistance);
 
-              const speedMps = location.coords.speed || 0;
-              const speedKmh = speedMps * 3.6;
-              setSpeed(speedKmh);
+            const speedMps = location.coords.speed || 0;
+            const speedKmh = speedMps * 3.6;
+            setSpeed(speedKmh);
 
-              speedHistory.current.push(speedKmh);
-              const avgSpd =
-                speedHistory.current.reduce((a, b) => a + b, 0) /
-                speedHistory.current.length;
-              setAvgSpeed(avgSpd);
+            speedSumRef.current += speedKmh;
+            speedCountRef.current += 1;
+            const avgSpd = speedSumRef.current / speedCountRef.current;
+            avgSpeedRef.current = avgSpd;
+            setAvgSpeed(avgSpd);
 
-              if (speedKmh > maxSpeed) {
-                setMaxSpeed(speedKmh);
-              }
+            const nextMaxSpeed = Math.max(maxSpeedRef.current, speedKmh);
+            maxSpeedRef.current = nextMaxSpeed;
+            setMaxSpeed(nextMaxSpeed);
 
-              const durationMinutes = computeElapsedSeconds(Date.now()) / 60;
-              setCalories(calculateCalories(durationMinutes, avgSpd));
-
-              const now = Date.now();
-              if (now - lastLiveUpdateRef.current > 2000) {
-                lastLiveUpdateRef.current = now;
-                sendLiveUpdate(newCoord, true);
-              }
-
-              if (now - lastPersistRef.current > 10000) {
-                lastPersistRef.current = now;
-                persistTrackingState({
-                  routeCoordinates: [...prev, newCoord],
-                  distance: distance + distanceFromLast,
-                  avgSpeed: avgSpd,
-                  maxSpeed: Math.max(maxSpeed, speedKmh),
-                  calories: calculateCalories(durationMinutes, avgSpd),
-                }).catch(console.error);
-              }
-
-              return [...prev, newCoord];
+            const now = Date.now();
+            if (statsIntervalMs === 0 || now - lastStatsUpdateRef.current >= statsIntervalMs) {
+              lastStatsUpdateRef.current = now;
+              const durationMinutes = computeElapsedSeconds(now) / 60;
+              const nextCalories = calculateCalories(durationMinutes, avgSpd);
+              caloriesRef.current = nextCalories;
+              setCalories(nextCalories);
             }
 
-            return prev;
-          });
+            const nextCoords = [...prevCoords, newCoord];
+            routeCoordinatesRef.current = nextCoords;
+            setRouteCoordinates(nextCoords);
+
+            if (now - lastLiveUpdateRef.current > 2000) {
+              lastLiveUpdateRef.current = now;
+              sendLiveUpdate(newCoord, true);
+            }
+
+            if (now - lastPersistRef.current > persistIntervalMs) {
+              lastPersistRef.current = now;
+              persistTrackingState({
+                routeCoordinates: nextCoords,
+                distance: nextDistance,
+                avgSpeed: avgSpd,
+                maxSpeed: nextMaxSpeed,
+                calories: caloriesRef.current,
+              }).catch(console.error);
+            }
+          }
         } catch (watchErr) {
           console.error('? Error en watcher de ubicaci¢n:', watchErr);
         }
@@ -256,8 +314,6 @@ export const useRouteTracker = () => {
     calculateCalories,
     calculateDistance,
     computeElapsedSeconds,
-    distance,
-    maxSpeed,
     persistTrackingState,
     sendLiveUpdate,
   ]);
@@ -289,6 +345,9 @@ export const useRouteTracker = () => {
    */
   const autoPauseTracking = useCallback(async (pauseAt) => {
     console.log('?? Auto-pausando tracking...');
+    if (isStoppingRef.current || status === TRACKER_STATUS.IDLE) {
+      return;
+    }
 
     if (authUserIdRef.current) {
       await markTrackingInactive(authUserIdRef.current);
@@ -317,7 +376,7 @@ export const useRouteTracker = () => {
     syncDuration();
 
     console.log('? Tracking auto-pausado');
-  }, [stopTimer, syncDuration]);
+  }, [status, stopTimer, syncDuration]);
 
 
 
@@ -327,6 +386,7 @@ export const useRouteTracker = () => {
    */
   useEffect(() => {
     const handleAppStateChange = async (nextAppState) => {
+      if (isStoppingRef.current) return;
       console.log(`?? AppState: ${appState.current} -> ${nextAppState}`);
 
       // Cuando la app vuelve al foreground
@@ -368,7 +428,7 @@ export const useRouteTracker = () => {
     return () => {
       subscription?.remove();
     };
-  }, [autoPauseTracking, currentLocation, persistTrackingState, status, syncDuration]);
+  }, [autoPauseTracking, persistTrackingState, status, syncDuration]);
 
 
 
@@ -429,6 +489,9 @@ export const useRouteTracker = () => {
     }
 
     inactivityCheckInterval.current = setInterval(async () => {
+      if (isStoppingRef.current || status !== TRACKER_STATUS.TRACKING) {
+        return;
+      }
       const lastMove = await getLastMovement();
       const now = Date.now();
       const pauseAt = lastMove ? lastMove + INACTIVITY_TIMEOUT : now;
@@ -439,12 +502,24 @@ export const useRouteTracker = () => {
         await autoPauseTracking(pauseAt);
       }
     }, 60000); // Cada 60 segundos
-  }, [autoPauseTracking]);
+  }, [autoPauseTracking, status]);
   useEffect(() => {
+    if (isStoppingRef.current) return;
     if (authUid && status === TRACKER_STATUS.TRACKING && currentLocation) {
       sendLiveUpdate(currentLocation, true);
     }
   }, [authUid, status, currentLocation, sendLiveUpdate]);
+
+  useEffect(() => {
+    setTrackingPrivacy(isPrivateTracking);
+    if (isStoppingRef.current) return;
+    if (isPrivateTracking && authUserIdRef.current) {
+      markTrackingInactive(authUserIdRef.current);
+    }
+    if (!isPrivateTracking && status === TRACKER_STATUS.TRACKING && currentLocation) {
+      sendLiveUpdate(currentLocation, true);
+    }
+  }, [currentLocation, isPrivateTracking, sendLiveUpdate, status]);
 
   /**
    * 📍 Solicitar permisos de ubicación
@@ -526,38 +601,80 @@ export const useRouteTracker = () => {
    * ▶️ Iniciar tracking
    */
   const startTracking = useCallback(async () => {
-    console.log('▶️ Iniciando tracking...');
+    console.log('Iniciando tracking...');
+    isStoppingRef.current = false;
 
     try {
+      const cleanupStartFailure = async () => {
+        if (locationSubscription.current) {
+          locationSubscription.current.remove();
+          locationSubscription.current = null;
+        }
+        if (inactivityCheckInterval.current) {
+          clearInterval(inactivityCheckInterval.current);
+          inactivityCheckInterval.current = null;
+        }
+        await stopBackgroundTracking();
+        setStatus(TRACKER_STATUS.IDLE);
+        stopTimer();
+      };
+
       if (!authUserIdRef.current) {
-        console.log('?? tracking_live: sin sesion activa, no se puede iniciar tracking');
+        console.log('tracking_live: sin sesion activa, no se puede iniciar tracking');
         setError('Debes iniciar sesion para compartir tu ubicacion.');
-        return;
+        return { success: false };
       }
 
-      // IMPORTANTE: Verificar permisos ANTES de iniciar background tracking (requerido por iOS)
       const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
       if (foregroundStatus !== 'granted') {
         const granted = await requestLocationPermission();
         if (!granted) {
-          setError('No hay permisos de ubicación. Por favor habilita la ubicación en la configuración.');
-          console.error('❌ Permisos denegados');
-          return;
+          setError('No hay permisos de ubicacion. Por favor habilita la ubicacion en la configuracion.');
+          console.error('Permisos denegados');
+          await cleanupStartFailure();
+          return { success: false };
         }
       }
 
-      console.log('✅ Permisos verificados');
+      setStatus(TRACKER_STATUS.TRACKING);
+      console.log('[useRouteTracker] status -> tracking');
+      startTime.current = Date.now();
+      totalPausedMsRef.current = 0;
+      pausedAtRef.current = null;
+      setDuration(0);
+      speedSumRef.current = 0;
+      speedCountRef.current = 0;
+      startTimer();
 
-      // Iniciar background tracking después de verificar permisos
-      // En Expo Go, esto retornará { foregroundOnly: true } y no fallará
-      const bgResult = await startBackgroundTracking(authUserIdRef.current);
-      if (bgResult?.foregroundOnly) {
-        console.log('📱 Modo foreground-only activo (Expo Go o sin permisos background)');
+      let lastKnownCoord = null;
+      try {
+        const lastKnown = await Location.getLastKnownPositionAsync({
+          maxAge: 60000,
+          requiredAccuracy: 100,
+        });
+        if (lastKnown?.coords) {
+          lastKnownCoord = {
+            latitude: lastKnown.coords.latitude,
+            longitude: lastKnown.coords.longitude,
+            timestamp: Date.now(),
+          };
+          setCurrentLocation(lastKnownCoord);
+          routeCoordinatesRef.current = [lastKnownCoord];
+          setRouteCoordinates([lastKnownCoord]);
+          lastLiveUpdateRef.current = Date.now();
+          lastMovementTime.current = Date.now();
+          sendLiveUpdate(lastKnownCoord, true);
+        }
+      } catch (lastKnownError) {
+        console.log('Error leyendo ultima ubicacion:', lastKnownError);
       }
 
-      // Obtener ubicación inicial con timeout
-      // Obtener ubicaci¢n inicial con timeout y fallback
-      console.log('?? Obteniendo ubicaci¢n inicial...');
+      const bgResult = await startBackgroundTracking(authUserIdRef.current);
+      if (bgResult?.foregroundOnly) {
+        console.log('Modo foreground-only activo (Expo Go o sin permisos background)');
+      }
+
+      console.log('Obteniendo ubicacion inicial...');
       let location;
       try {
         location = await Promise.race([
@@ -566,33 +683,32 @@ export const useRouteTracker = () => {
             timeoutMillis: 8000,
           }),
           new Promise((_, reject) =>
-            setTimeout(
-              () => reject(new Error('Timeout obteniendo ubicaci¢n')),
-              12000
-            )
+            setTimeout(() => reject(new Error('Timeout obteniendo ubicacion')), 12000)
           ),
         ]);
       } catch (locError) {
-        console.warn('? Ubicaci¢n inicial fall¢, intentando fallback:', locError.message);
+        console.warn('Ubicacion inicial fallo, intentando fallback:', locError.message);
         try {
           location = await Location.getLastKnownPositionAsync({
             maxAge: 60000,
             requiredAccuracy: 100,
           });
         } catch (fallbackError) {
-          console.error('? Error obteniendo ubicaci¢n (fallback):', fallbackError.message);
+          console.error('Error obteniendo ubicacion (fallback):', fallbackError.message);
         }
-      
+
         if (!location) {
-          console.error('? Error obteniendo ubicaci¢n:', locError.message);
-          setError(`Error de ubicaci¢n: ${locError.message}`);
-          return;
+          console.error('Error obteniendo ubicacion:', locError.message);
+          setError(`Error de ubicacion: ${locError.message}`);
+          await cleanupStartFailure();
+          return { success: false };
         }
       }
       if (!location || !location.coords) {
-        setError('No se pudo obtener la ubicación. Verifica que el GPS esté habilitado.');
-        console.error('❌ Ubicación inválida');
-        return;
+        setError('No se pudo obtener la ubicacion. Verifica que el GPS este habilitado.');
+        console.error('Ubicacion invalida');
+        await cleanupStartFailure();
+        return { success: false };
       }
 
       const initialCoord = {
@@ -601,48 +717,42 @@ export const useRouteTracker = () => {
         timestamp: Date.now(),
       };
 
-      console.log('📍 Ubicación inicial:', initialCoord);
-
       setCurrentLocation(initialCoord);
-      setRouteCoordinates([initialCoord]);
-      setStatus(TRACKER_STATUS.TRACKING);
-      startTime.current = Date.now();
-      totalPausedMsRef.current = 0;
-      pausedAtRef.current = null;
-      setDuration(0);
+      const seededCoords = lastKnownCoord ? [lastKnownCoord, initialCoord] : [initialCoord];
+      routeCoordinatesRef.current = seededCoords;
+      setRouteCoordinates(seededCoords);
       lastLiveUpdateRef.current = Date.now();
       lastMovementTime.current = Date.now();
       sendLiveUpdate(initialCoord, true);
 
-      // 💾 Guardar estado del tracking para detectar cierre de app
       await persistTrackingState({
         isPaused: false,
         pausedAt: null,
         totalPausedMs: totalPausedMsRef.current,
-        routeCoordinates: [initialCoord],
+        routeCoordinates: seededCoords,
       });
       await updateLastMovement();
 
-      // ⏱️ Iniciar verificación de inactividad
       startInactivityCheck();
 
-      // Iniciar contador de tiempo
-      startTimer();
-
-      // Suscribirse a actualizaciones de ubicacion
       try {
         await startLocationWatcher();
       } catch (watchError) {
-        console.error('? Error iniciando watcher:', watchError);
+        console.error('Error iniciando watcher:', watchError);
         setError(`Error iniciando tracking: ${watchError.message}`);
-        setStatus(TRACKER_STATUS.IDLE);
+        await cleanupStartFailure();
+        return { success: false };
       }
 
-      console.log('✅ Tracking iniciado correctamente');
+      console.log('Tracking iniciado correctamente');
+      return { success: true };
     } catch (err) {
-      console.error('❌ Error general en startTracking:', err);
+      console.error('Error general en startTracking:', err);
       setError(`Error: ${err.message}`);
+      await stopBackgroundTracking();
       setStatus(TRACKER_STATUS.IDLE);
+      stopTimer();
+      return { success: false };
     }
   }, [
     requestLocationPermission,
@@ -653,31 +763,21 @@ export const useRouteTracker = () => {
     computeElapsedSeconds,
     persistTrackingState,
     startLocationWatcher,
+    startTimer,
+    stopTimer,
   ]);
 
-  /**
-   * ⏸️ Pausar tracking
-   */
-  const pauseTracking = useCallback(() => {
-    console.log('?? Pausando tracking...');
-    setStatus(TRACKER_STATUS.PAUSED);
-    pausedAtRef.current = Date.now();
-    syncDuration();
-
-    // Detener timer
-    stopTimer();
-
-    saveTrackingState(
-      authUserIdRef.current,
-      startTime.current,
-      currentLocation,
-      {
-        isPaused: true,
-        pausedAt: pausedAtRef.current,
-        totalPausedMs: totalPausedMsRef.current,
-      }
-    ).catch(console.error);
-  }, [currentLocation, stopTimer, syncDuration]);
+  const pauseTracking = useCallback(async () => {
+    if (status !== TRACKER_STATUS.TRACKING) return;
+    console.log('[useRouteTracker] pausing');
+    const now = Date.now();
+    await autoPauseTracking(now);
+    await persistTrackingState({
+      isPaused: true,
+      pausedAt: now,
+      totalPausedMs: totalPausedMsRef.current,
+    });
+  }, [autoPauseTracking, persistTrackingState, status]);
 
   /**
    * ?? Reanudar tracking
@@ -729,60 +829,73 @@ export const useRouteTracker = () => {
    * ?? Detener tracking y guardar ruta
    */
   const stopTracking = useCallback(async () => {
-    let savedRoute = null;
-    const lastCoord = currentLocation || routeCoordinates[routeCoordinates.length - 1];
-    if (lastCoord) {
-      await sendLiveUpdate(lastCoord, false);
+    if (isStoppingRef.current) {
+      return null;
     }
-    console.log('?? Deteniendo tracking...');
+    isStoppingRef.current = true;
+    try {
+      console.log('[useRouteTracker] stopTracking begin', {
+        status,
+        coords: routeCoordinates.length,
+        distance,
+      });
+      let savedRoute = null;
+      const lastCoord = currentLocation || routeCoordinates[routeCoordinates.length - 1];
+      if (lastCoord) {
+        await sendLiveUpdate(lastCoord, false);
+      }
+      console.log('Deteniendo tracking...');
 
-    // Limpiar suscripcion de ubicacion
-    if (locationSubscription.current) {
-      locationSubscription.current.remove();
-      locationSubscription.current = null;
+      if (locationSubscription.current) {
+        locationSubscription.current.remove();
+        locationSubscription.current = null;
+      }
+
+      stopTimer();
+
+      if (inactivityCheckInterval.current) {
+        clearInterval(inactivityCheckInterval.current);
+        inactivityCheckInterval.current = null;
+      }
+
+      if (routeCoordinates.length > 10 && distance > 100) {
+        savedRoute = await saveRoute();
+      }
+
+      setStatus(TRACKER_STATUS.IDLE);
+      console.log('[useRouteTracker] status -> idle');
+      routeCoordinatesRef.current = [];
+      setRouteCoordinates([]);
+      distanceRef.current = 0;
+      setDistance(0);
+      setDuration(0);
+      setSpeed(0);
+      avgSpeedRef.current = 0;
+      setAvgSpeed(0);
+      maxSpeedRef.current = 0;
+      setMaxSpeed(0);
+      caloriesRef.current = 0;
+      setCalories(0);
+      speedHistory.current = [];
+      speedSumRef.current = 0;
+      speedCountRef.current = 0;
+      startTime.current = null;
+      totalPausedMsRef.current = 0;
+      pausedAtRef.current = null;
+      lastMovementTime.current = Date.now();
+
+      await stopBackgroundTracking();
+      await clearTrackingState();
+
+      console.log('Tracking detenido');
+      return savedRoute;
+    } finally {
+      setTimeout(() => {
+        isStoppingRef.current = false;
+      }, 500);
     }
-
-    // Detener timer
-    stopTimer();
-
-    // Detener verificacion de inactividad
-    if (inactivityCheckInterval.current) {
-      clearInterval(inactivityCheckInterval.current);
-      inactivityCheckInterval.current = null;
-    }
-
-    // Guardar ruta si tiene datos significativos
-    if (routeCoordinates.length > 10 && distance > 100) {
-      savedRoute = await saveRoute();
-    }
-
-    await stopBackgroundTracking();
-
-    // Limpiar estado de tracking persistido
-    await clearTrackingState();
-
-    // Resetear estados
-    setStatus(TRACKER_STATUS.IDLE);
-    setRouteCoordinates([]);
-    setDistance(0);
-    setDuration(0);
-    setSpeed(0);
-    setAvgSpeed(0);
-    setMaxSpeed(0);
-    setCalories(0);
-    speedHistory.current = [];
-    startTime.current = null;
-    totalPausedMsRef.current = 0;
-    pausedAtRef.current = null;
-    lastMovementTime.current = Date.now();
-
-    console.log('? Tracking detenido');
-    return savedRoute;
   }, [currentLocation, routeCoordinates, distance, sendLiveUpdate, saveRoute, stopTimer]);
 
-  /**
-   * 💾 Guardar ruta en AsyncStorage
-   */
   const saveRoute = useCallback(async () => {
     try {
       const realDuration = computeElapsedSeconds();
@@ -852,6 +965,8 @@ export const useRouteTracker = () => {
 
   useEffect(() => {
     const restoreTrackingState = async () => {
+      if (skipRestore) return;
+      if (isStoppingRef.current) return;
       const state = await getTrackingState();
       if (!state?.isActive || !state.startTime) return;
 
@@ -860,12 +975,25 @@ export const useRouteTracker = () => {
       pausedAtRef.current = state.isPaused ? state.pausedAt || state.savedAt : null;
 
       if (state.routeCoordinates && Array.isArray(state.routeCoordinates)) {
+        routeCoordinatesRef.current = state.routeCoordinates;
         setRouteCoordinates(state.routeCoordinates);
       }
-      if (state.distance != null) setDistance(state.distance);
-      if (state.avgSpeed != null) setAvgSpeed(state.avgSpeed);
-      if (state.maxSpeed != null) setMaxSpeed(state.maxSpeed);
-      if (state.calories != null) setCalories(state.calories);
+      if (state.distance != null) {
+        distanceRef.current = state.distance;
+        setDistance(state.distance);
+      }
+      if (state.avgSpeed != null) {
+        avgSpeedRef.current = state.avgSpeed;
+        setAvgSpeed(state.avgSpeed);
+      }
+      if (state.maxSpeed != null) {
+        maxSpeedRef.current = state.maxSpeed;
+        setMaxSpeed(state.maxSpeed);
+      }
+      if (state.calories != null) {
+        caloriesRef.current = state.calories;
+        setCalories(state.calories);
+      }
       if (state.lastLocation) setCurrentLocation(state.lastLocation);
 
       setDuration(computeElapsedSeconds());
@@ -890,7 +1018,7 @@ export const useRouteTracker = () => {
     };
 
     restoreTrackingState();
-  }, [autoPauseTracking, checkOrphanedTracking, computeElapsedSeconds, startLocationWatcher, startTimer]);
+  }, [autoPauseTracking, checkOrphanedTracking, computeElapsedSeconds, skipRestore, startLocationWatcher, startTimer]);
 
   /**
    * 🧹 Limpiar en unmount
@@ -931,36 +1059,3 @@ export const useRouteTracker = () => {
 };
 
 export default useRouteTracker;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,13 +1,14 @@
 import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { upsertTrackingLive } from "../services/tracking";
+import { getTrackingPrivacy } from "../services/trackingPrivacy";
 
 export const TRACKING_LIVE_TASK = "TRACKING_LIVE_TASK";
 const TRACKING_USER_ID_KEY = "@tracking_user_id";
 
 TaskManager.defineTask(TRACKING_LIVE_TASK, async ({ data, error }) => {
   if (error) {
-    console.log("❌ Task error:", error);
+    console.log("? Task error:", error);
     return;
   }
 
@@ -16,7 +17,12 @@ TaskManager.defineTask(TRACKING_LIVE_TASK, async ({ data, error }) => {
 
   const userId = await AsyncStorage.getItem(TRACKING_USER_ID_KEY);
   if (!userId) {
-    console.log("⚠️ Task: no userId guardado, skip");
+    console.log("?? Task: no userId guardado, skip");
+    return;
+  }
+
+  const isPrivate = await getTrackingPrivacy();
+  if (isPrivate) {
     return;
   }
 
@@ -31,5 +37,5 @@ TaskManager.defineTask(TRACKING_LIVE_TASK, async ({ data, error }) => {
     isActive: true,
   });
 
-  if (!result.ok) console.log("❌ Task upsert error:", result.error);
+  if (!result.ok) console.log("? Task upsert error:", result.error);
 });

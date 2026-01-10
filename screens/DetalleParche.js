@@ -36,7 +36,7 @@ import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { spacing, typography, borderRadius } from '../theme';
 import CreateRodadaModal from '../components/tracking/CreateRodadaModal';
 import FollowersModal from '../components/FollowersModal';
-import RodadasModal from '../components/RodadasModal';
+import RodadasModal from '../components/tracking/RodadasModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = 280;
