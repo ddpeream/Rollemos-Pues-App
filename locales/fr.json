@@ -4,7 +4,8 @@
     "patinadores": "Patineurs",
     "parches": "Groupes",
     "spots": "Spots",
-    "galeria": "Galerie"
+    "galeria": "Galerie",
+    "comunidad": "Communaute"
   },
   "filters": {
     "all": "Tous",
@@ -205,16 +206,23 @@
     },
     "tracking": {
       "permissionsTitle": "Permissions requises",
-      "permissionsMessage": "Nous avons besoin de votre localisation pour suivre votre itinéraire.",
+      "permissionsMessage": "Nous avons besoin de votre position pour suivre votre trajet.",
+      "startingTitle": "Demarrage du suivi",
+      "startingMessage": "On enregistre votre trajet.",
       "discardTitle": "Supprimer l'itinéraire ?",
       "discardMessage": "L'itinéraire est trop court. Voulez-vous le supprimer ?",
-      "finishTitle": "Terminer l'itinéraire ?",
-      "finishMessage": "Vous avez parcouru {{distance}} en {{duration}}. Voulez-vous enregistrer cet itinéraire ?",
+      "finishTitle": "Terminer votre trajet ?",
+      "finishMessage": "Vous avez parcouru {{distance}} en {{duration}}. Voulez-vous enregistrer ce trajet?",
       "cancel": "Annuler",
       "discard": "Supprimer",
       "save": "Enregistrer",
       "savedTitle": "Itinéraire enregistré",
-      "savedMessage": "Votre itinéraire a été enregistré avec succès",
+      "savedMessage": "Bien joue, votre trajet est enregistre.",
+      "saveFailedTitle": "Itineraire non enregistre",
+      "saveFailedMessage": "Impossible d'enregistrer le trajet. Reessayez.",
+      "discardedTitle": "Itineraire supprime",
+      "discardedMessage": "L'itineraire a ete supprime.",
+      "errorTitle": "Erreur de suivi",
       "pause": "Pause",
       "resume": "Reprendre",
       "start": "Démarrer",
@@ -256,6 +264,15 @@
     "settings": {
       "title": "Paramètres",
       "placeholder": "Écran de paramètres en construction."
+    },
+    "comunidad": {
+      "title": "Communaute",
+      "count_one": "{{count}} communaute",
+      "count_other": "{{count}} communautes",
+      "searchPlaceholder": "Rechercher communaute ou groupe...",
+      "loading": "Chargement de la communaute...",
+      "empty": "Aucune communaute disponible",
+      "emptyHint": "Aucune communaute ou groupe pour le moment"
     }
   },
   "home": {
@@ -419,3 +436,4 @@
     }
   }
 }
+

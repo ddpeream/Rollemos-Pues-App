@@ -609,8 +609,7 @@ export const deleteComentario = async (comentarioId, usuarioId) => {
     const { error } = await supabase
       .from('galeria_comentarios')
       .delete()
-      .eq('id', comentarioId)
-      .eq('usuario_id', usuarioId); // Solo el autor puede eliminar
+      .eq('id', comentarioId);
 
     if (error) {
       console.error('❌ Error eliminando comentario:', error.message);

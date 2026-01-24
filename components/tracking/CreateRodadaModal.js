@@ -16,12 +16,11 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../store/useAppStore';
-import { useRodadas } from '../hooks/useRodadas';
-import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../../store/useAppStore';
+import { useRodadas } from '../../hooks/useRodadas';
+import { useAuth } from '../../hooks/useAuth';
 
 // Debounce helper
 const useDebounce = (callback, delay) => {
@@ -37,7 +36,7 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => {
+const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comunidadId = null, rodadaTipo = 'rodada' }) => {
   const { theme, isDark } = useTheme();
   const { user } = useAuth();
   const { 
@@ -172,6 +171,8 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => 
       horaEncuentro: horaCompleta,
       organizadorId: user.id,
       parcheId: parcheId,
+      comunidadId: comunidadId,
+      tipo: rodadaTipo,
       nivelRequerido: nivelRequerido,
     };
 
@@ -251,18 +252,22 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => 
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
+      <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1}>
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
         >
-          <View style={[
-            styles.modalContent, 
-            { 
-              backgroundColor: glassBackground,
-              borderColor: glassBorder,
-            }
-          ]}>
+          <TouchableOpacity
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: glassBackground,
+                borderColor: glassBorder,
+              },
+            ]}
+            onPress={() => {}}
+            activeOpacity={1}
+          >
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: glassBorder }]}>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -583,9 +588,9 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => 
             {/* Espaciado inferior */}
             <View style={{ height: 40 }} />
           </ScrollView>
-          </View>
+          </TouchableOpacity>
         </KeyboardAvoidingView>
-      </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -755,3 +760,5 @@ const styles = StyleSheet.create({
 });
 
 export default CreateRodadaModal;
+
+

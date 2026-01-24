@@ -20,8 +20,8 @@ import {
   ScrollView,
   ActivityIndicator,
   FlatList,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../store/useAppStore';
@@ -247,6 +247,7 @@ const CreatePostModal = ({
         <KeyboardAvoidingView 
           style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 0}
         >
           <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent={false} />
           
@@ -286,7 +287,12 @@ const CreatePostModal = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.contentContainer}
+        >
           {/* Selector de Imagen */}
           <TouchableOpacity 
             style={[styles.imageSelector, { borderColor: theme.colors.glass.border }]}
@@ -496,6 +502,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.base,
+  },
+  contentContainer: {
+    paddingBottom: 200,
   },
   imageSelector: {
     borderRadius: borderRadius.lg,

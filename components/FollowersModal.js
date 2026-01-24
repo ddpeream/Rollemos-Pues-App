@@ -20,6 +20,8 @@ import {
   TextInput,
   ActivityIndicator,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -167,8 +169,20 @@ export default function FollowersModal({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-        <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+      <TouchableOpacity
+        style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
+        onPress={onClose}
+        activeOpacity={1}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboard}
+        >
+          <TouchableOpacity
+            style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
+            onPress={() => {}}
+            activeOpacity={1}
+          >
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
             <View style={styles.headerLeft}>
@@ -222,14 +236,19 @@ export default function FollowersModal({
               ListEmptyComponent={renderEmpty}
             />
           )}
-        </View>
-      </View>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </TouchableOpacity>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  keyboard: {
     flex: 1,
     justifyContent: 'flex-end',
   },
@@ -338,3 +357,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+

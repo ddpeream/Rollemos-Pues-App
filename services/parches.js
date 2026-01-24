@@ -740,6 +740,45 @@ export const uploadMultipleParcheImages = async (parcheId, imageUris) => {
   }
 };
 
+/**
+ * Eliminar una imagen de un parche
+ * @param {string} parcheId
+ * @param {string} imageUrl
+ * @returns {Promise<Object>}
+ */
+export const removeParcheImage = async (parcheId, imageUrl) => {
+  try {
+    const { data: parche, error } = await supabase
+      .from('parches')
+      .select('foto, fotos')
+      .eq('id', parcheId)
+      .single();
+
+    if (error) {
+      console.error('💥 Error obteniendo parche:', error);
+      return { success: false, error: error.message };
+    }
+
+    const nextFotos = (parche?.fotos || []).filter((url) => url !== imageUrl);
+    const nextFoto = parche?.foto === imageUrl ? nextFotos[0] || null : parche?.foto;
+
+    const { error: updateError } = await supabase
+      .from('parches')
+      .update({ fotos: nextFotos, foto: nextFoto, updated_at: new Date().toISOString() })
+      .eq('id', parcheId);
+
+    if (updateError) {
+      console.error('💥 Error eliminando imagen:', updateError);
+      return { success: false, error: updateError.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('💥 Error en removeParcheImage:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // ==========================================
 // �📊 FUNCIONES DE VALIDACIÓN
 // ==========================================

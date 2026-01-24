@@ -9,10 +9,10 @@ import {
   Image,
   ScrollView,
   Dimensions,
-  SafeAreaView,
   Alert,
   Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
