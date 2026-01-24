@@ -8,10 +8,10 @@ import { useNavigation } from '@react-navigation/native';
 
 import Inicio from '../screens/Inicio';
 import Patinadores from '../screens/Patinadores';
-import Parches from '../screens/Parches';
+import Comunidad from '../screens/Comunidad';
 import Spots from '../screens/Spots'; // 🛒 Marketplace
 import Galeria from '../screens/Galeria';
-import Tracking from '../screens/Tracking';
+import Tracking from '../screens/tracking/Tracking';
 import RoutesHistory from '../screens/RoutesHistory';
 import ThemeToggle from '../components/ThemeToggle';
 import useAppStore from '../store/useAppStore';
@@ -145,9 +145,9 @@ export default function MainTabs() {
               iconName = focused ? 'home' : 'home-outline';
             } else if (route.name === 'Patinadores') {
               IconComponent = MaterialCommunityIcons;
-              iconName = focused ? 'skate' : 'skate';
+              iconName = focused ? 'roller-skate' : 'roller-skate';
               return <IconComponent name={iconName} size={size} color={color} />;
-            } else if (route.name === 'Parches') {
+            } else if (route.name === 'Comunidad') {
               IconComponent = FontAwesome5;
               iconName = 'users';
               return <IconComponent name={iconName} size={size - 2} color={color} />;
@@ -178,9 +178,9 @@ export default function MainTabs() {
           options={{ title: t('nav.patinadores'), tabBarLabel: t('nav.patinadores') }}
         />
         <Tab.Screen
-          name="Parches"
-          component={Parches}
-          options={{ title: t('nav.parches'), tabBarLabel: t('nav.parches') }}
+          name="Comunidad"
+          component={Comunidad}
+          options={{ title: t('nav.comunidad'), tabBarLabel: t('nav.comunidad') }}
         />
         <Tab.Screen
           name="MarketRollers"

@@ -22,8 +22,8 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import useAppStore from '../store/useAppStore';
-import { spacing, typography, borderRadius } from '../theme';
+import { useAppStore } from '../../store/useAppStore';
+import { spacing, typography, borderRadius } from '../../theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PAGE_SIZE = 10;

@@ -1,4 +1,5 @@
 import * as Location from "expo-location";
+import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TRACKING_LIVE_TASK } from "../tasks/trackingLiveTask";
 import Constants from "expo-constants";
@@ -10,6 +11,10 @@ const isExpoGo = Constants.appOwnership === "expo";
 
 export async function startBackgroundTracking(userId) {
   await AsyncStorage.setItem(TRACKING_USER_ID_KEY, userId);
+  if (!TaskManager.isTaskDefined(TRACKING_LIVE_TASK)) {
+    console.warn("?? Tracking task no registrado; se omite background tracking");
+    return { foregroundOnly: true };
+  }
 
   // Verificar permisos (no solicitar - ya deben estar concedidos antes de llamar esta función)
   const fg = await Location.getForegroundPermissionsAsync();

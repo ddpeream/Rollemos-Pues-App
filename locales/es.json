@@ -4,7 +4,8 @@
     "patinadores": "Patinadores",
     "parches": "Parches",
     "spots": "Spots",
-    "galeria": "Galería"
+    "galeria": "Galería",
+    "comunidad": "Comunidad"
   },
   "filters": {
     "all": "Todos",
@@ -205,16 +206,23 @@
     },
     "tracking": {
       "permissionsTitle": "Permisos requeridos",
-      "permissionsMessage": "Necesitamos acceso a tu ubicación para rastrear tu ruta.",
+      "permissionsMessage": "Necesitamos acceso a tu ubicacion para rastrear tu ruta.",
+      "startingTitle": "Empezando tracking",
+      "startingMessage": "Listo, empezamos a grabar tu ruta.",
       "discardTitle": "¿Descartar ruta?",
       "discardMessage": "La ruta es muy corta. ¿Deseas descartarla?",
-      "finishTitle": "¿Finalizar ruta?",
-      "finishMessage": "Has recorrido {{distance}} en {{duration}}. ¿Deseas guardar esta ruta?",
+      "finishTitle": "Finalizar tu ruta?",
+      "finishMessage": "Recorriste {{distance}} en {{duration}}. Quieres guardar tu ruta?",
       "cancel": "Cancelar",
       "discard": "Descartar",
       "save": "Guardar",
       "savedTitle": "Ruta guardada",
-      "savedMessage": "Tu ruta se ha guardado exitosamente",
+      "savedMessage": "Buen trabajo, tu ruta quedo guardada.",
+      "saveFailedTitle": "No se guardo la ruta",
+      "saveFailedMessage": "No se pudo guardar la ruta. Intentalo de nuevo.",
+      "discardedTitle": "Ruta descartada",
+      "discardedMessage": "La ruta fue descartada.",
+      "errorTitle": "Error de tracking",
       "pause": "Pausar",
       "resume": "Reanudar",
       "start": "Iniciar",
@@ -256,6 +264,15 @@
     "settings": {
       "title": "Configuración",
       "placeholder": "Pantalla de configuración en construcción."
+    },
+    "comunidad": {
+      "title": "Comunidad",
+      "count_one": "{{count}} comunidad",
+      "count_other": "{{count}} comunidades",
+      "searchPlaceholder": "Buscar comunidad o parche...",
+      "loading": "Cargando comunidad...",
+      "empty": "No hay comunidades disponibles",
+      "emptyHint": "Aun no hay comunidades o parches"
     }
   },
   "home": {
@@ -419,3 +436,5 @@
     }
   }
 }
+
+

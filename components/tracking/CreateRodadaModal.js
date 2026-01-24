@@ -18,9 +18,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../store/useAppStore';
-import { useRodadas } from '../hooks/useRodadas';
-import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../../store/useAppStore';
+import { useRodadas } from '../../hooks/useRodadas';
+import { useAuth } from '../../hooks/useAuth';
 
 // Debounce helper
 const useDebounce = (callback, delay) => {
@@ -36,7 +36,7 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => {
+const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comunidadId = null, rodadaTipo = 'rodada' }) => {
   const { theme, isDark } = useTheme();
   const { user } = useAuth();
   const { 
@@ -171,6 +171,8 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null }) => 
       horaEncuentro: horaCompleta,
       organizadorId: user.id,
       parcheId: parcheId,
+      comunidadId: comunidadId,
+      tipo: rodadaTipo,
       nivelRequerido: nivelRequerido,
     };
 
