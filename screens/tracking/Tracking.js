@@ -16,7 +16,7 @@
  * - Toggle para mostrar/ocultar spots
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Animated, StatusBar, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -103,7 +103,6 @@ export default function Tracking() {
   );
   const [isMapAutoCenter, setIsMapAutoCenter] = useState(true);
   const [showSpotsOnMap] = useState(true);
-  const [initialLocation, setInitialLocation] = useState(null);
   const [selectedLiveSkaterId, setSelectedLiveSkaterId] = useState(null);
   const [showLiveSkaterBadge, setShowLiveSkaterBadge] = useState(false);
 
@@ -149,7 +148,7 @@ export default function Tracking() {
   }, [rodadas]);
 
   // 👥 Live Skaters (Otros patinadores en tiempo real)
-  const { livePaths, visibleLiveSkaters, liveDistances } = useTrackingLiveSkaters({
+  const { livePaths, visibleLiveSkaters } = useTrackingLiveSkaters({
     userId: user?.id,
   });
 
@@ -174,6 +173,7 @@ export default function Tracking() {
     status,
     currentLocation,
     routeCoordinates,
+    routePointCount,
     distance,
     duration,
     speed,
@@ -224,46 +224,6 @@ export default function Tracking() {
     initPermissions();
   }, [hasPermission, requestLocationPermission]);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const warmLocation = async () => {
-      const granted = await requestLocationPermission();
-      if (!granted) return;
-
-      try {
-        const last = await Location.getLastKnownPositionAsync({});
-        if (isMounted && last?.coords) {
-          setInitialLocation({
-            latitude: last.coords.latitude,
-            longitude: last.coords.longitude,
-          });
-        }
-      } catch (error) {
-        console.log('Error leyendo ultima ubicacion:', error);
-      }
-
-      try {
-        const fresh = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        if (isMounted && fresh?.coords) {
-          setInitialLocation({
-            latitude: fresh.coords.latitude,
-            longitude: fresh.coords.longitude,
-          });
-        }
-      } catch (error) {
-        console.log('Error leyendo ubicacion actual:', error);
-      }
-    };
-
-    warmLocation();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [requestLocationPermission]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -378,6 +338,12 @@ export default function Tracking() {
             t('screens.tracking.startingTitle'),
             t('screens.tracking.startingMessage')
           );
+        } else {
+          Alert.alert(
+            t('screens.tracking.errorTitle'),
+            startResult?.error || t('screens.tracking.permissionsMessage'),
+            [{ text: t('common.ok') }]
+          );
         }
       } finally {
         startActionInProgressRef.current = false;
@@ -392,7 +358,7 @@ export default function Tracking() {
   };
 
   const handleStopTracking = () => {
-    console.log('[Tracking] stopButton', { status, coords: routeCoordinates.length });
+    console.log('[Tracking] stopButton', { status, coords: routePointCount });
     if (status === TRACKER_STATUS.IDLE) {
       console.log('[Tracking] stopButton ignored: idle');
       return;
@@ -402,15 +368,17 @@ export default function Tracking() {
       stopActionInProgressRef.current = true;
       setSkipRestoring(true);
       console.log('[Tracking] stopTracking begin');
+      let result = null;
       try {
-        await stopTracking();
+        result = await stopTracking();
         console.log('[Tracking] stopTracking done');
       } finally {
         stopActionInProgressRef.current = false;
         setTimeout(() => setSkipRestoring(false), 500);
       }
+      return result;
     };
-    if (routeCoordinates.length < 10) {
+    if (routePointCount < 10) {
       Alert.alert(
         t('screens.tracking.discardTitle'),
         t('screens.tracking.discardMessage'),
@@ -419,7 +387,15 @@ export default function Tracking() {
           {
             text: t('screens.tracking.discard'),
             style: 'destructive',
-            onPress: runStopTracking,
+            onPress: async () => {
+              const result = await runStopTracking();
+              if (!result) {
+                Alert.alert(
+                  t('screens.tracking.discardedTitle'),
+                  t('screens.tracking.discardedMessage')
+                );
+              }
+            },
           },
         ]
       );
@@ -435,8 +411,15 @@ export default function Tracking() {
           {
             text: t('screens.tracking.save'),
             onPress: async () => {
-              await runStopTracking();
-              Alert.alert(t('screens.tracking.savedTitle'), t('screens.tracking.savedMessage'));
+              const result = await runStopTracking();
+              if (result) {
+                Alert.alert(t('screens.tracking.savedTitle'), t('screens.tracking.savedMessage'));
+              } else {
+                Alert.alert(
+                  t('screens.tracking.saveFailedTitle'),
+                  t('screens.tracking.saveFailedMessage')
+                );
+              }
             },
           },
         ]
@@ -527,26 +510,26 @@ export default function Tracking() {
     }
   };
 
-  const handleSelectRodadaFromMap = (rodada) => {
+  const handleSelectRodadaFromMap = useCallback((rodada) => {
     setSelectedRodada(rodada);
     setShowRodadaBadge(true);
     setSelectedLiveSkaterId(null);
     setShowLiveSkaterBadge(false);
-  };
+  }, []);
 
-  const handleSelectLiveSkater = (skater) => {
+  const handleSelectLiveSkater = useCallback((skater) => {
     setSelectedLiveSkaterId(skater.userId);
     setShowLiveSkaterBadge(true);
     setShowRodadaBadge(false);
     setSelectedRodada(null);
-  };
+  }, []);
 
-  const handleOpenRodadaDetailFromMap = async (rodada) => {
+  const handleOpenRodadaDetailFromMap = useCallback(async (rodada) => {
     const detail = await fetchRodadaById(rodada.id);
     const target = detail || rodada;
     await handleOpenRodadaDetail(target);
     setShowRodadaBadge(false);
-  };
+  }, [fetchRodadaById, handleOpenRodadaDetail]);
 
   const handleSelectRodadaFromList = async (rodada) => {
     await ensureRodadasVisible();
@@ -637,6 +620,11 @@ export default function Tracking() {
     requestLocationPermission();
   };
 
+  // Callback para cuando el usuario mueve el mapa manualmente
+  const handleMapPan = useCallback(() => {
+    setIsMapAutoCenter(false);
+  }, []);
+
 const statsContainerStyle = {
     backgroundColor: isDark ? 'rgba(12, 16, 24, 0.7)' : 'rgba(255, 255, 255, 0.75)',
     borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
@@ -660,9 +648,8 @@ const statsContainerStyle = {
       <TrackingMap
         mapRef={mapRef}
         mapType={mapType}
-        onMapPan={() => setIsMapAutoCenter(false)}
+        onMapPan={handleMapPan}
         initialRegion={INITIAL_REGION_MEDELLIN}
-        initialLocation={initialLocation}
         routeCoordinates={routeCoordinates}
         theme={theme}
         isDark={isDark}
@@ -722,7 +709,7 @@ const statsContainerStyle = {
       <LiveSkaterBadge
         visible={showLiveSkaterBadge && selectedLiveSkater}
         skater={selectedLiveSkater}
-        distanceMeters={liveDistances?.[selectedLiveSkaterId] || 0}
+        distanceMeters={0}
         getSkaterColor={getSkaterColor}
         onDismiss={handleDismissLiveSkaterBadge}
       />

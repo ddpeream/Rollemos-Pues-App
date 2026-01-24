@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { getDistanceBetweenPoints } from '../utils/tracking';
 import {
   fetchTrackingLive,
   subscribeTrackingLive,
@@ -39,9 +38,8 @@ export const getSkaterColor = (skater) => {
 export const useTrackingLiveSkaters = ({ userId }) => {
   const [liveSkaters, setLiveSkaters] = useState([]);
   const [livePaths, setLivePaths] = useState({});
-  const [liveDistances, setLiveDistances] = useState({});
-  const liveDistancesRef = useRef({});
 
+  // Replicando lógica original: solo un setState, sin liveDistances
   const appendLivePath = useCallback(
     (skaterId, lat, lng) => {
       if (!skaterId) return;
@@ -58,22 +56,6 @@ export const useTrackingLiveSkaters = ({ userId }) => {
         if (nextPoints.length > maxPoints) {
           nextPoints.splice(0, nextPoints.length - maxPoints);
         }
-        if (last) {
-          const increment = getDistanceBetweenPoints(last, {
-            latitude: lat,
-            longitude: lng,
-          });
-          const previousDistance = liveDistancesRef.current[skaterId] || 0;
-          const nextDistance = previousDistance + increment;
-          liveDistancesRef.current = {
-            ...liveDistancesRef.current,
-            [skaterId]: nextDistance,
-          };
-          setLiveDistances((prevDistances) => ({
-            ...prevDistances,
-            [skaterId]: nextDistance,
-          }));
-        }
         return {
           ...prev,
           [skaterId]: { points: nextPoints },
@@ -84,10 +66,21 @@ export const useTrackingLiveSkaters = ({ userId }) => {
   );
 
   const visibleLiveSkaters = useMemo(() => {
+    console.log('👥 visibleLiveSkaters filter:', liveSkaters.length, 'total, userId:', userId);
     return liveSkaters.filter((skater) => {
-      if (!skater.isActive) return false;
-      if (!Number.isFinite(skater.lat) || !Number.isFinite(skater.lng)) return false;
-      if (userId && skater.userId === userId) return false;
+      if (!skater.isActive) {
+        console.log('  ❌ filtered (inactive):', skater.userId);
+        return false;
+      }
+      if (!Number.isFinite(skater.lat) || !Number.isFinite(skater.lng)) {
+        console.log('  ❌ filtered (invalid coords):', skater.userId, skater.lat, skater.lng);
+        return false;
+      }
+      if (userId && skater.userId === userId) {
+        console.log('  ❌ filtered (self):', skater.userId);
+        return false;
+      }
+      console.log('  ✅ visible:', skater.userId, 'lat:', skater.lat, 'lng:', skater.lng);
       return true;
     });
   }, [liveSkaters, userId]);
@@ -123,11 +116,6 @@ export const useTrackingLiveSkaters = ({ userId }) => {
           delete next[normalized.userId];
           return next;
         });
-        setLiveDistances((prev) => {
-          const next = { ...prev };
-          delete next[normalized.userId];
-          return next;
-        });
         return;
       }
 
@@ -152,6 +140,5 @@ export const useTrackingLiveSkaters = ({ userId }) => {
   return {
     livePaths,
     visibleLiveSkaters,
-    liveDistances,
   };
 };

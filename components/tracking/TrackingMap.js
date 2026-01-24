@@ -1,15 +1,14 @@
-import React, { useRef } from 'react';
+import React, { useRef, memo, useCallback } from 'react';
 import { View, Text, Platform } from 'react-native';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles, darkMapStyle } from '../../screens/tracking/tracking.style';
 
-export default function TrackingMap({
+function TrackingMap({
   mapRef,
   mapType,
   onMapPan,
   initialRegion,
-  initialLocation,
   routeCoordinates,
   theme,
   isDark,
@@ -28,7 +27,7 @@ export default function TrackingMap({
 }) {
   const lastRodadaTapRef = useRef({ id: null, at: 0 });
 
-  const handleRodadaPress = (rodada) => {
+  const handleRodadaPress = useCallback((rodada) => {
     const now = Date.now();
     const last = lastRodadaTapRef.current;
     const isDoubleTap = last.id === rodada.id && now - last.at < 300;
@@ -40,7 +39,7 @@ export default function TrackingMap({
     }
 
     onSelectRodada(rodada);
-  };
+  }, [onSelectRodada, onDoublePressRodada]);
 
   return (
     <MapView
@@ -79,14 +78,15 @@ export default function TrackingMap({
         );
       })}
 
-      {(currentLocation || initialLocation) && (
+      {currentLocation && (
         <Marker
           coordinate={{
-            latitude: (currentLocation || initialLocation).latitude,
-            longitude: (currentLocation || initialLocation).longitude,
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
           }}
           anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={Platform.OS !== "android"}
+          tracksViewChanges={Platform.OS === 'ios'}
+          zIndex={100}
         >
           <View
             style={[
@@ -112,7 +112,8 @@ export default function TrackingMap({
           }}
           rotation={skater.heading || 0}
           anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={Platform.OS !== "android"}
+          tracksViewChanges={Platform.OS === 'ios'}
+          zIndex={90}
           onPress={() => onSelectSkater?.(skater)}
         >
           <View
@@ -144,7 +145,7 @@ export default function TrackingMap({
                   longitude: parseFloat(rodada.punto_salida_lng),
                 }}
                 onPress={() => handleRodadaPress(rodada)}
-                tracksViewChanges={Platform.OS !== "android"}
+                zIndex={80}
               >
                 <View style={styles.rodadaMarkerContainer}>
                   <View
@@ -186,7 +187,7 @@ export default function TrackingMap({
                     longitude: parseFloat(rodada.punto_llegada_lng),
                   }}
                   onPress={() => handleRodadaPress(rodada)}
-                  tracksViewChanges={Platform.OS !== "android"}
+                  zIndex={80}
                 >
                   <View style={styles.rodadaMarkerContainer}>
                     <View
@@ -233,7 +234,7 @@ export default function TrackingMap({
             }}
             title={spot.nombre}
             description={spot.ciudad || "Spot"}
-            tracksViewChanges={Platform.OS !== "android"}
+            zIndex={70}
           >
             <View
               style={[
@@ -252,3 +253,6 @@ export default function TrackingMap({
     </MapView>
   );
 }
+
+// Memorizar componente para evitar re-renders innecesarios
+export default memo(TrackingMap);

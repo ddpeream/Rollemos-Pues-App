@@ -51,17 +51,25 @@ export const useRouteTracker = (options = {}) => {
 
   // Estados
   const [status, setStatus] = useState(TRACKER_STATUS.IDLE);
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [routeCoordinates, setRouteCoordinates] = useState([]);
-  const [distance, setDistance] = useState(0); // en metros
+  const [routePointCount, setRoutePointCount] = useState(0);
   const [duration, setDuration] = useState(0); // en segundos
-  const [speed, setSpeed] = useState(0); // km/h
-  const [avgSpeed, setAvgSpeed] = useState(0); // km/h
-  const [maxSpeed, setMaxSpeed] = useState(0); // km/h
-  const [calories, setCalories] = useState(0); // kcal estimadas
   const [hasPermission, setHasPermission] = useState(false);
   const [error, setError] = useState(null);
   const [authUid, setAuthUid] = useState(null);
+
+  // Estado combinado para datos de tracking (evita múltiples re-renders)
+  const [trackingData, setTrackingData] = useState({
+    currentLocation: null,
+    routeCoordinates: [],
+    distance: 0,
+    speed: 0,
+    avgSpeed: 0,
+    maxSpeed: 0,
+    calories: 0,
+  });
+
+  // Destructuring para compatibilidad con el código existente
+  const { currentLocation, routeCoordinates, distance, speed, avgSpeed, maxSpeed, calories } = trackingData;
   const isStoppingRef = useRef(false);
 
   // Refs para tracking
@@ -76,19 +84,38 @@ export const useRouteTracker = (options = {}) => {
   const lastStatsUpdateRef = useRef(0);
   const authUserIdRef = useRef(null);
   const inactivityCheckInterval = useRef(null);
+  const liveHeartbeatInterval = useRef(null);
   const lastMovementTime = useRef(Date.now());
   const totalPausedMsRef = useRef(0);
   const pausedAtRef = useRef(null);
   const appState = useRef(AppState.currentState);
   const routeCoordinatesRef = useRef([]);
+  const routeCoordinatesFullRef = useRef([]);
   const distanceRef = useRef(0);
   const avgSpeedRef = useRef(0);
   const maxSpeedRef = useRef(0);
   const caloriesRef = useRef(0);
+  const currentLocationRef = useRef(null);
+  const lastUiUpdateRef = useRef(0);
+  const isPrivateTrackingRef = useRef(isPrivateTracking);
 
   useEffect(() => {
     routeCoordinatesRef.current = routeCoordinates;
   }, [routeCoordinates]);
+
+  const buildReducedCoordinates = useCallback((fullCoords) => {
+    const maxPoints = 500;
+    if (!Array.isArray(fullCoords) || fullCoords.length <= maxPoints) {
+      return fullCoords;
+    }
+    const step = Math.ceil(fullCoords.length / maxPoints);
+    const reduced = fullCoords.filter((_, index) => index % step === 0);
+    const last = fullCoords[fullCoords.length - 1];
+    if (last && reduced[reduced.length - 1] !== last) {
+      reduced.push(last);
+    }
+    return reduced;
+  }, []);
 
   useEffect(() => {
     distanceRef.current = distance;
@@ -105,6 +132,10 @@ export const useRouteTracker = (options = {}) => {
   useEffect(() => {
     caloriesRef.current = calories;
   }, [calories]);
+
+  useEffect(() => {
+    isPrivateTrackingRef.current = isPrivateTracking;
+  }, [isPrivateTracking]);
 
 
   const computeElapsedSeconds = useCallback((now = Date.now()) => {
@@ -184,6 +215,24 @@ export const useRouteTracker = (options = {}) => {
     [isPrivateTracking, user]
   );
 
+  const startLiveHeartbeat = useCallback(() => {
+    if (liveHeartbeatInterval.current) return;
+    liveHeartbeatInterval.current = setInterval(() => {
+      if (isStoppingRef.current) return;
+      if (isPrivateTrackingRef.current) return;
+      const latest = currentLocationRef.current;
+      if (latest) {
+        sendLiveUpdate(latest, true);
+      }
+    }, 10000);
+  }, [sendLiveUpdate]);
+
+  const stopLiveHeartbeat = useCallback(() => {
+    if (!liveHeartbeatInterval.current) return;
+    clearInterval(liveHeartbeatInterval.current);
+    liveHeartbeatInterval.current = null;
+  }, []);
+
   const persistTrackingState = useCallback(
     async (options = {}) => {
       if (!authUserIdRef.current || !startTime.current) return;
@@ -199,14 +248,16 @@ export const useRouteTracker = (options = {}) => {
         calories: options.calories ?? calories,
       });
     },
-    [avgSpeed, calories, currentLocation, distance, maxSpeed, routeCoordinates]
+    [trackingData]
   );
 
   const startLocationWatcher = useCallback(async () => {
     if (locationSubscription.current) return;
 
-    const persistIntervalMs = Platform.OS === 'android' ? 30000 : 10000;
-    const statsIntervalMs = Platform.OS === 'android' ? 5000 : 0;
+    const persistIntervalMs = Platform.OS === 'android' ? 180000 : 30000;
+    const statsIntervalMs = Platform.OS === 'android' ? 8000 : 0;
+    const liveUpdateIntervalMs = Platform.OS === 'android' ? 12000 : 2000;
+    const uiUpdateIntervalMs = Platform.OS === 'android' ? 3000 : 2000;
     const watchOptions =
       Platform.OS === 'android'
         ? {
@@ -215,8 +266,8 @@ export const useRouteTracker = (options = {}) => {
             distanceInterval: 8,
           }
         : {
-            accuracy: Location.Accuracy.BestForNavigation,
-            timeInterval: 1000,
+            accuracy: Location.Accuracy.High,
+            timeInterval: 2000,
             distanceInterval: 5,
           };
 
@@ -231,61 +282,95 @@ export const useRouteTracker = (options = {}) => {
             timestamp: Date.now(),
             speed: location.coords.speed,
           };
+          currentLocationRef.current = newCoord;
 
-          setCurrentLocation(newCoord);
-
-          const prevCoords = routeCoordinatesRef.current;
-          if (prevCoords.length === 0) {
+          const prevFullCoords = routeCoordinatesFullRef.current;
+          if (prevFullCoords.length === 0) {
             const seeded = [newCoord];
-            routeCoordinatesRef.current = seeded;
-            setRouteCoordinates(seeded);
+            routeCoordinatesFullRef.current = seeded;
+            setRoutePointCount(1);
+            const reduced = buildReducedCoordinates(seeded);
+            routeCoordinatesRef.current = reduced;
+            setTrackingData(prev => ({
+              ...prev,
+              currentLocation: newCoord,
+              routeCoordinates: reduced,
+            }));
+            lastUiUpdateRef.current = Date.now();
+            if (!isPrivateTrackingRef.current) {
+              sendLiveUpdate(newCoord, true);
+            }
             return;
           }
 
-          const lastCoord = prevCoords[prevCoords.length - 1];
+          const lastCoord = prevFullCoords[prevFullCoords.length - 1];
           const distanceFromLast = calculateDistance(
             lastCoord.latitude,
             lastCoord.longitude,
             newCoord.latitude,
-            newCoord.longitude
+            newCoord.longitude,
           );
 
-          if (distanceFromLast > 3) {
+          if (distanceFromLast > MIN_MOVEMENT_DISTANCE) {
             lastMovementTime.current = Date.now();
             updateLastMovement().catch(console.error);
 
+            const now = Date.now();
             const nextDistance = distanceRef.current + distanceFromLast;
             distanceRef.current = nextDistance;
-            setDistance(nextDistance);
 
             const speedMps = location.coords.speed || 0;
             const speedKmh = speedMps * 3.6;
-            setSpeed(speedKmh);
 
             speedSumRef.current += speedKmh;
             speedCountRef.current += 1;
             const avgSpd = speedSumRef.current / speedCountRef.current;
             avgSpeedRef.current = avgSpd;
-            setAvgSpeed(avgSpd);
 
             const nextMaxSpeed = Math.max(maxSpeedRef.current, speedKmh);
             maxSpeedRef.current = nextMaxSpeed;
-            setMaxSpeed(nextMaxSpeed);
 
-            const now = Date.now();
-            if (statsIntervalMs === 0 || now - lastStatsUpdateRef.current >= statsIntervalMs) {
+            if (
+              statsIntervalMs === 0 ||
+              now - lastStatsUpdateRef.current >= statsIntervalMs
+            ) {
               lastStatsUpdateRef.current = now;
               const durationMinutes = computeElapsedSeconds(now) / 60;
               const nextCalories = calculateCalories(durationMinutes, avgSpd);
               caloriesRef.current = nextCalories;
-              setCalories(nextCalories);
             }
 
-            const nextCoords = [...prevCoords, newCoord];
-            routeCoordinatesRef.current = nextCoords;
-            setRouteCoordinates(nextCoords);
+            const nextFullCoords = [...prevFullCoords, newCoord];
+            routeCoordinatesFullRef.current = nextFullCoords;
+            setRoutePointCount(nextFullCoords.length);
 
-            if (now - lastLiveUpdateRef.current > 2000) {
+            // Optimización: Solo recalcular reduction cada 50 puntos nuevos
+            const shouldRecalculateReduction =
+              nextFullCoords.length % 50 === 0 || nextFullCoords.length <= 50;
+            const reduced = shouldRecalculateReduction
+              ? buildReducedCoordinates(nextFullCoords)
+              : [...routeCoordinatesRef.current, newCoord];
+            routeCoordinatesRef.current = reduced;
+
+            const shouldUpdateUi =
+              uiUpdateIntervalMs === 0 ||
+              now - lastUiUpdateRef.current >= uiUpdateIntervalMs;
+
+            if (shouldUpdateUi) {
+              lastUiUpdateRef.current = now;
+              // Un solo setState para evitar múltiples re-renders
+              setTrackingData({
+                currentLocation: newCoord,
+                routeCoordinates: reduced,
+                distance: nextDistance,
+                speed: speedKmh,
+                avgSpeed: avgSpd,
+                maxSpeed: nextMaxSpeed,
+                calories: caloriesRef.current,
+              });
+            }
+
+            if (now - lastLiveUpdateRef.current > liveUpdateIntervalMs) {
               lastLiveUpdateRef.current = now;
               sendLiveUpdate(newCoord, true);
             }
@@ -293,7 +378,7 @@ export const useRouteTracker = (options = {}) => {
             if (now - lastPersistRef.current > persistIntervalMs) {
               lastPersistRef.current = now;
               persistTrackingState({
-                routeCoordinates: nextCoords,
+                routeCoordinates: nextFullCoords,
                 distance: nextDistance,
                 avgSpeed: avgSpd,
                 maxSpeed: nextMaxSpeed,
@@ -302,20 +387,26 @@ export const useRouteTracker = (options = {}) => {
             }
           }
         } catch (watchErr) {
-          console.error('? Error en watcher de ubicaci¢n:', watchErr);
+          console.error("Error en watcher de ubicación:", watchErr);
         }
       },
       (error) => {
-        console.error('? Error en watchPositionAsync:', error);
+        console.error("Error en watchPositionAsync:", error);
         setError(`Error de GPS: ${error.message}`);
-      }
+      },
     );
+    startLiveHeartbeat();
+    const latest = currentLocationRef.current;
+    if (latest && !isPrivateTrackingRef.current) {
+      sendLiveUpdate(latest, true);
+    }
   }, [
     calculateCalories,
     calculateDistance,
     computeElapsedSeconds,
     persistTrackingState,
     sendLiveUpdate,
+    startLiveHeartbeat,
   ]);
   useEffect(() => {
     let isMounted = true;
@@ -357,6 +448,7 @@ export const useRouteTracker = (options = {}) => {
       locationSubscription.current.remove();
       locationSubscription.current = null;
     }
+    stopLiveHeartbeat();
 
     // Detener timer
     stopTimer();
@@ -403,7 +495,11 @@ export const useRouteTracker = (options = {}) => {
           : null;
 
         if (check && check.shouldStop) {
-          console.log(`?? Auto-pausa por inactividad (${check.inactiveMinutes} min)`);
+          if (check.inactiveMinutes > 0) {
+            console.log(
+              `Auto-pausa por inactividad (${check.inactiveMinutes} min)`,
+            );
+          }
           setError(`Tracking pausado automaticamente por ${check.inactiveMinutes} minutos de inactividad`);
 
           // Pausar tracking automaticamente
@@ -448,6 +544,7 @@ export const useRouteTracker = (options = {}) => {
       locationSubscription.current.remove();
       locationSubscription.current = null;
     }
+    stopLiveHeartbeat();
 
     // Detener timer
     stopTimer();
@@ -463,13 +560,16 @@ export const useRouteTracker = (options = {}) => {
 
     // Resetear estados
     setStatus(TRACKER_STATUS.IDLE);
-    setRouteCoordinates([]);
-    setDistance(0);
+    setTrackingData({
+      currentLocation: null,
+      routeCoordinates: [],
+      distance: 0,
+      speed: 0,
+      avgSpeed: 0,
+      maxSpeed: 0,
+      calories: 0,
+    });
     setDuration(0);
-    setSpeed(0);
-    setAvgSpeed(0);
-    setMaxSpeed(0);
-    setCalories(0);
     speedHistory.current = [];
     startTime.current = null;
     totalPausedMsRef.current = 0;
@@ -503,23 +603,20 @@ export const useRouteTracker = (options = {}) => {
       }
     }, 60000); // Cada 60 segundos
   }, [autoPauseTracking, status]);
-  useEffect(() => {
-    if (isStoppingRef.current) return;
-    if (authUid && status === TRACKER_STATUS.TRACKING && currentLocation) {
-      sendLiveUpdate(currentLocation, true);
-    }
-  }, [authUid, status, currentLocation, sendLiveUpdate]);
+  // useEffect de authUid+currentLocation ELIMINADO - el watcher ya maneja los updates
 
+  // useEffect de privacidad - SOLO reacciona a cambios de isPrivateTracking
   useEffect(() => {
     setTrackingPrivacy(isPrivateTracking);
     if (isStoppingRef.current) return;
+
     if (isPrivateTracking && authUserIdRef.current) {
+      // Marcar como inactivo cuando se activa modo privado
       markTrackingInactive(authUserIdRef.current);
+      stopLiveHeartbeat();
     }
-    if (!isPrivateTracking && status === TRACKER_STATUS.TRACKING && currentLocation) {
-      sendLiveUpdate(currentLocation, true);
-    }
-  }, [currentLocation, isPrivateTracking, sendLiveUpdate, status]);
+    // Cuando se desactiva privacidad, el watcher enviará el update en el próximo ciclo
+  }, [isPrivateTracking, stopLiveHeartbeat]);
 
   /**
    * 📍 Solicitar permisos de ubicación
@@ -610,6 +707,7 @@ export const useRouteTracker = (options = {}) => {
           locationSubscription.current.remove();
           locationSubscription.current = null;
         }
+        stopLiveHeartbeat();
         if (inactivityCheckInterval.current) {
           clearInterval(inactivityCheckInterval.current);
           inactivityCheckInterval.current = null;
@@ -658,12 +756,19 @@ export const useRouteTracker = (options = {}) => {
             longitude: lastKnown.coords.longitude,
             timestamp: Date.now(),
           };
-          setCurrentLocation(lastKnownCoord);
-          routeCoordinatesRef.current = [lastKnownCoord];
-          setRouteCoordinates([lastKnownCoord]);
+          currentLocationRef.current = lastKnownCoord;
+          routeCoordinatesFullRef.current = [lastKnownCoord];
+          setRoutePointCount(1);
+          const reduced = buildReducedCoordinates(routeCoordinatesFullRef.current);
+          routeCoordinatesRef.current = reduced;
+          setTrackingData(prev => ({
+            ...prev,
+            currentLocation: lastKnownCoord,
+            routeCoordinates: reduced,
+          }));
           lastLiveUpdateRef.current = Date.now();
           lastMovementTime.current = Date.now();
-          sendLiveUpdate(lastKnownCoord, true);
+          // sendLiveUpdate(lastKnownCoord, true);
         }
       } catch (lastKnownError) {
         console.log('Error leyendo ultima ubicacion:', lastKnownError);
@@ -716,11 +821,19 @@ export const useRouteTracker = (options = {}) => {
         longitude: location.coords.longitude,
         timestamp: Date.now(),
       };
+      currentLocationRef.current = initialCoord;
 
-      setCurrentLocation(initialCoord);
       const seededCoords = lastKnownCoord ? [lastKnownCoord, initialCoord] : [initialCoord];
-      routeCoordinatesRef.current = seededCoords;
-      setRouteCoordinates(seededCoords);
+      routeCoordinatesFullRef.current = seededCoords;
+      setRoutePointCount(seededCoords.length);
+      const reduced = buildReducedCoordinates(seededCoords);
+      routeCoordinatesRef.current = reduced;
+      setTrackingData(prev => ({
+        ...prev,
+        currentLocation: initialCoord,
+        routeCoordinates: reduced,
+      }));
+      lastUiUpdateRef.current = Date.now();
       lastLiveUpdateRef.current = Date.now();
       lastMovementTime.current = Date.now();
       sendLiveUpdate(initialCoord, true);
@@ -823,7 +936,7 @@ export const useRouteTracker = (options = {}) => {
         totalPausedMs: totalPausedMsRef.current,
       }
     ).catch(console.error);
-  }, [currentLocation, startInactivityCheck, startLocationWatcher, startTimer]);
+  }, [trackingData, startInactivityCheck, startLocationWatcher, startTimer]);
 
   /**
    * ?? Detener tracking y guardar ruta
@@ -840,16 +953,18 @@ export const useRouteTracker = (options = {}) => {
         distance,
       });
       let savedRoute = null;
-      const lastCoord = currentLocation || routeCoordinates[routeCoordinates.length - 1];
+      const fullCoords = routeCoordinatesFullRef.current;
+      const lastCoord = currentLocation || fullCoords[fullCoords.length - 1];
       if (lastCoord) {
         await sendLiveUpdate(lastCoord, false);
       }
       console.log('Deteniendo tracking...');
 
-      if (locationSubscription.current) {
-        locationSubscription.current.remove();
-        locationSubscription.current = null;
-      }
+    if (locationSubscription.current) {
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
+    }
+    stopLiveHeartbeat();
 
       stopTimer();
 
@@ -858,24 +973,30 @@ export const useRouteTracker = (options = {}) => {
         inactivityCheckInterval.current = null;
       }
 
-      if (routeCoordinates.length > 10 && distance > 100) {
+      if (fullCoords.length > 10 && distance > 100) {
         savedRoute = await saveRoute();
       }
 
       setStatus(TRACKER_STATUS.IDLE);
       console.log('[useRouteTracker] status -> idle');
+      routeCoordinatesFullRef.current = [];
       routeCoordinatesRef.current = [];
-      setRouteCoordinates([]);
-      distanceRef.current = 0;
-      setDistance(0);
+      setRoutePointCount(0);
       setDuration(0);
-      setSpeed(0);
+      // Resetear todos los datos de tracking en un solo setState
+      setTrackingData({
+        currentLocation: null,
+        routeCoordinates: [],
+        distance: 0,
+        speed: 0,
+        avgSpeed: 0,
+        maxSpeed: 0,
+        calories: 0,
+      });
+      distanceRef.current = 0;
       avgSpeedRef.current = 0;
-      setAvgSpeed(0);
       maxSpeedRef.current = 0;
-      setMaxSpeed(0);
       caloriesRef.current = 0;
-      setCalories(0);
       speedHistory.current = [];
       speedSumRef.current = 0;
       speedCountRef.current = 0;
@@ -894,24 +1015,28 @@ export const useRouteTracker = (options = {}) => {
         isStoppingRef.current = false;
       }, 500);
     }
-  }, [currentLocation, routeCoordinates, distance, sendLiveUpdate, saveRoute, stopTimer]);
+  }, [trackingData, sendLiveUpdate, saveRoute, stopTimer]);
 
   const saveRoute = useCallback(async () => {
     try {
       const realDuration = computeElapsedSeconds();
       setDuration(realDuration);
+      const fullCoords = routeCoordinatesFullRef.current;
+      if (!fullCoords.length) {
+        return null;
+      }
       const route = {
         id: Date.now().toString(),
         userId: user?.id || 'guest',
-        coordinates: routeCoordinates,
+        coordinates: fullCoords,
         distance: distance,
         duration: realDuration,
         avgSpeed: avgSpeed,
         maxSpeed: maxSpeed,
         calories: calories,
         date: new Date().toISOString(),
-        startPoint: routeCoordinates[0],
-        endPoint: routeCoordinates[routeCoordinates.length - 1],
+        startPoint: fullCoords[0],
+        endPoint: fullCoords[fullCoords.length - 1],
       };
 
       // Cargar rutas existentes
@@ -931,7 +1056,7 @@ export const useRouteTracker = (options = {}) => {
       setError(err.message);
       return null;
     }
-  }, [user, routeCoordinates, distance, avgSpeed, maxSpeed, calories, computeElapsedSeconds]);
+  }, [user, distance, avgSpeed, maxSpeed, calories, computeElapsedSeconds]);
 
   /**
    * 📋 Cargar rutas guardadas
@@ -974,27 +1099,30 @@ export const useRouteTracker = (options = {}) => {
       totalPausedMsRef.current = state.totalPausedMs || 0;
       pausedAtRef.current = state.isPaused ? state.pausedAt || state.savedAt : null;
 
+      // Restaurar refs
+      let reduced = [];
       if (state.routeCoordinates && Array.isArray(state.routeCoordinates)) {
-        routeCoordinatesRef.current = state.routeCoordinates;
-        setRouteCoordinates(state.routeCoordinates);
+        routeCoordinatesFullRef.current = state.routeCoordinates;
+        setRoutePointCount(state.routeCoordinates.length);
+        reduced = buildReducedCoordinates(state.routeCoordinates);
+        routeCoordinatesRef.current = reduced;
       }
-      if (state.distance != null) {
-        distanceRef.current = state.distance;
-        setDistance(state.distance);
-      }
-      if (state.avgSpeed != null) {
-        avgSpeedRef.current = state.avgSpeed;
-        setAvgSpeed(state.avgSpeed);
-      }
-      if (state.maxSpeed != null) {
-        maxSpeedRef.current = state.maxSpeed;
-        setMaxSpeed(state.maxSpeed);
-      }
-      if (state.calories != null) {
-        caloriesRef.current = state.calories;
-        setCalories(state.calories);
-      }
-      if (state.lastLocation) setCurrentLocation(state.lastLocation);
+      if (state.distance != null) distanceRef.current = state.distance;
+      if (state.avgSpeed != null) avgSpeedRef.current = state.avgSpeed;
+      if (state.maxSpeed != null) maxSpeedRef.current = state.maxSpeed;
+      if (state.calories != null) caloriesRef.current = state.calories;
+      if (state.lastLocation) currentLocationRef.current = state.lastLocation;
+
+      // Un solo setState para restaurar todos los datos
+      setTrackingData({
+        currentLocation: state.lastLocation || null,
+        routeCoordinates: reduced,
+        distance: state.distance || 0,
+        speed: 0,
+        avgSpeed: state.avgSpeed || 0,
+        maxSpeed: state.maxSpeed || 0,
+        calories: state.calories || 0,
+      });
 
       setDuration(computeElapsedSeconds());
 
@@ -1028,15 +1156,17 @@ export const useRouteTracker = (options = {}) => {
       if (locationSubscription.current) {
         locationSubscription.current.remove();
       }
+      stopLiveHeartbeat();
       stopTimer();
     };
-  }, [stopTimer]);
+  }, [stopLiveHeartbeat, stopTimer]);
 
   return {
     // Estados
     status,
     currentLocation,
     routeCoordinates,
+    routePointCount,
     distance,
     duration,
     speed,

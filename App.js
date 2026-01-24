@@ -20,7 +20,6 @@ import Notificaciones from './screens/Notificaciones';
 import useAppStore from './store/useAppStore';
 import { cleanupOrphanedTracking } from './services/trackingAutoStop';
 import { usePushNotifications } from "./hooks/usePushNotifications";
-import "./tasks/trackingLiveTask";
 import { navigationRef } from './navigation/navigationRef';
 
 const RootStack = createNativeStackNavigator();
