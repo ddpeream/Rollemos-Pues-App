@@ -32,7 +32,7 @@ export default function Configuracion() {
   const appVersion = '1.2.3';
   const buildNumber = '45';
   const cacheSize = '23.5 MB';
-  const lastSync = '2 min ago';
+  const lastSync = t('screens.configuracion.lastSyncTime');
 
   const SettingSection = ({ title, children }) => (
     <View style={styles.section}>
@@ -86,34 +86,53 @@ export default function Configuracion() {
 
   const handleClearCache = () => {
     Alert.alert(
-      'Limpiar Caché',
-      '¿Estás seguro de que deseas limpiar el caché de la aplicación?',
+      t('screens.configuracion.alerts.clearCacheTitle'),
+      t('screens.configuracion.alerts.clearCacheMessage'),
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Limpiar', onPress: () => Alert.alert('Éxito', 'Caché limpiado correctamente') },
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('screens.configuracion.alerts.clearCacheConfirm'),
+          onPress: () =>
+            Alert.alert(
+              t('common.success'),
+              t('screens.configuracion.alerts.clearCacheSuccess')
+            ),
+        },
       ]
     );
   };
 
   const handleExportData = () => {
-    Alert.alert('Exportar Datos', 'Tus datos de rutas se exportarán a un archivo JSON.');
+    Alert.alert(
+      t('screens.configuracion.alerts.exportDataTitle'),
+      t('screens.configuracion.alerts.exportDataMessage')
+    );
   };
 
   const handlePrivacyPolicy = () => {
-    Alert.alert('Política de Privacidad', 'Se abrirá la política de privacidad en el navegador.');
+    Alert.alert(
+      t('screens.configuracion.alerts.privacyPolicyTitle'),
+      t('screens.configuracion.alerts.privacyPolicyMessage')
+    );
   };
 
   const handleTerms = () => {
-    Alert.alert('Términos de Servicio', 'Se abrirán los términos de servicio en el navegador.');
+    Alert.alert(
+      t('screens.configuracion.alerts.termsTitle'),
+      t('screens.configuracion.alerts.termsMessage')
+    );
   };
 
   const handleSupport = () => {
-    Alert.alert('Soporte', 'Contacta con soporte en: soporte@rollemospues.com');
+    Alert.alert(
+      t('screens.configuracion.alerts.supportTitle'),
+      t('screens.configuracion.alerts.supportMessage')
+    );
   };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-      <BackButton title="Configuración" />
+      <BackButton title={t('screens.configuracion.title')} />
       
       <ScrollView 
         style={styles.scrollView}
@@ -121,12 +140,16 @@ export default function Configuracion() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Apariencia */}
-        <SettingSection title="APARIENCIA">
+        <SettingSection title={t('screens.configuracion.sections.appearance')}>
           <SettingRow
             icon="moon"
             iconColor={theme.colors.secondary}
-            title="Modo Oscuro"
-            subtitle={isDark ? 'Activado' : 'Desactivado'}
+            title={t('screens.configuracion.darkMode')}
+            subtitle={
+              isDark
+                ? t('screens.configuracion.enabled')
+                : t('screens.configuracion.disabled')
+            }
             rightComponent={
               <ToggleSwitch value={isDark} onValueChange={toggleTheme} />
             }
@@ -134,8 +157,12 @@ export default function Configuracion() {
           <SettingRow
             icon="speedometer"
             iconColor={theme.colors.info}
-            title="Unidades"
-            subtitle={metricUnits ? 'Sistema Métrico (km)' : 'Sistema Imperial (mi)'}
+            title={t('screens.configuracion.units')}
+            subtitle={
+              metricUnits
+                ? t('screens.configuracion.metricSystem')
+                : t('screens.configuracion.imperialSystem')
+            }
             rightComponent={
               <ToggleSwitch value={metricUnits} onValueChange={setMetricUnits} />
             }
@@ -143,12 +170,12 @@ export default function Configuracion() {
         </SettingSection>
 
         {/* Notificaciones */}
-        <SettingSection title="NOTIFICACIONES">
+        <SettingSection title={t('screens.configuracion.sections.notifications')}>
           <SettingRow
             icon="notifications"
             iconColor={theme.colors.warning}
-            title="Notificaciones Push"
-            subtitle="Alertas de rutas y actividad"
+            title={t('screens.configuracion.pushNotifications')}
+            subtitle={t('screens.configuracion.pushNotificationsHint')}
             rightComponent={
               <ToggleSwitch value={notifications} onValueChange={setNotifications} />
             }
@@ -156,8 +183,8 @@ export default function Configuracion() {
           <SettingRow
             icon="volume-high"
             iconColor={theme.colors.success}
-            title="Efectos de Sonido"
-            subtitle="Durante el tracking de rutas"
+            title={t('screens.configuracion.soundEffects')}
+            subtitle={t('screens.configuracion.soundEffectsHint')}
             rightComponent={
               <ToggleSwitch value={soundEffects} onValueChange={setSoundEffects} />
             }
@@ -165,12 +192,12 @@ export default function Configuracion() {
         </SettingSection>
 
         {/* Privacidad */}
-        <SettingSection title="PRIVACIDAD Y UBICACIÓN">
+        <SettingSection title={t('screens.configuracion.sections.privacyLocation')}>
           <SettingRow
             icon="location"
             iconColor={theme.colors.error}
-            title="Ubicación en Tiempo Real"
-            subtitle="Permitir seguimiento GPS"
+            title={t('screens.configuracion.realTimeLocation')}
+            subtitle={t('screens.configuracion.realTimeLocationHint')}
             rightComponent={
               <ToggleSwitch value={locationEnabled} onValueChange={setLocationEnabled} />
             }
@@ -178,8 +205,8 @@ export default function Configuracion() {
           <SettingRow
             icon="people"
             iconColor={theme.colors.primary}
-            title="Compartir Actividad"
-            subtitle="Visible para otros patinadores"
+            title={t('screens.configuracion.shareActivity')}
+            subtitle={t('screens.configuracion.shareActivityHint')}
             rightComponent={
               <ToggleSwitch value={shareActivity} onValueChange={setShareActivity} />
             }
@@ -187,12 +214,12 @@ export default function Configuracion() {
         </SettingSection>
 
         {/* Datos */}
-        <SettingSection title="DATOS Y ALMACENAMIENTO">
+        <SettingSection title={t('screens.configuracion.sections.dataStorage')}>
           <SettingRow
             icon="sync"
             iconColor={theme.colors.info}
-            title="Sincronización Automática"
-            subtitle={`Última sync: ${lastSync}`}
+            title={t('screens.configuracion.autoSync')}
+            subtitle={t('screens.configuracion.lastSync', { time: lastSync })}
             rightComponent={
               <ToggleSwitch value={autoSync} onValueChange={setAutoSync} />
             }
@@ -200,7 +227,7 @@ export default function Configuracion() {
           <SettingRow
             icon="folder"
             iconColor={theme.colors.warning}
-            title="Caché de la App"
+            title={t('screens.configuracion.cache')}
             subtitle={cacheSize}
             onPress={handleClearCache}
             showArrow
@@ -208,62 +235,72 @@ export default function Configuracion() {
           <SettingRow
             icon="download"
             iconColor={theme.colors.success}
-            title="Exportar Mis Datos"
-            subtitle="Descarga tus rutas y estadísticas"
+            title={t('screens.configuracion.exportData')}
+            subtitle={t('screens.configuracion.exportDataHint')}
             onPress={handleExportData}
             showArrow
           />
         </SettingSection>
 
         {/* Soporte */}
-        <SettingSection title="SOPORTE">
+        <SettingSection title={t('screens.configuracion.sections.support')}>
           <SettingRow
             icon="help-circle"
             iconColor={theme.colors.primary}
-            title="Centro de Ayuda"
-            subtitle="FAQ y tutoriales"
+            title={t('screens.configuracion.helpCenter')}
+            subtitle={t('screens.configuracion.helpCenterHint')}
             onPress={handleSupport}
             showArrow
           />
           <SettingRow
             icon="mail"
             iconColor={theme.colors.secondary}
-            title="Contactar Soporte"
-            subtitle="soporte@rollemospues.com"
+            title={t('screens.configuracion.contactSupport')}
+            subtitle={t('screens.configuracion.supportEmail')}
             onPress={handleSupport}
             showArrow
           />
           <SettingRow
             icon="star"
             iconColor={theme.colors.warning}
-            title="Calificar la App"
-            subtitle="¡Déjanos una reseña!"
-            onPress={() => Alert.alert('Gracias', '¡Se abrirá la tienda de apps!')}
+            title={t('screens.configuracion.rateApp')}
+            subtitle={t('screens.configuracion.rateAppHint')}
+            onPress={() =>
+              Alert.alert(
+                t('screens.configuracion.alerts.rateAppTitle'),
+                t('screens.configuracion.alerts.rateAppMessage')
+              )
+            }
             showArrow
           />
         </SettingSection>
 
         {/* Legal */}
-        <SettingSection title="LEGAL">
+        <SettingSection title={t('screens.configuracion.sections.legal')}>
           <SettingRow
             icon="document-text"
             iconColor={theme.colors.text.secondary}
-            title="Política de Privacidad"
+            title={t('screens.configuracion.privacyPolicy')}
             onPress={handlePrivacyPolicy}
             showArrow
           />
           <SettingRow
             icon="shield-checkmark"
             iconColor={theme.colors.text.secondary}
-            title="Términos de Servicio"
+            title={t('screens.configuracion.terms')}
             onPress={handleTerms}
             showArrow
           />
           <SettingRow
             icon="information-circle"
             iconColor={theme.colors.text.secondary}
-            title="Licencias de Código Abierto"
-            onPress={() => Alert.alert('Licencias', 'React Native, Expo, Supabase...')}
+            title={t('screens.configuracion.licenses')}
+            onPress={() =>
+              Alert.alert(
+                t('screens.configuracion.alerts.licensesTitle'),
+                t('screens.configuracion.alerts.licensesMessage')
+              )
+            }
             showArrow
           />
         </SettingSection>
@@ -271,13 +308,16 @@ export default function Configuracion() {
         {/* Info de la App */}
         <View style={styles.appInfo}>
           <Text style={[styles.appName, { color: theme.colors.primary }]}>
-            Rollemos Pues!!! 🛼
+            {t('screens.configuracion.appName')}
           </Text>
           <Text style={[styles.appVersion, { color: theme.colors.text.secondary }]}>
-            Versión {appVersion} (Build {buildNumber})
+            {t('screens.configuracion.versionLabel', {
+              version: appVersion,
+              build: buildNumber,
+            })}
           </Text>
           <Text style={[styles.appCopyright, { color: theme.colors.text.secondary }]}>
-            © 2024 Rollemos Pues. Todos los derechos reservados.
+            {t('screens.configuracion.copyright')}
           </Text>
         </View>
       </ScrollView>

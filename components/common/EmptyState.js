@@ -7,18 +7,23 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../store/useAppStore';
 import { spacing, typography } from '../../theme';
 import Button from './Button';
 
 const EmptyState = ({
   icon = 'folder-open-outline',
-  title = 'No hay datos',
-  message = 'No se encontraron elementos',
+  title = null,
+  message = null,
   actionLabel = null,
   onAction = null,
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
+
+  const resolvedTitle = title ?? t('common.emptyTitle');
+  const resolvedMessage = message ?? t('common.emptyMessage');
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -51,8 +56,8 @@ const EmptyState = ({
       <View style={styles.iconContainer}>
         <Ionicons name={icon} size={64} color={theme.colors.text.secondary} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+      <Text style={styles.title}>{resolvedTitle}</Text>
+      <Text style={styles.message}>{resolvedMessage}</Text>
       {actionLabel && onAction && (
         <Button onPress={onAction} variant="primary">
           {actionLabel}

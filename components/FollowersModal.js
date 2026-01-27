@@ -117,7 +117,7 @@ export default function FollowersModal({
         
         <View style={styles.followerInfo}>
           <Text style={[styles.followerName, { color: theme.colors.text.primary }]} numberOfLines={1}>
-            {item.usuario?.nombre || 'Usuario'}
+            {item.usuario?.nombre || t('common.user')}
           </Text>
           {item.usuario?.ciudad && (
             <Text style={[styles.followerCity, { color: theme.colors.text.tertiary }]} numberOfLines={1}>
@@ -129,7 +129,7 @@ export default function FollowersModal({
         {isCurrentUser ? (
           <View style={[styles.youBadge, { backgroundColor: theme.colors.alpha.primary15 }]}>
             <Text style={[styles.youBadgeText, { color: theme.colors.primary }]}>
-              {t('common.you', 'Tú')}
+              {t('common.you')}
             </Text>
           </View>
         ) : (
@@ -156,8 +156,8 @@ export default function FollowersModal({
       <Ionicons name="people-outline" size={60} color={theme.colors.text.tertiary} />
       <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
         {searchQuery 
-          ? t('detalleParche.noFollowersFound', 'No se encontraron seguidores')
-          : t('detalleParche.noFollowersYet', 'Aún no hay seguidores')}
+          ? t('detalleParche.noFollowersFound')
+          : t('detalleParche.noFollowersYet')}
       </Text>
     </View>
   );
@@ -187,10 +187,10 @@ export default function FollowersModal({
           <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
             <View style={styles.headerLeft}>
               <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-                {t('detalleParche.followers', 'Seguidores')}
+                {t('detalleParche.followers')}
               </Text>
               <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-                {totalFollowers.toLocaleString()} {t('detalleParche.followersCount', 'seguidores')}
+                {totalFollowers.toLocaleString()} {t('detalleParche.followersCount')}
               </Text>
             </View>
             <TouchableOpacity 
@@ -206,7 +206,7 @@ export default function FollowersModal({
             <Ionicons name="search" size={20} color={theme.colors.text.tertiary} />
             <TextInput
               style={[styles.searchInput, { color: theme.colors.text.primary }]}
-              placeholder={t('detalleParche.searchFollowers', 'Buscar seguidor...')}
+              placeholder={t('detalleParche.searchFollowers')}
               placeholderTextColor={theme.colors.text.tertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}

@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { theme as staticTheme } from '../theme';
 import useAppStore from '../store/useAppStore';
@@ -33,6 +34,10 @@ export default function DetalleComunidad() {
   const route = useRoute();
   const { comunidadId } = route.params || {};
   const { theme, user } = useAppStore();
+  const { t } = useTranslation();
+
+  // i18next pluralization in this project uses *_one / *_other keys.
+  const pluralKey = (baseKey, count) => `${baseKey}_${count === 1 ? 'one' : 'other'}`;
 
   const {
     joinComunidad,
@@ -122,14 +127,20 @@ export default function DetalleComunidad() {
 
   const handleAddImages = async () => {
     if (!canManageMedia) {
-      Alert.alert('Sin permisos', 'Solo lideres pueden agregar fotos');
+      Alert.alert(
+        t('screens.detalleComunidad.noPermissionTitle'),
+        t('screens.detalleComunidad.addPhotosNoPermission')
+      );
       return;
     }
 
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permisos requeridos', 'Necesitamos acceso a tu galeria');
+        Alert.alert(
+          t('screens.detalleComunidad.permissionsTitle'),
+          t('screens.detalleComunidad.galleryAccess')
+        );
         return;
       }
 
@@ -146,15 +157,23 @@ export default function DetalleComunidad() {
         const uploadResult = await addComunidadImages(comunidadId, imageUris);
         if (uploadResult.success) {
           await loadComunidad();
-          Alert.alert('Listo', `${imageUris.length} imagen(es) agregada(s)`);
+          Alert.alert(
+            t('common.done'),
+            t(pluralKey('screens.detalleComunidad.imagesAdded', imageUris.length), {
+              count: imageUris.length,
+            })
+          );
         } else {
-          Alert.alert('Error', uploadResult.error || 'No se pudieron subir');
+          Alert.alert(
+            t('common.error'),
+            uploadResult.error || t('screens.detalleComunidad.imagesUploadError')
+          );
         }
         setUploadingImages(false);
       }
     } catch (error) {
       setUploadingImages(false);
-      Alert.alert('Error', 'No se pudieron seleccionar imagenes');
+      Alert.alert(t('common.error'), t('screens.detalleComunidad.imageSelectError'));
     }
   };
 
@@ -165,7 +184,10 @@ export default function DetalleComunidad() {
 
   const handleRemoveImage = async () => {
     if (!canDeleteMedia) {
-      Alert.alert('Sin permisos', 'Solo el creador puede eliminar fotos');
+      Alert.alert(
+        t('screens.detalleComunidad.noPermissionTitle'),
+        t('screens.detalleComunidad.deletePhotosNoPermission')
+      );
       return;
     }
 
@@ -175,12 +197,12 @@ export default function DetalleComunidad() {
     }
 
     Alert.alert(
-      'Eliminar foto',
-      '¿Quieres eliminar esta foto?',
+      t('screens.detalleComunidad.deletePhotoTitle'),
+      t('screens.detalleComunidad.deletePhotoMessage'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             const result = await deleteComunidadImage(comunidadId, imageUrl);
@@ -188,7 +210,10 @@ export default function DetalleComunidad() {
               await loadComunidad();
               setViewerImageIndex(0);
             } else {
-              Alert.alert('Error', result.error || 'No se pudo eliminar');
+              Alert.alert(
+                t('common.error'),
+                result.error || t('screens.detalleComunidad.deletePhotoError')
+              );
             }
           },
         },
@@ -226,7 +251,10 @@ export default function DetalleComunidad() {
 
   const handleAddLeader = async (leaderUser) => {
     if (!canAddLeader) {
-      Alert.alert('Sin permisos', 'No puedes agregar lideres');
+      Alert.alert(
+        t('screens.detalleComunidad.noPermissionTitle'),
+        t('screens.detalleComunidad.addLeaderNoPermission')
+      );
       return;
     }
 
@@ -238,14 +266,17 @@ export default function DetalleComunidad() {
     const result = await addLeader(comunidadId, leaderUser.id);
     if (result.success) {
       if (result.alreadyLeader) {
-        Alert.alert('Info', 'Este usuario ya es lider');
+        Alert.alert(t('common.info'), t('screens.detalleComunidad.alreadyLeader'));
         setIsAddingLeader(false);
         return;
       }
       await loadComunidad();
       closeLeaderModal();
     } else {
-      Alert.alert('Error', result.error || 'No se pudo agregar');
+      Alert.alert(
+        t('common.error'),
+        result.error || t('screens.detalleComunidad.addLeaderError')
+      );
     }
     setIsAddingLeader(false);
   };
@@ -264,7 +295,7 @@ export default function DetalleComunidad() {
       <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background.primary }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-          Cargando comunidad...
+          {t('screens.detalleComunidad.loading')}
         </Text>
       </View>
     );
@@ -277,7 +308,7 @@ export default function DetalleComunidad() {
           <Ionicons name="chevron-back" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-          Comunidad
+          {t('screens.detalleComunidad.title')}
         </Text>
         <View style={{ width: 24 }} />
       </View>
@@ -326,7 +357,9 @@ export default function DetalleComunidad() {
             <View style={styles.leaderRow}>
               <Ionicons name="person-outline" size={14} color={theme.colors.text.secondary} />
               <Text style={[styles.leaderText, { color: theme.colors.text.secondary }]}>
-                Lider principal: {comunidad.usuario_creador.nombre}
+                {t('screens.detalleComunidad.primaryLeader', {
+                  name: comunidad.usuario_creador.nombre,
+                })}
               </Text>
             </View>
           ) : null}
@@ -348,13 +381,17 @@ export default function DetalleComunidad() {
             <View style={styles.statItem}>
               <Ionicons name="people-outline" size={16} color={theme.colors.text.secondary} />
               <Text style={[styles.statText, { color: theme.colors.text.secondary }]}>
-                {comunidad.miembros || 0} miembros
+                {t(pluralKey('screens.parches.members', comunidad.miembros || 0), {
+                  count: comunidad.miembros || 0,
+                })}
               </Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.text.secondary} />
               <Text style={[styles.statText, { color: theme.colors.text.secondary }]}>
-                {comunidad.is_public ? 'Publica' : 'Privada'}
+                {comunidad.is_public
+                  ? t('screens.detalleComunidad.public')
+                  : t('screens.detalleComunidad.private')}
               </Text>
             </View>
           </View>
@@ -391,7 +428,10 @@ export default function DetalleComunidad() {
               } else {
                 const result = await joinComunidad(comunidadId);
                 if (!result.success) {
-                  Alert.alert('Error', result.error || 'No se pudo unir');
+                  Alert.alert(
+                    t('common.error'),
+                    result.error || t('screens.detalleComunidad.joinError')
+                  );
                 }
               }
             }}
@@ -402,18 +442,18 @@ export default function DetalleComunidad() {
                 fontWeight: '600',
               }}
             >
-              {joined ? 'Unido' : 'Unirme'}
+              {joined ? t('screens.detalleComunidad.joined') : t('screens.detalleComunidad.join')}
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-            Rodadas activas
+            {t('screens.detalleComunidad.activeRodadas')}
           </Text>
           {loadingRodadas ? (
             <Text style={[styles.sectionText, { color: theme.colors.text.secondary }]}>
-              Cargando rodadas...
+              {t('screens.detalleComunidad.loadingRodadas')}
             </Text>
           ) : (
             <Text style={[styles.sectionText, { color: theme.colors.text.secondary }]}>
@@ -425,7 +465,7 @@ export default function DetalleComunidad() {
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-              Lideres
+              {t('screens.detalleComunidad.leadersTitle')}
             </Text>
             {canAddLeader && (
               <TouchableOpacity
@@ -434,7 +474,7 @@ export default function DetalleComunidad() {
               >
                 <Ionicons name="person-add-outline" size={16} color={theme.colors.primary} />
                 <Text style={[styles.addLeaderText, { color: theme.colors.primary }]}>
-                  Agregar
+                  {t('common.add')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -447,7 +487,7 @@ export default function DetalleComunidad() {
               ]}
             >
               <Text style={[styles.tagText, { color: theme.colors.primary }]}>
-                {comunidad.usuario_creador?.nombre || 'Creador'}
+                {comunidad.usuario_creador?.nombre || t('screens.detalleComunidad.creator')}
               </Text>
             </View>
             {extraLideres.map((lider) => (
@@ -479,7 +519,7 @@ export default function DetalleComunidad() {
             >
               <Ionicons name="bicycle" size={20} color="#000" />
               <Text style={[styles.creatorButtonText, { color: '#000' }]}>
-                Crear rodada
+                {t('screens.detalleComunidad.createRide')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -491,7 +531,7 @@ export default function DetalleComunidad() {
             >
               <Ionicons name="barbell-outline" size={20} color="#000" />
               <Text style={[styles.creatorButtonText, { color: '#000' }]}>
-                Crear entreno
+                {t('screens.detalleComunidad.createTraining')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -506,9 +546,9 @@ export default function DetalleComunidad() {
         onSuccess={(rodada) => {
           fetchRodadas({ comunidadId });
           Alert.alert(
-            'Rodada creada',
-            `"${rodada.nombre}" ha sido programada.`,
-            [{ text: 'Ok' }]
+            t('rodadas.created'),
+            t('rodadas.createdMessage', { nombre: rodada.nombre }),
+            [{ text: t('common.ok') }]
           );
         }}
       />
@@ -584,7 +624,7 @@ export default function DetalleComunidad() {
             >
               <View style={styles.leaderModalHeader}>
                 <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-                  Agregar lider
+                  {t('screens.detalleComunidad.addLeaderTitle')}
                 </Text>
                 <TouchableOpacity onPress={closeLeaderModal}>
                   <Ionicons name="close" size={22} color={theme.colors.text.primary} />
@@ -602,7 +642,7 @@ export default function DetalleComunidad() {
                 <Ionicons name="search-outline" size={18} color={theme.colors.text.secondary} />
                 <TextInput
                   style={[styles.searchInput, { color: theme.colors.text.primary }]}
-                  placeholder="Buscar usuario"
+                  placeholder={t('screens.detalleComunidad.searchUserPlaceholder')}
                   placeholderTextColor={theme.colors.text.secondary}
                   value={leaderSearch}
                   onChangeText={handleLeaderSearch}
@@ -621,7 +661,7 @@ export default function DetalleComunidad() {
                   <View style={styles.loadingRow}>
                     <ActivityIndicator size="small" color={theme.colors.primary} />
                     <Text style={[styles.sectionText, { color: theme.colors.text.secondary }]}>
-                      Buscando...
+                      {t('screens.detalleComunidad.searching')}
                     </Text>
                   </View>
                 ) : (
@@ -642,8 +682,8 @@ export default function DetalleComunidad() {
                     )}
                     ListEmptyComponent={() => {
                       const emptyText = leaderSearch.trim().length === 0
-                        ? 'Escribe para buscar'
-                        : 'Sin resultados';
+                        ? t('screens.detalleComunidad.typeToSearch')
+                        : t('common.noResults');
                       return (
                         <Text style={[styles.emptyResultsText, { color: theme.colors.text.secondary }]}>
                           {emptyText}

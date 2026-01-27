@@ -107,11 +107,11 @@ export default function EditarPerfil() {
             setError(null);
           } else {
             console.error('❌ EditarPerfil: No se pudo cargar usuario');
-            setError('Error al cargar el perfil');
+            setError(strings.loadingError);
           }
         } catch (err) {
           console.error('❌ EditarPerfil: Error sincronizando:', err);
-          setError('Error al sincronizar datos');
+          setError(t('screens.editarPerfil.syncError'));
         } finally {
           setLoading(false);
         }
@@ -127,7 +127,10 @@ export default function EditarPerfil() {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'Necesitas permitir acceso a la galería para seleccionar una imagen');
+        Alert.alert(
+          t('screens.signup.permissionDeniedTitle'),
+          t('screens.signup.permissionDeniedMessage')
+        );
         return;
       }
 
@@ -145,18 +148,18 @@ export default function EditarPerfil() {
       }
     } catch (error) {
       console.error('❌ Error al seleccionar imagen:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      Alert.alert(t('common.error'), t('screens.signup.pickImageError'));
     }
   };
 
   const handleSave = async () => {
     if (!user?.id) {
-      Alert.alert('Error', 'No se pudo identificar el usuario');
+      Alert.alert(t('common.error'), t('screens.editarPerfil.userNotIdentified'));
       return;
     }
 
     if (!nombre.trim()) {
-      Alert.alert('Error', 'El nombre es requerido');
+      Alert.alert(t('common.error'), t('screens.signup.nameRequired'));
       return;
     }
 
@@ -196,18 +199,18 @@ export default function EditarPerfil() {
           ...user,
           ...updatedData,
         });
-        Alert.alert('Éxito', strings.successMessage, [
+        Alert.alert(t('common.success'), strings.successMessage, [
           {
-            text: 'OK',
+            text: t('common.ok'),
             onPress: () => navigation.goBack(),
           },
         ]);
       } else {
-        Alert.alert('Error', result.error || strings.errorMessage);
+        Alert.alert(t('common.error'), result.error || strings.errorMessage);
       }
     } catch (err) {
       console.error('❌ Error guardando usuario:', err);
-      Alert.alert('Error', err.message || strings.errorMessage);
+      Alert.alert(t('common.error'), err.message || strings.errorMessage);
     } finally {
       setSaving(false);
     }
@@ -400,7 +403,7 @@ export default function EditarPerfil() {
       style={styles.keyboardView}
     >
       <ScrollView style={styles.container}>
-        <BackButton title="Editar Perfil" />
+        <BackButton title={strings.title} />
         
         <View style={styles.content}>
           {/* Avatar Section */}
@@ -428,7 +431,9 @@ export default function EditarPerfil() {
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Ionicons name="camera" size={40} color={theme.colors.primary} />
-                  <Text style={styles.avatarPlaceholderText}>Cambiar foto</Text>
+                  <Text style={styles.avatarPlaceholderText}>
+                    {t('screens.editarPerfil.changePhoto')}
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -436,7 +441,7 @@ export default function EditarPerfil() {
 
           {/* Información básica */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Información Básica</Text>
+            <Text style={styles.sectionTitle}>{t('screens.editarPerfil.basicInfo')}</Text>
 
             <Text style={styles.label}>{strings.name}</Text>
             <TextInput
@@ -469,7 +474,7 @@ export default function EditarPerfil() {
 
           {/* Disciplina y Nivel */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Patinaje</Text>
+            <Text style={styles.sectionTitle}>{t('screens.editarPerfil.skatingSection')}</Text>
 
             <View style={styles.row}>
               <View style={styles.rowItem}>

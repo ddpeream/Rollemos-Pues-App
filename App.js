@@ -5,6 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import './i18n';
 
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -26,6 +27,7 @@ const RootStack = createNativeStackNavigator();
 
 export default function App() {
   const { isDark, theme, isAuthenticated, authLoading, initializeApp } = useAppStore();
+  const { t } = useTranslation();
   usePushNotifications();
 
   useEffect(() => {
@@ -40,13 +42,16 @@ export default function App() {
           console.log(`?? Tracking huerfano ${action}: ${result.inactiveMinutes} min de inactividad`);
 
           // Notificar al usuario
-          const title = action === 'paused' ? 'Tracking pausado' : 'Tracking detenido';
+          const title =
+            action === 'paused'
+              ? t('screens.tracking.orphanedPausedTitle')
+              : t('screens.tracking.orphanedStoppedTitle');
           const message =
             action === 'paused'
-              ? `El tracking se pauso automaticamente despues de ${result.inactiveMinutes} minutos de inactividad.`
-              : `El tracking se detuvo automaticamente despues de ${result.inactiveMinutes} minutos de inactividad.`;
+              ? t('screens.tracking.orphanedPausedMessage', { minutes: result.inactiveMinutes })
+              : t('screens.tracking.orphanedStoppedMessage', { minutes: result.inactiveMinutes });
 
-          Alert.alert(title, message, [{ text: 'Entendido', style: 'default' }]);
+          Alert.alert(title, message, [{ text: t('common.understood'), style: 'default' }]);
         }
       } catch (error) {
         console.error('Error verificando tracking huérfano:', error);

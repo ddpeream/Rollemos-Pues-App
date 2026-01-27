@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, borderRadius, typography } from '../theme';
 
@@ -19,6 +20,7 @@ export default function ViewModeToggle({
   style = null 
 }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const handleToggle = (newMode) => {
     if (newMode !== mode) {
@@ -92,7 +94,7 @@ export default function ViewModeToggle({
         <Text
           style={mode === 'list' ? styles.activeText : styles.inactiveText}
         >
-          Lista
+          {t('components.viewModeToggle.list')}
         </Text>
       </TouchableOpacity>
 
@@ -112,7 +114,7 @@ export default function ViewModeToggle({
         <Text
           style={mode === 'map' ? styles.activeText : styles.inactiveText}
         >
-          Mapa
+          {t('screens.spots.map')}
         </Text>
       </TouchableOpacity>
     </View>

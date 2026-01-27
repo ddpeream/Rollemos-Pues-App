@@ -26,6 +26,9 @@ const { width } = Dimensions.get('window');
 
 export default function Parches() {
   const { t } = useTranslation();
+
+  // i18next pluralization in this project uses *_one / *_other keys.
+  const pluralKey = (baseKey, count) => `${baseKey}_${count === 1 ? 'one' : 'other'}`;
   const { theme, user } = useAppStore();
   const navigation = useNavigation();
   
@@ -44,10 +47,23 @@ export default function Parches() {
   const [activeFilter, setActiveFilter] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  const translateDiscipline = (discipline) => {
+    if (!discipline) return discipline;
+    const normalized = discipline.toLowerCase();
+    if (normalized === 'street') return t('screens.shared.disciplines.street');
+    if (normalized === 'park') return t('screens.shared.disciplines.park');
+    if (normalized === 'vert') return t('screens.shared.disciplines.vert');
+    if (normalized === 'freestyle') return t('screens.shared.disciplines.freestyle');
+    if (normalized === 'downhill') return t('screens.shared.disciplines.downhill');
+    if (normalized === 'slalom') return t('screens.shared.disciplines.slalom');
+    if (normalized === 'speed') return t('screens.shared.disciplines.speed');
+    return discipline;
+  };
+
   const translateOption = (option) => {
     if (option === 'Todos') return t('filters.all');
     if (option === 'Todas') return t('filters.allFeminine');
-    return option;
+    return translateDiscipline(option);
   };
 
   // Cargar parches al entrar a la pantalla
@@ -259,7 +275,7 @@ export default function Parches() {
             <View style={styles.statItem}>
               <Ionicons name="people-outline" size={16} color={theme.colors.text.secondary} />
               <Text style={[styles.statText, { color: theme.colors.text.secondary }]}>
-                {t('screens.parches.members', { count: item.miembros || 0 })}
+                {t(pluralKey('screens.parches.members', item.miembros || 0), { count: item.miembros || 0 })}
               </Text>
             </View>
             {item.fundado && (
@@ -281,7 +297,7 @@ export default function Parches() {
                   borderColor: theme.colors.primary 
                 }]}>
                   <Text style={[styles.disciplineText, { color: theme.colors.primary }]}>
-                    {disc}
+                    {translateDiscipline(disc)}
                   </Text>
                 </View>
               ))}
@@ -320,7 +336,7 @@ export default function Parches() {
             {t('nav.parches')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-            {t('screens.parches.count', { count: filteredParches.length })}
+            {t(pluralKey('screens.parches.count', filteredParches.length), { count: filteredParches.length })}
           </Text>
         </View>
         <TouchableOpacity 
@@ -328,7 +344,7 @@ export default function Parches() {
           onPress={() => setShowCreateModal(true)}
         >
           <Ionicons name="add" size={20} color="#FFFFFF" />
-          <Text style={styles.createButtonText}>Crear</Text>
+          <Text style={styles.createButtonText}>{t('common.create')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -439,12 +455,12 @@ export default function Parches() {
           if (result.success) {
             console.log('✅ Parche creado:', result.data);
             Alert.alert(
-              '🛹 ¡Parche creado!',
-              `"${result.data.nombre}" ha sido creado exitosamente.`,
-              [{ text: 'Genial!' }]
+              t('screens.parches.createdTitle'),
+              t('screens.parches.createdMessage', { name: result.data.nombre }),
+              [{ text: t('common.great') }]
             );
           } else {
-            Alert.alert('Error', result.error || 'No se pudo crear el parche');
+            Alert.alert(t('common.error'), result.error || t('screens.parches.createError'));
             throw new Error(result.error); // Para que el modal no se cierre
           }
         }}

@@ -31,6 +31,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
 import { validatePatchData } from '../utils/parches';
@@ -58,6 +59,7 @@ export default function CreateParcheModal({
   usuario,
   editData = null, // Si se pasa, es modo edición
 }) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   
   // Estados del formulario
@@ -355,9 +357,9 @@ export default function CreateParcheModal({
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Permisos requeridos',
-          'Necesitamos acceso a tu galería para seleccionar fotos.',
-          [{ text: 'OK' }]
+          t('components.createParcheModal.permissionsRequired'),
+          t('components.createParcheModal.galleryPermission'),
+          [{ text: t('common.ok') }]
         );
         return;
       }
@@ -378,7 +380,7 @@ export default function CreateParcheModal({
       }
     } catch (error) {
       console.error('❌ Error seleccionando imagen:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      Alert.alert(t('common.error'), t('components.createParcheModal.imageSelectError'));
     }
   };
 
@@ -388,9 +390,9 @@ export default function CreateParcheModal({
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Permisos requeridos',
-          'Necesitamos acceso a tu cámara para tomar fotos.',
-          [{ text: 'OK' }]
+          t('components.createParcheModal.permissionsRequired'),
+          t('components.createParcheModal.cameraPermission'),
+          [{ text: t('common.ok') }]
         );
         return;
       }
@@ -409,7 +411,7 @@ export default function CreateParcheModal({
       }
     } catch (error) {
       console.error('❌ Error tomando foto:', error);
-      Alert.alert('Error', 'No se pudo tomar la foto');
+      Alert.alert(t('common.error'), t('components.createParcheModal.takePhotoError'));
     }
   };
 
@@ -470,7 +472,7 @@ export default function CreateParcheModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>
-              {editData ? 'Editar Parche' : 'Crear Nuevo Parche'}
+              {editData ? t('components.createParcheModal.titleEdit') : t('components.createParcheModal.titleCreate')}
             </Text>
             <TouchableOpacity 
               style={styles.closeButton} 
@@ -485,7 +487,7 @@ export default function CreateParcheModal({
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text style={[styles.helpText, { marginTop: spacing.md }]}>
-                {editData ? 'Guardando cambios...' : 'Creando parche...'}
+                {editData ? t('components.createParcheModal.savingChanges') : t('components.createParcheModal.creating')}
               </Text>
             </View>
           ) : (
@@ -508,31 +510,31 @@ export default function CreateParcheModal({
 
                 {/* Información básica */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Información Básica</Text>
-                  
+                  <Text style={styles.sectionTitle}>{t('components.createParcheModal.basicInfo')}</Text>
+
                   <TextInput
                     style={styles.input}
-                    placeholder="Nombre del parche"
+                    placeholder={t('components.createParcheModal.namePlaceholder')}
                     placeholderTextColor={theme.colors.text.secondary}
                     value={formData.nombre}
                     onChangeText={(value) => updateFormData('nombre', value)}
                     maxLength={100}
                   />
-                  
+
                   <TextInput
                     style={[styles.input, styles.textArea, { marginTop: spacing.sm }]}
-                    placeholder="Descripción del parche (opcional)"
+                    placeholder={t('components.createParcheModal.descriptionPlaceholder')}
                     placeholderTextColor={theme.colors.text.secondary}
                     value={formData.descripcion}
                     onChangeText={(value) => updateFormData('descripcion', value)}
                     multiline
                     maxLength={500}
                   />
-                  
+
                   <View style={{ marginTop: spacing.sm }}>
                     <TextInput
                       style={styles.input}
-                      placeholder="Ciudad"
+                      placeholder={t('components.createParcheModal.cityPlaceholder')}
                       placeholderTextColor={theme.colors.text.secondary}
                       value={formData.ciudad}
                       onChangeText={(value) => {
@@ -584,9 +586,9 @@ export default function CreateParcheModal({
 
                 {/* Disciplinas */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Disciplinas</Text>
+                  <Text style={styles.sectionTitle}>{t('components.createParcheModal.disciplines')}</Text>
                   <Text style={styles.helpText}>
-                    Selecciona las disciplinas que practica tu parche
+                    {t('components.createParcheModal.disciplinesHelp')}
                   </Text>
                   
                   <View style={styles.disciplinasContainer}>
@@ -620,11 +622,11 @@ export default function CreateParcheModal({
 
                 {/* Detalles adicionales */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Detalles</Text>
-                  
+                  <Text style={styles.sectionTitle}>{t('components.createParcheModal.details')}</Text>
+
                   <TextInput
                     style={styles.input}
-                    placeholder="Número aproximado de miembros"
+                    placeholder={t('components.createParcheModal.membersPlaceholder')}
                     placeholderTextColor={theme.colors.text.secondary}
                     value={formData.miembros_aprox}
                     onChangeText={(value) => updateFormData('miembros_aprox', value.replace(/[^0-9]/g, ''))}
@@ -635,7 +637,7 @@ export default function CreateParcheModal({
 
                 {/* Foto del parche */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Foto del parche (opcional)</Text>
+                  <Text style={styles.sectionTitle}>{t('components.createParcheModal.photoSection')}</Text>
                   
                   {formData.foto ? (
                     <View style={{ marginTop: spacing.sm }}>
@@ -682,10 +684,10 @@ export default function CreateParcheModal({
                       >
                         <Ionicons name="images-outline" size={32} color={theme.colors.primary} />
                         <Text style={{ color: theme.colors.text.secondary, marginTop: spacing.xs }}>
-                          Galería
+                          {t('components.createParcheModal.gallery')}
                         </Text>
                       </TouchableOpacity>
-                      
+
                       <TouchableOpacity
                         style={{
                           flex: 1,
@@ -701,7 +703,7 @@ export default function CreateParcheModal({
                       >
                         <Ionicons name="camera-outline" size={32} color={theme.colors.primary} />
                         <Text style={{ color: theme.colors.text.secondary, marginTop: spacing.xs }}>
-                          Cámara
+                          {t('components.createParcheModal.camera')}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -710,16 +712,16 @@ export default function CreateParcheModal({
 
                 {/* Contacto */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Información de Contacto</Text>
+                  <Text style={styles.sectionTitle}>{t('components.createParcheModal.contactInfo')}</Text>
                   <Text style={styles.helpText}>
-                    Información opcional para que otros skaters puedan contactarte
+                    {t('components.createParcheModal.contactHelp')}
                   </Text>
                   
                   <View style={styles.contactoRow}>
                     <Ionicons name="mail" size={20} color={theme.colors.text.secondary} style={styles.contactoIcon} />
                     <TextInput
                       style={[styles.input, styles.contactoInput]}
-                      placeholder="Correo electrónico"
+                      placeholder={t('components.createParcheModal.emailPlaceholder')}
                       placeholderTextColor={theme.colors.text.secondary}
                       value={formData.contacto.correo}
                       onChangeText={(value) => updateContacto('correo', value)}
@@ -727,24 +729,24 @@ export default function CreateParcheModal({
                       autoCapitalize="none"
                     />
                   </View>
-                  
+
                   <View style={styles.contactoRow}>
                     <Ionicons name="logo-instagram" size={20} color={theme.colors.text.secondary} style={styles.contactoIcon} />
                     <TextInput
                       style={[styles.input, styles.contactoInput]}
-                      placeholder="Instagram (sin @)"
+                      placeholder={t('components.createParcheModal.instagramPlaceholder')}
                       placeholderTextColor={theme.colors.text.secondary}
                       value={formData.contacto.instagram}
                       onChangeText={(value) => updateContacto('instagram', value.replace('@', ''))}
                       autoCapitalize="none"
                     />
                   </View>
-                  
+
                   <View style={styles.contactoRow}>
                     <Ionicons name="call" size={20} color={theme.colors.text.secondary} style={styles.contactoIcon} />
                     <TextInput
                       style={[styles.input, styles.contactoInput]}
-                      placeholder="Teléfono (opcional)"
+                      placeholder={t('components.createParcheModal.phonePlaceholder')}
                       placeholderTextColor={theme.colors.text.secondary}
                       value={formData.contacto.telefono}
                       onChangeText={(value) => updateContacto('telefono', value)}
@@ -756,15 +758,15 @@ export default function CreateParcheModal({
 
               {/* Footer con botones */}
               <View style={styles.footer}>
-                <TouchableOpacity 
-                  style={styles.cancelButton} 
+                <TouchableOpacity
+                  style={styles.cancelButton}
                   onPress={onClose}
                   disabled={loading}
                 >
-                  <Text style={styles.cancelText}>Cancelar</Text>
+                  <Text style={styles.cancelText}>{t('components.createParcheModal.cancel')}</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={[
                     styles.submitButton,
                     (!isFormValid || loading) && styles.submitButtonDisabled
@@ -772,13 +774,13 @@ export default function CreateParcheModal({
                   onPress={handleSubmit}
                   disabled={!isFormValid || loading}
                 >
-                  <Ionicons 
-                    name={editData ? "checkmark-circle" : "add-circle"} 
-                    size={20} 
-                    color="#000" 
+                  <Ionicons
+                    name={editData ? "checkmark-circle" : "add-circle"}
+                    size={20}
+                    color="#000"
                   />
                   <Text style={styles.submitText}>
-                    {editData ? 'Guardar Cambios' : 'Crear Parche'}
+                    {editData ? t('components.createParcheModal.saveChanges') : t('components.createParcheModal.createParche')}
                   </Text>
                 </TouchableOpacity>
               </View>

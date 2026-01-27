@@ -85,7 +85,9 @@ function TrackingMap({
             longitude: currentLocation.longitude,
           }}
           anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={Platform.OS === 'ios'}
+          // En Android, los markers custom (View + icon) pueden no renderizarse/"desaparecer" si tracksViewChanges=false.
+          // Lo dejamos en true para el marker del usuario actual.
+          tracksViewChanges={true}
           zIndex={100}
         >
           <View

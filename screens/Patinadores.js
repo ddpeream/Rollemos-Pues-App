@@ -25,6 +25,9 @@ const { width } = Dimensions.get('window');
 
 export default function Patinadores() {
   const { t } = useTranslation();
+
+  // i18next pluralization in this project uses *_one / *_other keys.
+  const pluralKey = (baseKey, count) => `${baseKey}_${count === 1 ? 'one' : 'other'}`;
   const { theme } = useAppStore();
   const navigation = useNavigation();
   
@@ -42,6 +45,19 @@ export default function Patinadores() {
   const [selectedDiscipline, setSelectedDiscipline] = useState('Todas');
   const [activeFilter, setActiveFilter] = useState(null);
 
+  const translateDiscipline = (discipline) => {
+    if (!discipline) return discipline;
+    const normalized = discipline.toLowerCase();
+    if (normalized === 'street') return t('screens.shared.disciplines.street');
+    if (normalized === 'park') return t('screens.shared.disciplines.park');
+    if (normalized === 'vert') return t('screens.shared.disciplines.vert');
+    if (normalized === 'freestyle') return t('screens.shared.disciplines.freestyle');
+    if (normalized === 'downhill') return t('screens.shared.disciplines.downhill');
+    if (normalized === 'slalom') return t('screens.shared.disciplines.slalom');
+    if (normalized === 'speed') return t('screens.shared.disciplines.speed');
+    return discipline;
+  };
+
   const translateOption = (option) => {
     if (option === 'Todos') return t('filters.all');
     if (option === 'Todas') return t('filters.allFeminine');
@@ -49,7 +65,16 @@ export default function Patinadores() {
     if (option === 'intermedio') return t('screens.shared.levels.intermedio');
     if (option === 'avanzado') return t('screens.shared.levels.avanzado');
     if (option === 'profesional') return t('screens.shared.levels.profesional');
-    return option;
+    return translateDiscipline(option);
+  };
+
+  const translateLevel = (level) => {
+    if (!level) return level;
+    if (level === 'principiante') return t('screens.shared.levels.principiante');
+    if (level === 'intermedio') return t('screens.shared.levels.intermedio');
+    if (level === 'avanzado') return t('screens.shared.levels.avanzado');
+    if (level === 'profesional') return t('screens.shared.levels.profesional');
+    return level;
   };
 
   // Cargar patinadores al entrar a la pantalla
@@ -259,7 +284,9 @@ export default function Patinadores() {
             {/* Level Badge */}
             {item.nivel && (
               <View style={[styles.levelBadge, getLevelStyle(item.nivel, theme)]}>
-                <Text style={[styles.levelText, { color: theme.colors.text.primary }]}>{item.nivel}</Text>
+                <Text style={[styles.levelText, { color: theme.colors.text.primary }]}>
+                  {translateLevel(item.nivel)}
+                </Text>
               </View>
             )}
             
@@ -270,7 +297,7 @@ export default function Patinadores() {
                 borderColor: theme.colors.border 
               }]}>
                 <Text style={[styles.disciplineText, { color: theme.colors.text.primary }]}>
-                  {disc}
+                  {translateDiscipline(disc)}
                 </Text>
               </View>
             ))}
@@ -326,7 +353,7 @@ export default function Patinadores() {
           {t('nav.patinadores')}
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-          {t('screens.patinadores.count', { count: filteredSkaters.length })}
+          {t(pluralKey('screens.patinadores.count', filteredSkaters.length), { count: filteredSkaters.length })}
         </Text>
       </View>
 

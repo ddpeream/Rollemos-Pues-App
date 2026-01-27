@@ -73,10 +73,10 @@ export default function Inicio() {
 
   const handleSubscribe = () => {
     if (!email.includes('@')) {
-      Alert.alert('Error', t('home.cta.emailPlaceholder'));
+      Alert.alert(t('common.error'), t('home.cta.invalidEmailMessage'));
       return;
     }
-    Alert.alert('¡Éxito!', '¡Gracias por suscribirte!');
+    Alert.alert(t('common.success'), t('home.cta.successMessage'));
     setEmail('');
   };
 
@@ -100,7 +100,9 @@ export default function Inicio() {
         <Text style={styles.destacadoName}>{skater.nombre}</Text>
         <View style={styles.badgeContainer}>
           <View style={[styles.badge, styles.badgeLevel]}>
-            <Text style={styles.badgeText}>{skater.nivel || 'Principiante'}</Text>
+            <Text style={styles.badgeText}>
+              {skater.nivel || t('screens.shared.levels.principiante')}
+            </Text>
           </View>
           {skater.disciplina && (
             <View style={styles.badge}>

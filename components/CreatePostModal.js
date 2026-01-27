@@ -24,6 +24,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
 import { searchPlaces } from '../services/rodadas';
@@ -37,6 +38,7 @@ const CreatePostModal = ({
   usuario 
 }) => {
   const { theme, isDark } = useTheme();
+  const { t } = useTranslation();
   const [imagen, setImagen] = useState(null);
   const [descripcion, setDescripcion] = useState('');
   const [ubicacion, setUbicacion] = useState('');
@@ -102,9 +104,9 @@ const CreatePostModal = ({
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Permisos requeridos',
-          'Necesitamos acceso a tu galería para seleccionar fotos.',
-          [{ text: 'OK' }]
+          t('createPost.permissionDenied'),
+          t('createPost.galleryPermission'),
+          [{ text: t('common.ok') }]
         );
         return;
       }
@@ -121,7 +123,8 @@ const CreatePostModal = ({
         const asset = result.assets[0];
         
         if (!asset.uri) {
-          throw new Error('La imagen seleccionada no tiene URI válida');
+          Alert.alert(t('common.error'), t('components.createPostModal.invalidImageUri'));
+          return;
         }
         
         setImagen(asset.uri);
@@ -131,7 +134,12 @@ const CreatePostModal = ({
         console.log('✅ Imagen seleccionada');
       }
     } catch (error) {
-      Alert.alert('Error', `No se pudo seleccionar la imagen: ${error.message}`);
+      Alert.alert(
+        t('common.error'),
+        t('components.createPostModal.selectImageError', { 
+          error: error.message || t('common.unknownError')
+        })
+      );
     }
   };
 
@@ -142,9 +150,9 @@ const CreatePostModal = ({
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Permisos requeridos',
-          'Necesitamos acceso a tu cámara para tomar fotos.',
-          [{ text: 'OK' }]
+          t('createPost.permissionDenied'),
+          t('createPost.cameraPermission'),
+          [{ text: t('common.ok') }]
         );
         return;
       }
@@ -160,7 +168,8 @@ const CreatePostModal = ({
         const asset = result.assets[0];
         
         if (!asset.uri) {
-          throw new Error('La foto capturada no tiene URI válida');
+          Alert.alert(t('common.error'), t('components.createPostModal.invalidImageUri'));
+          return;
         }
         
         setImagen(asset.uri);
@@ -170,19 +179,24 @@ const CreatePostModal = ({
         console.log('✅ Foto capturada');
       }
     } catch (error) {
-      Alert.alert('Error', `No se pudo tomar la foto: ${error.message}`);
+      Alert.alert(
+        t('common.error'),
+        t('components.createPostModal.takePhotoError', { 
+          error: error.message || t('common.unknownError')
+        })
+      );
     }
   };
 
   // Mostrar opciones de imagen
   const showImageOptions = () => {
     Alert.alert(
-      'Seleccionar foto',
-      'Elige una opción',
+      t('createPost.selectSource'),
+      t('components.createPostModal.chooseOption'),
       [
-        { text: 'Galería', onPress: selectImage },
-        { text: 'Cámara', onPress: takePhoto },
-        { text: 'Cancelar', style: 'cancel' }
+        { text: t('createPost.gallery'), onPress: selectImage },
+        { text: t('createPost.camera'), onPress: takePhoto },
+        { text: t('createPost.cancel'), style: 'cancel' }
       ]
     );
   };
@@ -191,12 +205,12 @@ const CreatePostModal = ({
   const handleSubmit = async () => {
     // Validaciones
     if (!imagen) {
-      Alert.alert('Error', 'Debes seleccionar una imagen');
+      Alert.alert(t('common.error'), t('createPost.selectImage'));
       return;
     }
 
     if (!descripcion.trim()) {
-      Alert.alert('Error', 'Debes agregar una descripción');
+      Alert.alert(t('common.error'), t('createPost.addDescription'));
       return;
     }
 
@@ -214,14 +228,21 @@ const CreatePostModal = ({
       const result = await onSubmit(postData);
       
       if (result && result.success) {
-        Alert.alert('Éxito', 'Post publicado correctamente');
+        Alert.alert(t('common.success'), t('components.createPostModal.publishSuccess'));
         handleClose();
       } else {
-        const errorMsg = result?.error || 'Error desconocido';
-        Alert.alert('Error', `No se pudo publicar: ${errorMsg}`);
+        const errorMsg = result?.error || t('common.unknownError');
+        Alert.alert(
+          t('common.error'),
+          t('components.createPostModal.publishError', { error: errorMsg })
+        );
       }
     } catch (error) {
-      Alert.alert('Error', `Error: ${error.message || 'Intenta nuevamente'}`);
+      const errorMsg = error.message || t('common.unknownError');
+      Alert.alert(
+        t('common.error'),
+        t('components.createPostModal.publishError', { error: errorMsg })
+      );
     } finally {
       setLoading(false);
     }
@@ -259,12 +280,12 @@ const CreatePostModal = ({
             disabled={loading}
           >
             <Text style={[styles.cancelText, { color: theme.colors.text.secondary }]}>
-              Cancelar
+              {t('createPost.cancel')}
             </Text>
           </TouchableOpacity>
           
           <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-            Nuevo Post
+            {t('createPost.title')}
           </Text>
           
           <TouchableOpacity 
@@ -281,7 +302,7 @@ const CreatePostModal = ({
               <ActivityIndicator color={theme.colors.onPrimary} size="small" />
             ) : (
               <Text style={[styles.submitText, { color: (!imagen || !descripcion.trim() || loading) ? '#666' : theme.colors.onPrimary }]}>
-                Publicar
+                {t('createPost.publish')}
               </Text>
             )}
           </TouchableOpacity>
@@ -325,7 +346,7 @@ const CreatePostModal = ({
                   color={theme.colors.text.secondary} 
                 />
                 <Text style={[styles.placeholderText, { color: theme.colors.text.secondary }]}>
-                  Toca para seleccionar una foto
+                  {t('createPost.tapToSelect')}
                 </Text>
               </View>
             )}
@@ -341,7 +362,7 @@ const CreatePostModal = ({
                   style={styles.userAvatar}
                 />
                 <Text style={[styles.userName, { color: theme.colors.text.primary }]}>
-                  {usuario?.nombre || 'Usuario'}
+                  {usuario?.nombre || t('screens.galeria.user')}
                 </Text>
               </View>
             )}
@@ -357,7 +378,7 @@ const CreatePostModal = ({
                   backgroundColor: theme.colors.background.surface
                 }
               ]}
-              placeholder="Escribe una descripción..."
+              placeholder={t('createPost.descriptionPlaceholder')}
               placeholderTextColor={theme.colors.text.secondary}
               value={descripcion}
               onChangeText={setDescripcion}
@@ -389,7 +410,7 @@ const CreatePostModal = ({
                       flex: 1
                     }
                   ]}
-                  placeholder="Agregar ubicación (opcional)"
+                  placeholder={t('createPost.locationPlaceholder')}
                   placeholderTextColor={theme.colors.text.secondary}
                   value={ubicacion}
                   onChangeText={setUbicacion}

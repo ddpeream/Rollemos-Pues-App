@@ -4,6 +4,7 @@
     "patinadores": "Patineurs",
     "parches": "Groupes",
     "spots": "Spots",
+    "marketRollers": "🛍️ MarketRollers",
     "galeria": "Galerie",
     "comunidad": "Communaute"
   },
@@ -21,8 +22,31 @@
     "goBack": "Retour",
     "logout": "Se déconnecter",
     "ok": "OK",
+    "understood": "Compris",
     "error": "Erreur",
-    "you": "Vous"
+    "success": "Succès",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "appName": "Rollemos Pues",
+    "unknownError": "Erreur inconnue",
+    "emptyTitle": "Aucune donnée",
+    "emptyMessage": "Aucun élément trouvé",
+    "you": "Vous",
+    "user": "Utilisateur",
+    "noResults": "Aucun résultat",
+    "notAvailable": "Non disponible",
+    "notDefined": "Non défini",
+    "notSpecified": "Non spécifié",
+    "done": "Terminé",
+    "info": "Info",
+    "add": "Ajouter",
+    "more": "Plus",
+    "great": "Super !",
+    "language": {
+      "es": "🇨🇴 Español",
+      "en": "🇺🇸 English",
+      "fr": "🇫🇷 Français"
+    }
   },
   "screens": {
     "inicio": "Accueil",
@@ -68,12 +92,80 @@
       "mapErrorTitle": "Erreur de carte",
       "mapErrorMessage": "Un problème est survenu lors du chargement de la carte. Redémarrez l'application."
     },
+    "marketplace": {
+      "title": "🛒 Marketplace",
+      "brandTitle": "🛍️ MarketRollers",
+      "productsCount_one": "{{count}} produit",
+      "productsCount_other": "{{count}} produits",
+      "itemsCount_one": "{{count}} article",
+      "itemsCount_other": "{{count}} articles",
+      "searchPlaceholderProducts": "Rechercher un produit...",
+      "searchPlaceholderItems": "Rechercher des articles...",
+      "emptyProducts": "Aucun produit disponible",
+      "emptyItems": "Aucun article disponible",
+      "priceLabel": "Prix",
+      "contactAction": "Contacter",
+      "callAction": "Appeler",
+      "whatsappAction": "WhatsApp",
+      "detailsTitle": "Détails",
+      "vendorLabel": "Vendeur",
+      "vendorFallback": "Vendeur",
+      "saveAction": "Enregistrer",
+      "savedAction": "Enregistré",
+      "shareAction": "Partager",
+      "createTitle": "Créer un produit",
+      "createAction": "Créer",
+      "authRequiredCreate": "Vous devez vous connecter pour créer des produits",
+      "validationMissingFields": "Complétez le nom, le prix, la description, WhatsApp et au moins une image",
+      "createSuccess": "Produit créé avec succès",
+      "createError": "Impossible de créer le produit",
+      "authRequiredDelete": "Vous devez vous connecter pour supprimer des produits",
+      "deleteTitle": "Supprimer le produit",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce produit ?",
+      "deleteSuccess": "Produit supprimé avec succès",
+      "deleteError": "Impossible de supprimer le produit",
+      "whatsappUnavailableTitle": "WhatsApp indisponible",
+      "whatsappUnavailableMessage": "Le vendeur n'a pas configuré WhatsApp",
+      "shareMessage": "Je te partage ce produit :\n\n{{name}}\n\nPrix : ${{price}}\nCatégorie : {{category}}\n\nÇa t'intéresse ?",
+      "contactMessage": "Bonjour, je suis intéressé par le produit : {{name}} pour ${{price}}. Est-il disponible ?",
+      "contactItemMessage": "Bonjour, je suis intéressé par l’article : {{name}} pour ${{price}}. Est-il toujours disponible ?",
+      "categories": {
+        "tablas": "Planches",
+        "ruedas": "Roues",
+        "proteccion": "Protection",
+        "accesorios": "Accessoires",
+        "partes": "Pièces"
+      },
+      "form": {
+        "nameLabel": "Nom du produit",
+        "namePlaceholder": "Ex : Planche de skate",
+        "priceLabel": "Prix (COP)",
+        "pricePlaceholder": "Ex : 280000",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Décris le produit",
+        "whatsappLabel": "WhatsApp (indicatif pays)",
+        "whatsappPlaceholder": "Ex : 573001234567",
+        "categoryLabel": "Catégorie",
+        "imagesLabel": "Images ({{count}})"
+      }
+    },
     "galeria": {
       "title": "Galerie",
       "loading": "Chargement du fil...",
       "empty": "Aucune publication",
       "emptyHint": "Soyez le premier à partager une photo",
       "upload": "Téléverser une photo",
+      "commentsTitle": "Commentaires",
+      "loadingComments": "Chargement des commentaires...",
+      "noComments": "Pas encore de commentaires",
+      "commentPlaceholder": "Écrivez un commentaire...",
+      "deletePhotoTitle": "Supprimer la photo",
+      "deletePhotoMessage": "Êtes-vous sûr de vouloir supprimer cette photo ?",
+      "deletePhotoSuccess": "Photo supprimée",
+      "deletePhotoError": "Impossible de supprimer la photo",
+      "deleteCommentTitle": "Supprimer le commentaire",
+      "deleteCommentMessage": "Voulez-vous supprimer ce commentaire ?",
+      "deleteCommentError": "Impossible de supprimer le commentaire",
       "likes": "j'aime",
       "viewComments_one": "Voir {{count}} commentaire",
       "viewComments_other": "Voir {{count}} commentaires",
@@ -100,8 +192,27 @@
       "level": "Niveau",
       "email": "Email",
       "loadingError": "Erreur lors du chargement du profil",
+      "syncError": "Erreur de synchronisation du profil",
       "noBio": "Pas de bio",
-      "noAuth": "Aucun utilisateur connecté"
+      "noAuth": "Aucun utilisateur connecté",
+      "noLocation": "Pas de localisation",
+      "personalInfo": "Informations personnelles",
+      "contact": "Contact"
+    },
+    "perfilUsuario": {
+      "profileTitle": "Profil",
+      "missingUser": "Aucun utilisateur spécifié",
+      "userNotFound": "Utilisateur non trouvé",
+      "loadError": "Erreur lors du chargement du profil",
+      "bioTitle": "Biographie",
+      "noBio": "Cet utilisateur n'a pas de bio",
+      "infoTitle": "Informations",
+      "level": "Niveau",
+      "discipline": "Discipline",
+      "city": "Ville",
+      "memberSince": "Membre depuis",
+      "message": "Message",
+      "follow": "Suivre"
     },
     "editarPerfil": {
       "title": "Modifier le profil",
@@ -115,9 +226,14 @@
       "level": "Niveau",
       "saving": "Enregistrement...",
       "loadingError": "Erreur lors du chargement du profil",
+      "syncError": "Erreur de synchronisation du profil",
       "successMessage": "Profil mis à jour",
       "errorMessage": "Erreur lors de la mise à jour du profil",
-      "noAuth": "Aucun utilisateur connecté"
+      "noAuth": "Aucun utilisateur connecté",
+      "userNotIdentified": "Impossible d'identifier l'utilisateur",
+      "changePhoto": "Changer la photo",
+      "basicInfo": "Informations de base",
+      "skatingSection": "Patinage"
     },
     "shared": {
       "disciplines": {
@@ -125,8 +241,10 @@
         "speed": "Vitesse",
         "street": "Street",
         "park": "Park",
+        "vert": "Vert",
         "slalom": "Slalom",
-        "downhill": "Downhill"
+        "downhill": "Downhill",
+        "dance": "Danse"
       },
       "levels": {
         "principiante": "Débutant",
@@ -231,6 +349,10 @@
       "statusIdle": "Prêt à enregistrer",
       "statusTracking": "Enregistrement...",
       "statusPaused": "En pause",
+      "orphanedPausedTitle": "Suivi en pause",
+      "orphanedPausedMessage": "Vous êtes inactif depuis {{minutes}} minutes. Nous avons mis votre trajet en pause.",
+      "orphanedStoppedTitle": "Suivi arrêté",
+      "orphanedStoppedMessage": "Vous êtes inactif depuis {{minutes}} minutes. Nous avons arrêté le suivi pour économiser la batterie.",
       "speedUnit": "km/h",
       "distance": "Distance",
       "time": "Temps",
@@ -259,7 +381,15 @@
     },
     "menu": {
       "profile": "Profil",
+      "notifications": "Notifications",
       "settings": "Paramètres"
+    },
+    "notificaciones": {
+      "title": "Notifications",
+      "loading": "Chargement des notifications...",
+      "emptyTitle": "Aucune notification",
+      "emptyMessage": "Lorsque vous aurez de l'activité, elle apparaîtra ici.",
+      "defaultTitle": "Notification"
     },
     "settings": {
       "title": "Paramètres",
@@ -272,7 +402,57 @@
       "searchPlaceholder": "Rechercher communaute ou groupe...",
       "loading": "Chargement de la communaute...",
       "empty": "Aucune communaute disponible",
-      "emptyHint": "Aucune communaute ou groupe pour le moment"
+      "emptyHint": "Aucune communaute ou groupe pour le moment",
+      "filters": {
+        "parches": "Groupes",
+        "comunidades": "Communautés"
+      },
+      "createMenu": {
+        "comunidad": "Communauté",
+        "parche": "Groupe"
+      },
+      "parcheCreatedTitle": "Groupe créé",
+      "parcheCreatedMessage": "\"{{name}}\" a été créé.",
+      "parcheCreateError": "Impossible de créer le groupe",
+      "comunidadCreateError": "Impossible de créer la communauté",
+      "createdTitle": "Communauté créée",
+      "createdMessage": "\"{{name}}\" a été créée.",
+      "createdImagesError": "La communauté a été créée, mais les photos n'ont pas pu être téléversées."
+    },
+    "detalleComunidad": {
+      "title": "Communauté",
+      "loading": "Chargement de la communauté...",
+      "noPermissionTitle": "Pas de permission",
+      "addPhotosNoPermission": "Vous n'avez pas la permission d'ajouter des photos",
+      "deletePhotosNoPermission": "Vous n'avez pas la permission de supprimer des photos",
+      "permissionsTitle": "Permissions requises",
+      "galleryAccess": "Nous avons besoin d'accéder à votre galerie pour sélectionner des photos",
+      "imagesAdded_one": "{{count}} image ajoutée",
+      "imagesAdded_other": "{{count}} images ajoutées",
+      "imagesUploadError": "Impossible de télécharger les images",
+      "imageSelectError": "Erreur lors de la sélection des images",
+      "deletePhotoTitle": "Supprimer la photo",
+      "deletePhotoMessage": "Êtes-vous sûr de vouloir supprimer cette photo ?",
+      "deletePhotoError": "Impossible de supprimer la photo",
+      "addLeaderNoPermission": "Vous n'avez pas la permission d'ajouter des leaders",
+      "alreadyLeader": "Cet utilisateur est déjà un leader de la communauté",
+      "addLeaderError": "Impossible d'ajouter le leader",
+      "addLeaderTitle": "Ajouter un leader",
+      "primaryLeader": "Leader : {{name}}",
+      "public": "Publique",
+      "private": "Privée",
+      "joinError": "Impossible de rejoindre la communauté",
+      "joined": "Rejoint",
+      "join": "Rejoindre",
+      "activeRodadas": "Sorties actives",
+      "loadingRodadas": "Chargement des sorties...",
+      "leadersTitle": "Leaders",
+      "creator": "Créateur",
+      "createRide": "Créer une sortie",
+      "createTraining": "Créer un entraînement",
+      "searchUserPlaceholder": "Rechercher un utilisateur...",
+      "searching": "Recherche en cours...",
+      "typeToSearch": "Tapez pour rechercher"
     }
   },
   "home": {
@@ -319,34 +499,49 @@
       "title": "Prêt à rouler ?",
       "subtitle": "Abonnez-vous pour recevoir des itinéraires, événements et nouvelles.",
       "emailPlaceholder": "votre@email.com",
-      "subscribe": "S'abonner"
+      "subscribe": "S'abonner",
+      "invalidEmailMessage": "Veuillez saisir un email valide.",
+      "successMessage": "C’est bon ! Nous vous contacterons bientôt."
     }
   },
   "detalleParche": {
     "loading": "Chargement du groupe...",
     "error": "Impossible de charger le groupe",
+    "notFound": "Groupe non trouvé",
     "loginRequired": "Connexion requise",
     "loginToJoin": "Vous devez vous connecter pour rejoindre un groupe",
-    "joinSuccess": "🎉 Vous avez rejoint !",
+    "joinSuccess": "Vous avez rejoint !",
     "joinSuccessMessage": "Vous faites maintenant partie de \"{{nombre}}\"",
     "joinError": "Impossible de rejoindre le groupe",
     "leaveTitle": "Quitter le groupe",
     "leaveConfirm": "Êtes-vous sûr de vouloir quitter \"{{nombre}}\" ?",
-    "leaveSuccess": "👋 Vous avez quitté le groupe",
+    "leaveSuccessTitle": "Groupe quitté",
+    "leaveSuccess": "Vous avez quitté le groupe avec succès",
     "leaveError": "Impossible de quitter le groupe",
     "leaveButton": "Quitter",
     "joinButton": "Rejoindre le groupe",
     "leaveCrewButton": "Quitter le groupe",
     "noPermission": "Pas de permission",
     "onlyCreatorCanAddPhotos": "Seul le créateur du groupe peut ajouter des photos",
+    "onlyCreatorCanDeletePhotos": "Seul le créateur du groupe peut supprimer des photos",
     "permissionsRequired": "Permissions requises",
     "galleryAccess": "Nous avons besoin d'accéder à votre galerie",
-    "imagesAdded": "{{count}} image(s) ajoutée(s)",
+    "imagesAdded_one": "{{count}} image ajoutée",
+    "imagesAdded_other": "{{count}} images ajoutées",
     "imagesError": "Impossible de télécharger les images",
+    "deletePhotoTitle": "Supprimer la photo",
+    "deletePhotoMessage": "Êtes-vous sûr de vouloir supprimer cette photo ?",
+    "deletePhotoError": "Impossible de supprimer la photo",
     "creatorBadge": "Vous êtes le créateur de ce groupe",
+    "creatorLabel": "Vous êtes le créateur",
+    "creatorRole": "Fondateur du groupe",
     "cancel": "Annuler",
     "members": "Membres",
+    "membersTitle": "Membres ({{count}})",
     "description": "Description",
+    "about": "À propos",
+    "founder": "Fondateur",
+    "contact": "Contact",
     "addPhotos": "Ajouter des photos",
     "followers": "Abonnés",
     "followersCount": "abonnés",
@@ -354,13 +549,22 @@
     "noFollowersFound": "Aucun abonné trouvé",
     "noFollowersYet": "Pas encore d'abonnés",
     "rodadas": "Sorties",
+    "rodadasTitle": "Sorties ({{count}})",
     "rodadasTotal": "sorties",
     "allRodadas": "Toutes",
     "upcomingRodadas": "À venir",
     "pastRodadas": "Passées",
     "noUpcomingRodadas": "Pas de sorties à venir",
     "noPastRodadas": "Pas de sorties passées",
-    "noRodadasYet": "Pas encore de sorties"
+    "noRodadasYet": "Pas encore de sorties",
+    "noDate": "Pas de date",
+    "rodadaStatusInProgress": "En cours",
+    "rodadaStatusUpcoming": "À venir",
+    "startPointPending": "Point de départ en attente",
+    "createRide": "Créer une sortie",
+    "createTraining": "Créer un entraînement",
+    "rodadaCreatedTitle": "Sortie créée !",
+    "rodadaCreatedMessage": "\"{{nombre}}\" a été créée avec succès"
   },
   "createPost": {
     "title": "Nouvelle publication",
@@ -380,21 +584,190 @@
     "camera": "Caméra",
     "gallery": "Galerie"
   },
+  "components": {
+    "createPostModal": {
+      "chooseOption": "Choisissez une option",
+      "selectImageError": "Impossible de sélectionner l'image : {{error}}",
+      "takePhotoError": "Impossible de prendre la photo : {{error}}",
+      "invalidImageUri": "L'image sélectionnée n'a pas d'URI valide",
+      "publishSuccess": "Publication publiée avec succès",
+      "publishError": "Impossible de publier : {{error}}"
+    },
+    "postOptionsMenu": {
+      "editPost": "Modifier la publication",
+      "deletePost": "Supprimer la publication",
+      "report": "Signaler",
+      "share": "Partager"
+    },
+    "deleteConfirmModal": {
+      "title": "Supprimer la publication",
+      "message": "Êtes-vous sûr de vouloir supprimer cette publication ? Cette action est irréversible.",
+      "noDescription": "Aucune description"
+    },
+    "errorBoundary": {
+      "title": "Oups ! Quelque chose s'est mal passé",
+      "debugInfo": "Infos de débogage :",
+      "retry": "Réessayer"
+    },
+    "spotCard": {
+      "locationUnavailable": "Emplacement indisponible",
+      "viewHere": "Voir ici",
+      "googleMaps": "Google Maps"
+    },
+    "spotMap": {
+      "loading": "Chargement de la carte...",
+      "title": "CARTE INTERACTIVE",
+      "subtitle_one": "{{count}} spot à {{city}}",
+      "subtitle_other": "{{count}} spots à {{city}}",
+      "openInMaps": "Ouvrir dans Maps"
+    },
+    "spotSearchFilter": {
+      "typeStreet": "Street",
+      "typePark": "Park",
+      "typePumptrack": "Pumptrack",
+      "difficultyLow": "Faible",
+      "difficultyMedium": "Moyenne",
+      "difficultyHigh": "Élevée",
+      "difficulty": "Difficulté",
+      "search": "Rechercher",
+      "searching": "Recherche...",
+      "done": "Terminé"
+    },
+    "parcheOptionsMenu": {
+      "edit": "Modifier le groupe",
+      "delete": "Supprimer le groupe",
+      "share": "Partager le groupe",
+      "report": "Signaler le groupe",
+      "deleteTitle": "Supprimer le groupe",
+      "deleteMessage": "Voulez-vous vraiment supprimer \"{{name}}\" ? Cette action est irréversible.",
+      "reportTitle": "Signaler le groupe",
+      "reportPrompt": "Pourquoi voulez-vous signaler ce groupe ?",
+      "reportReasonInappropriate": "Contenu inapproprié",
+      "reportReasonFalseInfo": "Informations fausses",
+      "reportReasonSpam": "Spam",
+      "ownerBadge": "VOTRE GROUPE"
+    },
+    "filterToolbar": {
+      "apply": "Appliquer les filtres"
+    },
+    "crewSearchFilter": {
+      "searchPlaceholder": "Rechercher un groupe, une ville...",
+      "search": "Rechercher",
+      "searching": "Recherche...",
+      "done": "Terminé"
+    },
+    "skaterSearchFilter": {
+      "searchPlaceholder": "Rechercher un patineur, une ville, une discipline...",
+      "search": "Rechercher",
+      "searching": "Recherche...",
+      "done": "Terminé"
+    },
+    "viewModeToggle": {
+      "list": "Liste"
+    },
+    "createParcheModal": {
+      "titleEdit": "Modifier le groupe",
+      "titleCreate": "Créer un nouveau groupe",
+      "savingChanges": "Enregistrement...",
+      "creating": "Création du groupe...",
+      "basicInfo": "Informations de base",
+      "namePlaceholder": "Nom du groupe",
+      "descriptionPlaceholder": "Description du groupe (optionnel)",
+      "cityPlaceholder": "Ville",
+      "disciplines": "Disciplines",
+      "disciplinesHelp": "Sélectionnez les disciplines pratiquées par votre groupe",
+      "details": "Détails",
+      "membersPlaceholder": "Nombre approximatif de membres",
+      "photoSection": "Photo du groupe (optionnel)",
+      "gallery": "Galerie",
+      "camera": "Caméra",
+      "contactInfo": "Informations de contact",
+      "contactHelp": "Informations optionnelles pour que d'autres patineurs puissent vous contacter",
+      "emailPlaceholder": "Adresse email",
+      "instagramPlaceholder": "Instagram (sans @)",
+      "phonePlaceholder": "Téléphone (optionnel)",
+      "cancel": "Annuler",
+      "saveChanges": "Enregistrer",
+      "createParche": "Créer le groupe",
+      "permissionsRequired": "Permissions requises",
+      "galleryPermission": "Nous avons besoin d'accéder à votre galerie pour sélectionner des photos.",
+      "cameraPermission": "Nous avons besoin d'accéder à votre caméra pour prendre des photos.",
+      "imageSelectError": "Impossible de sélectionner l'image",
+      "takePhotoError": "Impossible de prendre la photo"
+    },
+    "createComunidadModal": {
+      "title": "Créer une communauté",
+      "create": "Créer",
+      "photos": "Photos",
+      "selectFromGallery": "Sélectionner depuis la galerie",
+      "cover": "Couverture",
+      "nameLabel": "Nom *",
+      "namePlaceholder": "Nom de la communauté",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Décrivez la communauté",
+      "cityLabel": "Ville",
+      "cityPlaceholder": "Ville",
+      "tagsLabel": "Étiquettes",
+      "privacyLabel": "Confidentialité",
+      "public": "Publique",
+      "private": "Privée",
+      "tags": {
+        "street": "Street",
+        "urbano": "Urbain",
+        "freestyle": "Freestyle",
+        "slalom": "Slalom",
+        "downhill": "Downhill",
+        "fitness": "Fitness",
+        "ruta": "Itinéraire",
+        "aprendizaje": "Apprentissage",
+        "nocturna": "Nocturne"
+      }
+    }
+  },
   "rodadas": {
     "title": "Sorties en groupe",
     "create": "Créer une sortie",
     "created": "🛼 Sortie créée !",
     "createdMessage": "\"{{nombre}}\" a été programmée. Les patineurs la verront sur la carte.",
     "great": "Super !",
+    "deleteTitle": "Supprimer la sortie",
+    "deleteMessage": "Voulez-vous vraiment supprimer \"{{nombre}}\" ?",
+    "deleteSuccess": "Sortie supprimée",
+    "deleteError": "Impossible de supprimer la sortie",
+    "status": {
+      "active": "En cours",
+      "upcoming": "À venir",
+      "finished": "Terminée"
+    },
+    "types": {
+      "rodada": "Sortie",
+      "training": "Entraînement",
+      "community": "Communauté"
+    },
+    "levels": {
+      "all": "Tous les niveaux",
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "advanced": "Avancé",
+      "short": "Tous"
+    },
     "detail": {
       "title": "Sortie",
       "status": "Statut",
+      "statusActive": "En cours",
+      "statusScheduled": "Programmée",
       "inProgress": "🔴 En cours",
       "scheduled": "🟢 Programmée",
+      "organizer": "Organisateur",
+      "youAreOrganizer": "Vous êtes l'organisateur",
+      "type": "Type",
+      "community": "Communauté",
       "startPoint": "Point de départ",
       "endPoint": "Point d'arrivée",
       "notSpecified": "Non spécifié",
       "dateTime": "Date et heure",
+      "noDate": "Sans date",
+      "noTime": "Non spécifiée",
       "levelRequired": "Niveau requis",
       "allLevels": "Tous les niveaux",
       "participants": "Participants",
@@ -403,16 +776,31 @@
       "viewOnMap": "Voir sur la carte",
       "join": "Rejoindre",
       "joining": "Rejoindre...",
-      "organizer": "Vous êtes l'organisateur"
+      "leave": "Quitter",
+      "leaving": "Quitter...",
+      "verifying": "Vérification...",
+      "delete": "Supprimer la sortie",
+      "deleting": "Suppression..."
     },
     "list": {
-      "title": "Sorties disponibles",
+      "title": "🛼 Sorties Programmées",
+      "loading": "Chargement des sorties...",
       "empty": "Aucune sortie programmée",
-      "emptyHint": "Soyez le premier à créer une sortie"
+      "emptyHint": "Créez la première sortie !",
+      "yours": "(la vôtre)"
+    },
+    "badge": {
+      "point": "Point :",
+      "undefined": "Non défini",
+      "date": "Date :",
+      "noDate": "Sans date",
+      "noTime": "Sans heure",
+      "participants": "Participants :",
+      "level": "Niveau :"
     }
   },
   "createRodada": {
-    "title": "Créer une sortie",
+    "title": "Nouvelle Sortie",
     "cancel": "Annuler",
     "create": "Créer",
     "name": "Nom de la sortie *",
@@ -426,7 +814,7 @@
     "date": "Date *",
     "datePlaceholder": "JJ/MM/AAAA",
     "time": "Heure *",
-    "timePlaceholder": "HH:MM",
+    "timePlaceholder": "7:00",
     "level": "Niveau requis",
     "levels": {
       "all": "Tous les niveaux",
@@ -434,6 +822,12 @@
       "intermediate": "Intermédiaire",
       "advanced": "Avancé"
     }
+  },
+  "tracking": {
+    "skater": "Patineur",
+    "distanceLabel": "Distance :",
+    "speedLabel": "Vitesse :",
+    "savedRoute": "Itinéraire enregistré"
   }
 }
 

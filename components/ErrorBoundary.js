@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import i18n from '../i18n';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -39,14 +40,14 @@ export class ErrorBoundary extends React.Component {
         <View style={styles.container}>
           <View style={styles.content}>
             <Ionicons name="alert-circle" size={64} color="#FF3B30" />
-            <Text style={styles.title}>¡Oops! Algo salió mal</Text>
+            <Text style={styles.title}>{i18n.t('components.errorBoundary.title')}</Text>
             <Text style={styles.message}>
-              {this.state.error?.toString() || 'Error desconocido'}
+              {this.state.error?.toString() || i18n.t('common.unknownError')}
             </Text>
             
             {__DEV__ && this.state.errorInfo && (
               <View style={styles.debugInfo}>
-                <Text style={styles.debugTitle}>Debug Info:</Text>
+                <Text style={styles.debugTitle}>{i18n.t('components.errorBoundary.debugInfo')}</Text>
                 <Text style={styles.debugText}>
                   {this.state.errorInfo.componentStack}
                 </Text>
@@ -57,7 +58,7 @@ export class ErrorBoundary extends React.Component {
               style={styles.button}
               onPress={this.resetError}
             >
-              <Text style={styles.buttonText}>Reintentar</Text>
+              <Text style={styles.buttonText}>{i18n.t('components.errorBoundary.retry')}</Text>
             </TouchableOpacity>
           </View>
         </View>

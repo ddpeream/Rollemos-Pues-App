@@ -592,12 +592,12 @@ export default function Tracking() {
 
   const handleDeleteRodada = (rodada) => {
     Alert.alert(
-      'Eliminar rodada',
-      `Seguro que quieres eliminar "${rodada?.nombre}"?`,
+      t('rodadas.deleteTitle'),
+      t('rodadas.deleteMessage', { nombre: rodada?.nombre }),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setDeletingRodada(true);
@@ -605,9 +605,12 @@ export default function Tracking() {
             setDeletingRodada(false);
             if (result.success) {
               setShowRodadaDetail(false);
-              Alert.alert('Info', 'Rodada eliminada');
+              Alert.alert(t('common.success'), t('rodadas.deleteSuccess'));
             } else {
-              Alert.alert('Error', result.error || 'No se pudo eliminar');
+              Alert.alert(
+                t('common.error'),
+                result.error || t('rodadas.deleteError')
+              );
             }
           },
         },
@@ -771,9 +774,9 @@ const statsContainerStyle = {
         onSuccess={(rodada) => {
           console.log("✅ Rodada creada:", rodada);
           Alert.alert(
-            "🛼 ¡Rodada creada!",
-            `"${rodada.nombre}" ha sido programada. Los patinadores podrán verla en el mapa.`,
-            [{ text: "Genial!" }]
+            t('rodadas.created'),
+            t('rodadas.createdMessage', { nombre: rodada.nombre }),
+            [{ text: t('rodadas.great') }]
           );
                 setIsMapAutoCenter(true);
           fetchRodadas(); // Recargar lista

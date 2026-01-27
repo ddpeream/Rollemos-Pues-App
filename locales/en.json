@@ -4,6 +4,7 @@
     "patinadores": "Skaters",
     "parches": "Crews",
     "spots": "Spots",
+    "marketRollers": "🛍️ MarketRollers",
     "galeria": "Gallery",
     "comunidad": "Community"
   },
@@ -21,8 +22,31 @@
     "goBack": "Go back",
     "logout": "Log out",
     "ok": "OK",
+    "understood": "Got it",
     "error": "Error",
-    "you": "You"
+    "success": "Success",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "appName": "Rollemos Pues",
+    "unknownError": "Unknown error",
+    "emptyTitle": "No data",
+    "emptyMessage": "No items found",
+    "you": "You",
+    "user": "User",
+    "noResults": "No results",
+    "notAvailable": "Not available",
+    "notDefined": "Not defined",
+    "notSpecified": "Not specified",
+    "done": "Done",
+    "info": "Info",
+    "add": "Add",
+    "more": "More",
+    "great": "Great!",
+    "language": {
+      "es": "🇨🇴 Español",
+      "en": "🇺🇸 English",
+      "fr": "🇫🇷 Français"
+    }
   },
   "screens": {
     "inicio": "Home",
@@ -68,12 +92,80 @@
       "mapErrorTitle": "Map Error",
       "mapErrorMessage": "There was a problem loading the map. Please restart the app."
     },
+    "marketplace": {
+      "title": "🛒 Marketplace",
+      "brandTitle": "🛍️ MarketRollers",
+      "productsCount_one": "{{count}} product",
+      "productsCount_other": "{{count}} products",
+      "itemsCount_one": "{{count}} item",
+      "itemsCount_other": "{{count}} items",
+      "searchPlaceholderProducts": "Search product...",
+      "searchPlaceholderItems": "Search items...",
+      "emptyProducts": "No products available",
+      "emptyItems": "No items available",
+      "priceLabel": "Price",
+      "contactAction": "Contact",
+      "callAction": "Call",
+      "whatsappAction": "WhatsApp",
+      "detailsTitle": "Details",
+      "vendorLabel": "Seller",
+      "vendorFallback": "Seller",
+      "saveAction": "Save",
+      "savedAction": "Saved",
+      "shareAction": "Share",
+      "createTitle": "Create Product",
+      "createAction": "Create",
+      "authRequiredCreate": "You must sign in to create products",
+      "validationMissingFields": "Complete name, price, description, WhatsApp and at least one image",
+      "createSuccess": "Product created successfully",
+      "createError": "Could not create the product",
+      "authRequiredDelete": "You must sign in to delete products",
+      "deleteTitle": "Delete Product",
+      "deleteConfirm": "Are you sure you want to delete this product?",
+      "deleteSuccess": "Product deleted successfully",
+      "deleteError": "Could not delete the product",
+      "whatsappUnavailableTitle": "WhatsApp unavailable",
+      "whatsappUnavailableMessage": "The seller has not set up WhatsApp",
+      "shareMessage": "I'm sharing this product with you:\n\n{{name}}\n\nPrice: ${{price}}\nCategory: {{category}}\n\nInterested?",
+      "contactMessage": "Hi, I'm interested in the product: {{name}} for ${{price}}. Is it available?",
+      "contactItemMessage": "Hi, I'm interested in the item: {{name}} for ${{price}}. Is it still available?",
+      "categories": {
+        "tablas": "Boards",
+        "ruedas": "Wheels",
+        "proteccion": "Protection",
+        "accesorios": "Accessories",
+        "partes": "Parts"
+      },
+      "form": {
+        "nameLabel": "Product name",
+        "namePlaceholder": "Ex: Skateboard deck",
+        "priceLabel": "Price (COP)",
+        "pricePlaceholder": "Ex: 280000",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Describe the product",
+        "whatsappLabel": "WhatsApp (country code included)",
+        "whatsappPlaceholder": "Ex: 573001234567",
+        "categoryLabel": "Category",
+        "imagesLabel": "Images ({{count}})"
+      }
+    },
     "galeria": {
       "title": "Gallery",
       "loading": "Loading feed...",
       "empty": "No posts yet",
       "emptyHint": "Be the first to share a photo",
       "upload": "Upload photo",
+      "commentsTitle": "Comments",
+      "loadingComments": "Loading comments...",
+      "noComments": "No comments yet",
+      "commentPlaceholder": "Write a comment...",
+      "deletePhotoTitle": "Delete photo",
+      "deletePhotoMessage": "Are you sure you want to delete this photo?",
+      "deletePhotoSuccess": "Photo deleted",
+      "deletePhotoError": "Could not delete the photo",
+      "deleteCommentTitle": "Delete comment",
+      "deleteCommentMessage": "Do you want to delete this comment?",
+      "deleteCommentError": "Could not delete the comment",
       "likes": "likes",
       "viewComments_one": "View {{count}} comment",
       "viewComments_other": "View {{count}} comments",
@@ -100,8 +192,27 @@
       "level": "Level",
       "email": "Email",
       "loadingError": "Error loading profile",
+      "syncError": "Error syncing profile",
       "noBio": "No bio",
-      "noAuth": "No authenticated user"
+      "noAuth": "No authenticated user",
+      "noLocation": "No location",
+      "personalInfo": "Personal Info",
+      "contact": "Contact"
+    },
+    "perfilUsuario": {
+      "profileTitle": "Profile",
+      "missingUser": "No user specified",
+      "userNotFound": "User not found",
+      "loadError": "Error loading profile",
+      "bioTitle": "Bio",
+      "noBio": "This user has no bio",
+      "infoTitle": "Information",
+      "level": "Level",
+      "discipline": "Discipline",
+      "city": "City",
+      "memberSince": "Member since",
+      "message": "Message",
+      "follow": "Follow"
     },
     "editarPerfil": {
       "title": "Edit Profile",
@@ -115,9 +226,14 @@
       "level": "Level",
       "saving": "Saving...",
       "loadingError": "Error loading profile",
+      "syncError": "Error syncing profile",
       "successMessage": "Profile updated successfully",
       "errorMessage": "Error updating profile",
-      "noAuth": "No authenticated user"
+      "noAuth": "No authenticated user",
+      "userNotIdentified": "Could not identify user",
+      "changePhoto": "Change photo",
+      "basicInfo": "Basic Info",
+      "skatingSection": "Skating"
     },
     "shared": {
       "disciplines": {
@@ -125,8 +241,10 @@
         "speed": "Speed",
         "street": "Street",
         "park": "Park",
+        "vert": "Vert",
         "slalom": "Slalom",
-        "downhill": "Downhill"
+        "downhill": "Downhill",
+        "dance": "Dance"
       },
       "levels": {
         "principiante": "Beginner",
@@ -232,6 +350,10 @@
       "statusIdle": "Ready to record",
       "statusTracking": "Recording...",
       "statusPaused": "Paused",
+      "orphanedPausedTitle": "Tracking paused",
+      "orphanedPausedMessage": "You've been inactive for {{minutes}} minutes. We paused your route.",
+      "orphanedStoppedTitle": "Tracking stopped",
+      "orphanedStoppedMessage": "You've been inactive for {{minutes}} minutes. We stopped tracking to save battery.",
       "speedUnit": "km/h",
       "distance": "Distance",
       "time": "Time",
@@ -260,7 +382,15 @@
     },
     "menu": {
       "profile": "Profile",
+      "notifications": "Notifications",
       "settings": "Settings"
+    },
+    "notificaciones": {
+      "title": "Notifications",
+      "loading": "Loading notifications...",
+      "emptyTitle": "No notifications",
+      "emptyMessage": "When you have activity, it will appear here.",
+      "defaultTitle": "Notification"
     },
     "settings": {
       "title": "Settings",
@@ -273,7 +403,57 @@
       "searchPlaceholder": "Search community or crew...",
       "loading": "Loading community...",
       "empty": "No communities available",
-      "emptyHint": "No communities or crews yet"
+      "emptyHint": "No communities or crews yet",
+      "filters": {
+        "parches": "Crews",
+        "comunidades": "Communities"
+      },
+      "createMenu": {
+        "comunidad": "Community",
+        "parche": "Crew"
+      },
+      "parcheCreatedTitle": "Crew created",
+      "parcheCreatedMessage": "\"{{name}}\" was created.",
+      "parcheCreateError": "Could not create the crew",
+      "comunidadCreateError": "Could not create the community",
+      "createdTitle": "Community created",
+      "createdMessage": "\"{{name}}\" was created.",
+      "createdImagesError": "The community was created, but the photos could not be uploaded."
+    },
+    "detalleComunidad": {
+      "title": "Community",
+      "loading": "Loading community...",
+      "noPermissionTitle": "No permission",
+      "addPhotosNoPermission": "You don't have permission to add photos",
+      "deletePhotosNoPermission": "You don't have permission to delete photos",
+      "permissionsTitle": "Permissions required",
+      "galleryAccess": "We need access to your gallery to select photos",
+      "imagesAdded_one": "{{count}} image added",
+      "imagesAdded_other": "{{count}} images added",
+      "imagesUploadError": "Could not upload the images",
+      "imageSelectError": "Error selecting images",
+      "deletePhotoTitle": "Delete photo",
+      "deletePhotoMessage": "Are you sure you want to delete this photo?",
+      "deletePhotoError": "Could not delete the photo",
+      "addLeaderNoPermission": "You don't have permission to add leaders",
+      "alreadyLeader": "This user is already a leader of the community",
+      "addLeaderError": "Could not add the leader",
+      "addLeaderTitle": "Add leader",
+      "primaryLeader": "Leader: {{name}}",
+      "public": "Public",
+      "private": "Private",
+      "joinError": "Could not join the community",
+      "joined": "Joined",
+      "join": "Join",
+      "activeRodadas": "Active rides",
+      "loadingRodadas": "Loading rides...",
+      "leadersTitle": "Leaders",
+      "creator": "Creator",
+      "createRide": "Create ride",
+      "createTraining": "Create training",
+      "searchUserPlaceholder": "Search user...",
+      "searching": "Searching...",
+      "typeToSearch": "Type to search"
     }
   },
   "home": {
@@ -320,34 +500,49 @@
       "title": "Ready to roll?",
       "subtitle": "Subscribe to receive routes, events and news.",
       "emailPlaceholder": "your@email.com",
-      "subscribe": "Subscribe"
+      "subscribe": "Subscribe",
+      "invalidEmailMessage": "Please enter a valid email.",
+      "successMessage": "All set! We'll contact you soon."
     }
   },
   "detalleParche": {
     "loading": "Loading crew...",
     "error": "Could not load the crew",
+    "notFound": "Crew not found",
     "loginRequired": "Sign in",
     "loginToJoin": "You must sign in to join a crew",
-    "joinSuccess": "🎉 You joined!",
+    "joinSuccess": "You joined!",
     "joinSuccessMessage": "You are now part of \"{{nombre}}\"",
     "joinError": "Could not join the crew",
     "leaveTitle": "Leave crew",
     "leaveConfirm": "Are you sure you want to leave \"{{nombre}}\"?",
-    "leaveSuccess": "👋 You left the crew",
+    "leaveSuccessTitle": "Left the crew",
+    "leaveSuccess": "You have left the crew successfully",
     "leaveError": "Could not leave the crew",
     "leaveButton": "Leave",
     "joinButton": "Join crew",
     "leaveCrewButton": "Leave crew",
     "noPermission": "No permission",
     "onlyCreatorCanAddPhotos": "Only the crew creator can add photos",
+    "onlyCreatorCanDeletePhotos": "Only the crew creator can delete photos",
     "permissionsRequired": "Permissions required",
     "galleryAccess": "We need access to your gallery",
-    "imagesAdded": "{{count}} image(s) added",
+    "imagesAdded_one": "{{count}} image added",
+    "imagesAdded_other": "{{count}} images added",
     "imagesError": "Could not upload images",
+    "deletePhotoTitle": "Delete photo",
+    "deletePhotoMessage": "Are you sure you want to delete this photo?",
+    "deletePhotoError": "Could not delete the photo",
     "creatorBadge": "You are the creator of this crew",
+    "creatorLabel": "You are the creator",
+    "creatorRole": "Crew founder",
     "cancel": "Cancel",
     "members": "Members",
+    "membersTitle": "Members ({{count}})",
     "description": "Description",
+    "about": "About",
+    "founder": "Founder",
+    "contact": "Contact",
     "addPhotos": "Add photos",
     "followers": "Followers",
     "followersCount": "followers",
@@ -355,13 +550,22 @@
     "noFollowersFound": "No followers found",
     "noFollowersYet": "No followers yet",
     "rodadas": "Rides",
+    "rodadasTitle": "Rides ({{count}})",
     "rodadasTotal": "rides",
     "allRodadas": "All",
     "upcomingRodadas": "Upcoming",
     "pastRodadas": "Past",
     "noUpcomingRodadas": "No upcoming rides",
     "noPastRodadas": "No past rides",
-    "noRodadasYet": "No rides yet"
+    "noRodadasYet": "No rides yet",
+    "noDate": "No date",
+    "rodadaStatusInProgress": "In progress",
+    "rodadaStatusUpcoming": "Upcoming",
+    "startPointPending": "Start point pending",
+    "createRide": "Create ride",
+    "createTraining": "Create training",
+    "rodadaCreatedTitle": "Ride created!",
+    "rodadaCreatedMessage": "\"{{nombre}}\" was created successfully"
   },
   "createPost": {
     "title": "New Post",
@@ -381,21 +585,190 @@
     "camera": "Camera",
     "gallery": "Gallery"
   },
+  "components": {
+    "createPostModal": {
+      "chooseOption": "Choose an option",
+      "selectImageError": "Could not select the image: {{error}}",
+      "takePhotoError": "Could not take the photo: {{error}}",
+      "invalidImageUri": "The selected image has no valid URI",
+      "publishSuccess": "Post published successfully",
+      "publishError": "Could not publish: {{error}}"
+    },
+    "postOptionsMenu": {
+      "editPost": "Edit post",
+      "deletePost": "Delete post",
+      "report": "Report",
+      "share": "Share"
+    },
+    "deleteConfirmModal": {
+      "title": "Delete post",
+      "message": "Are you sure you want to delete this post? This action cannot be undone.",
+      "noDescription": "No description"
+    },
+    "errorBoundary": {
+      "title": "Oops! Something went wrong",
+      "debugInfo": "Debug info:",
+      "retry": "Try again"
+    },
+    "spotCard": {
+      "locationUnavailable": "Location unavailable",
+      "viewHere": "View here",
+      "googleMaps": "Google Maps"
+    },
+    "spotMap": {
+      "loading": "Loading map...",
+      "title": "INTERACTIVE MAP",
+      "subtitle_one": "{{count}} spot in {{city}}",
+      "subtitle_other": "{{count}} spots in {{city}}",
+      "openInMaps": "Open in Maps"
+    },
+    "spotSearchFilter": {
+      "typeStreet": "Street",
+      "typePark": "Park",
+      "typePumptrack": "Pumptrack",
+      "difficultyLow": "Low",
+      "difficultyMedium": "Medium",
+      "difficultyHigh": "High",
+      "difficulty": "Difficulty",
+      "search": "Search",
+      "searching": "Searching...",
+      "done": "Done"
+    },
+    "parcheOptionsMenu": {
+      "edit": "Edit crew",
+      "delete": "Delete crew",
+      "share": "Share crew",
+      "report": "Report crew",
+      "deleteTitle": "Delete crew",
+      "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action can't be undone.",
+      "reportTitle": "Report crew",
+      "reportPrompt": "Why do you want to report this crew?",
+      "reportReasonInappropriate": "Inappropriate content",
+      "reportReasonFalseInfo": "False information",
+      "reportReasonSpam": "Spam",
+      "ownerBadge": "YOUR CREW"
+    },
+    "filterToolbar": {
+      "apply": "Apply filters"
+    },
+    "crewSearchFilter": {
+      "searchPlaceholder": "Search crew, city...",
+      "search": "Search",
+      "searching": "Searching...",
+      "done": "Done"
+    },
+    "skaterSearchFilter": {
+      "searchPlaceholder": "Search skater, city, discipline...",
+      "search": "Search",
+      "searching": "Searching...",
+      "done": "Done"
+    },
+    "viewModeToggle": {
+      "list": "List"
+    },
+    "createParcheModal": {
+      "titleEdit": "Edit Crew",
+      "titleCreate": "Create New Crew",
+      "savingChanges": "Saving changes...",
+      "creating": "Creating crew...",
+      "basicInfo": "Basic Info",
+      "namePlaceholder": "Crew name",
+      "descriptionPlaceholder": "Crew description (optional)",
+      "cityPlaceholder": "City",
+      "disciplines": "Disciplines",
+      "disciplinesHelp": "Select the disciplines your crew practices",
+      "details": "Details",
+      "membersPlaceholder": "Approximate number of members",
+      "photoSection": "Crew photo (optional)",
+      "gallery": "Gallery",
+      "camera": "Camera",
+      "contactInfo": "Contact Info",
+      "contactHelp": "Optional info so other skaters can contact you",
+      "emailPlaceholder": "Email address",
+      "instagramPlaceholder": "Instagram (without @)",
+      "phonePlaceholder": "Phone (optional)",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "createParche": "Create Crew",
+      "permissionsRequired": "Permissions required",
+      "galleryPermission": "We need access to your gallery to select photos.",
+      "cameraPermission": "We need access to your camera to take photos.",
+      "imageSelectError": "Could not select the image",
+      "takePhotoError": "Could not take the photo"
+    },
+    "createComunidadModal": {
+      "title": "Create community",
+      "create": "Create",
+      "photos": "Photos",
+      "selectFromGallery": "Select from gallery",
+      "cover": "Cover",
+      "nameLabel": "Name *",
+      "namePlaceholder": "Community name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe the community",
+      "cityLabel": "City",
+      "cityPlaceholder": "City",
+      "tagsLabel": "Tags",
+      "privacyLabel": "Privacy",
+      "public": "Public",
+      "private": "Private",
+      "tags": {
+        "street": "Street",
+        "urbano": "Urban",
+        "freestyle": "Freestyle",
+        "slalom": "Slalom",
+        "downhill": "Downhill",
+        "fitness": "Fitness",
+        "ruta": "Route",
+        "aprendizaje": "Learning",
+        "nocturna": "Night"
+      }
+    }
+  },
   "rodadas": {
     "title": "Group Rides",
     "create": "Create ride",
     "created": "🛼 Ride created!",
     "createdMessage": "\"{{nombre}}\" has been scheduled. Skaters will see it on the map.",
     "great": "Great!",
+    "deleteTitle": "Delete ride",
+    "deleteMessage": "Are you sure you want to delete \"{{nombre}}\"?",
+    "deleteSuccess": "Ride deleted",
+    "deleteError": "Could not delete the ride",
+    "status": {
+      "active": "In progress",
+      "upcoming": "Upcoming",
+      "finished": "Finished"
+    },
+    "types": {
+      "rodada": "Ride",
+      "training": "Training",
+      "community": "Community"
+    },
+    "levels": {
+      "all": "All levels",
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced",
+      "short": "All"
+    },
     "detail": {
       "title": "Ride",
       "status": "Status",
+      "statusActive": "In progress",
+      "statusScheduled": "Scheduled",
       "inProgress": "🔴 In progress",
       "scheduled": "🟢 Scheduled",
+      "organizer": "Organizer",
+      "youAreOrganizer": "You are the organizer",
+      "type": "Type",
+      "community": "Community",
       "startPoint": "Start point",
       "endPoint": "End point",
       "notSpecified": "Not specified",
       "dateTime": "Date and time",
+      "noDate": "No date",
+      "noTime": "Not specified",
       "levelRequired": "Required level",
       "allLevels": "All levels",
       "participants": "Participants",
@@ -404,16 +777,31 @@
       "viewOnMap": "View on map",
       "join": "Join",
       "joining": "Joining...",
-      "organizer": "You are the organizer"
+      "leave": "Leave",
+      "leaving": "Leaving...",
+      "verifying": "Verifying...",
+      "delete": "Delete ride",
+      "deleting": "Deleting..."
     },
     "list": {
-      "title": "Available rides",
+      "title": "🛼 Scheduled Rides",
+      "loading": "Loading rides...",
       "empty": "No rides scheduled",
-      "emptyHint": "Be the first to create a ride"
+      "emptyHint": "Create the first ride!",
+      "yours": "(yours)"
+    },
+    "badge": {
+      "point": "Point:",
+      "undefined": "Not defined",
+      "date": "Date:",
+      "noDate": "No date",
+      "noTime": "No time",
+      "participants": "Participants:",
+      "level": "Level:"
     }
   },
   "createRodada": {
-    "title": "Create Ride",
+    "title": "New Ride",
     "cancel": "Cancel",
     "create": "Create",
     "name": "Ride name *",
@@ -427,7 +815,7 @@
     "date": "Date *",
     "datePlaceholder": "DD/MM/YYYY",
     "time": "Time *",
-    "timePlaceholder": "HH:MM",
+    "timePlaceholder": "7:00",
     "level": "Required level",
     "levels": {
       "all": "All levels",
@@ -435,6 +823,12 @@
       "intermediate": "Intermediate",
       "advanced": "Advanced"
     }
+  },
+  "tracking": {
+    "skater": "Skater",
+    "distanceLabel": "Distance:",
+    "speedLabel": "Speed:",
+    "savedRoute": "Saved route"
   }
 }
 

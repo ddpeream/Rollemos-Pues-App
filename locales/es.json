@@ -4,6 +4,7 @@
     "patinadores": "Patinadores",
     "parches": "Parches",
     "spots": "Spots",
+    "marketRollers": "🛍️ MarketRollers",
     "galeria": "Galería",
     "comunidad": "Comunidad"
   },
@@ -21,8 +22,31 @@
     "goBack": "Volver",
     "logout": "Cerrar sesión",
     "ok": "OK",
+    "understood": "Entendido",
     "error": "Error",
-    "you": "Tú"
+    "success": "Éxito",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "appName": "Rollemos Pues",
+    "unknownError": "Error desconocido",
+    "emptyTitle": "No hay datos",
+    "emptyMessage": "No se encontraron elementos",
+    "you": "Tú",
+    "user": "Usuario",
+    "noResults": "Sin resultados",
+    "notAvailable": "No disponible",
+    "notDefined": "No definido",
+    "notSpecified": "No especificado",
+    "done": "Listo",
+    "info": "Información",
+    "add": "Agregar",
+    "more": "Más",
+    "great": "¡Genial!",
+    "language": {
+      "es": "🇨🇴 Español",
+      "en": "🇺🇸 English",
+      "fr": "🇫🇷 Français"
+    }
   },
   "screens": {
     "inicio": "Inicio",
@@ -68,12 +92,80 @@
       "mapErrorTitle": "Error del Mapa",
       "mapErrorMessage": "Hubo un problema al cargar el mapa. Intenta reiniciar la app."
     },
+    "marketplace": {
+      "title": "🛒 Marketplace",
+      "brandTitle": "🛍️ MarketRollers",
+      "productsCount_one": "{{count}} producto",
+      "productsCount_other": "{{count}} productos",
+      "itemsCount_one": "{{count}} artículo",
+      "itemsCount_other": "{{count}} artículos",
+      "searchPlaceholderProducts": "Buscar producto...",
+      "searchPlaceholderItems": "Buscar artículos...",
+      "emptyProducts": "No hay productos disponibles",
+      "emptyItems": "No hay artículos disponibles",
+      "priceLabel": "Precio",
+      "contactAction": "Contactar",
+      "callAction": "Llamar",
+      "whatsappAction": "WhatsApp",
+      "detailsTitle": "Detalles",
+      "vendorLabel": "Vendedor",
+      "vendorFallback": "Vendedor",
+      "saveAction": "Guardar",
+      "savedAction": "Guardado",
+      "shareAction": "Compartir",
+      "createTitle": "Crear Producto",
+      "createAction": "Crear",
+      "authRequiredCreate": "Debes iniciar sesion para crear productos",
+      "validationMissingFields": "Completa nombre, precio, descripcion, WhatsApp y al menos una imagen",
+      "createSuccess": "Producto creado correctamente",
+      "createError": "No se pudo crear el producto",
+      "authRequiredDelete": "Debes iniciar sesion para eliminar productos",
+      "deleteTitle": "Eliminar Producto",
+      "deleteConfirm": "Estas seguro de que deseas eliminar este producto?",
+      "deleteSuccess": "Producto eliminado correctamente",
+      "deleteError": "No se pudo eliminar el producto",
+      "whatsappUnavailableTitle": "WhatsApp no disponible",
+      "whatsappUnavailableMessage": "El vendedor no tiene WhatsApp configurado",
+      "shareMessage": "Te comparto este producto:\n\n{{name}}\n\nPrecio: ${{price}}\nCategoria: {{category}}\n\nTe interesa?",
+      "contactMessage": "Hola, me interesa el producto: {{name}} por ${{price}}. Esta disponible?",
+      "contactItemMessage": "Hola, me interesa el artículo: {{name}} por ${{price}}. ¿Todavía está disponible?",
+      "categories": {
+        "tablas": "Tablas",
+        "ruedas": "Ruedas",
+        "proteccion": "Protección",
+        "accesorios": "Accesorios",
+        "partes": "Partes"
+      },
+      "form": {
+        "nameLabel": "Nombre del Producto",
+        "namePlaceholder": "Ej: Tabla Skateboard",
+        "priceLabel": "Precio (COP)",
+        "pricePlaceholder": "Ej: 280000",
+        "descriptionLabel": "Descripcion",
+        "descriptionPlaceholder": "Describe el producto",
+        "whatsappLabel": "WhatsApp (numero con codigo pais)",
+        "whatsappPlaceholder": "Ej: 573001234567",
+        "categoryLabel": "Categoría",
+        "imagesLabel": "Imágenes ({{count}})"
+      }
+    },
     "galeria": {
       "title": "Galería",
       "loading": "Cargando feed...",
       "empty": "No hay publicaciones",
       "emptyHint": "Sé el primero en compartir una foto",
       "upload": "Subir foto",
+      "commentsTitle": "Comentarios",
+      "loadingComments": "Cargando comentarios...",
+      "noComments": "Aún no hay comentarios",
+      "commentPlaceholder": "Escribe un comentario...",
+      "deletePhotoTitle": "Eliminar foto",
+      "deletePhotoMessage": "¿Estás seguro de que deseas eliminar esta foto?",
+      "deletePhotoSuccess": "Foto eliminada",
+      "deletePhotoError": "No se pudo eliminar la foto",
+      "deleteCommentTitle": "Eliminar comentario",
+      "deleteCommentMessage": "¿Quieres eliminar este comentario?",
+      "deleteCommentError": "No se pudo eliminar el comentario",
       "likes": "Me gusta",
       "viewComments_one": "Ver {{count}} comentario",
       "viewComments_other": "Ver los {{count}} comentarios",
@@ -100,8 +192,27 @@
       "level": "Nivel",
       "email": "Correo",
       "loadingError": "Error al cargar el perfil",
+      "syncError": "Error al sincronizar el perfil",
       "noBio": "Sin biografía",
-      "noAuth": "No hay usuario autenticado"
+      "noAuth": "No hay usuario autenticado",
+      "noLocation": "Sin ubicación",
+      "personalInfo": "Información Personal",
+      "contact": "Contacto"
+    },
+    "perfilUsuario": {
+      "profileTitle": "Perfil",
+      "missingUser": "No se especificó un usuario",
+      "userNotFound": "Usuario no encontrado",
+      "loadError": "Error al cargar el perfil",
+      "bioTitle": "Biografía",
+      "noBio": "Este usuario no tiene biografía",
+      "infoTitle": "Información",
+      "level": "Nivel",
+      "discipline": "Disciplina",
+      "city": "Ciudad",
+      "memberSince": "Miembro desde",
+      "message": "Mensaje",
+      "follow": "Seguir"
     },
     "editarPerfil": {
       "title": "Editar Perfil",
@@ -115,9 +226,14 @@
       "level": "Nivel",
       "saving": "Guardando...",
       "loadingError": "Error al cargar el perfil",
+      "syncError": "Error al sincronizar el perfil",
       "successMessage": "Perfil actualizado correctamente",
       "errorMessage": "Error al actualizar el perfil",
-      "noAuth": "No hay usuario autenticado"
+      "noAuth": "No hay usuario autenticado",
+      "userNotIdentified": "No se pudo identificar el usuario",
+      "changePhoto": "Cambiar foto",
+      "basicInfo": "Información Básica",
+      "skatingSection": "Patinaje"
     },
     "shared": {
       "disciplines": {
@@ -125,8 +241,10 @@
         "speed": "Speed",
         "street": "Street",
         "park": "Park",
+        "vert": "Vert",
         "slalom": "Slalom",
-        "downhill": "Downhill"
+        "downhill": "Downhill",
+        "dance": "Dance"
       },
       "levels": {
         "principiante": "Principiante",
@@ -231,6 +349,10 @@
       "statusIdle": "Listo para grabar",
       "statusTracking": "Grabando...",
       "statusPaused": "Pausado",
+      "orphanedPausedTitle": "Tracking pausado",
+      "orphanedPausedMessage": "Llevas {{minutes}} minutos sin moverte. Dejamos la ruta en pausa.",
+      "orphanedStoppedTitle": "Tracking detenido",
+      "orphanedStoppedMessage": "Llevas {{minutes}} minutos sin moverte. Detuvimos el tracking para ahorrar batería.",
       "speedUnit": "km/h",
       "distance": "Distancia",
       "time": "Tiempo",
@@ -259,7 +381,15 @@
     },
     "menu": {
       "profile": "Perfil",
+      "notifications": "Notificaciones",
       "settings": "Configuración"
+    },
+    "notificaciones": {
+      "title": "Notificaciones",
+      "loading": "Cargando notificaciones...",
+      "emptyTitle": "No hay notificaciones",
+      "emptyMessage": "Cuando tengas actividad, aparecerá aquí.",
+      "defaultTitle": "Notificación"
     },
     "settings": {
       "title": "Configuración",
@@ -272,7 +402,57 @@
       "searchPlaceholder": "Buscar comunidad o parche...",
       "loading": "Cargando comunidad...",
       "empty": "No hay comunidades disponibles",
-      "emptyHint": "Aun no hay comunidades o parches"
+      "emptyHint": "Aun no hay comunidades o parches",
+      "filters": {
+        "parches": "Parches",
+        "comunidades": "Comunidades"
+      },
+      "createMenu": {
+        "comunidad": "Comunidad",
+        "parche": "Parche"
+      },
+      "parcheCreatedTitle": "Parche creado",
+      "parcheCreatedMessage": "\"{{name}}\" fue creado.",
+      "parcheCreateError": "No se pudo crear el parche",
+      "comunidadCreateError": "No se pudo crear la comunidad",
+      "createdTitle": "Comunidad creada",
+      "createdMessage": "\"{{name}}\" fue creada.",
+      "createdImagesError": "Se creó la comunidad, pero no se pudieron subir las fotos."
+    },
+    "detalleComunidad": {
+      "title": "Comunidad",
+      "loading": "Cargando comunidad...",
+      "noPermissionTitle": "Sin permisos",
+      "addPhotosNoPermission": "No tienes permisos para agregar fotos",
+      "deletePhotosNoPermission": "No tienes permisos para eliminar fotos",
+      "permissionsTitle": "Permisos requeridos",
+      "galleryAccess": "Necesitamos acceso a tu galería para seleccionar fotos",
+      "imagesAdded_one": "{{count}} imagen agregada",
+      "imagesAdded_other": "{{count}} imágenes agregadas",
+      "imagesUploadError": "No se pudieron subir las imágenes",
+      "imageSelectError": "Error al seleccionar las imágenes",
+      "deletePhotoTitle": "Eliminar foto",
+      "deletePhotoMessage": "¿Estás seguro de que quieres eliminar esta foto?",
+      "deletePhotoError": "No se pudo eliminar la foto",
+      "addLeaderNoPermission": "No tienes permisos para agregar líderes",
+      "alreadyLeader": "Este usuario ya es líder de la comunidad",
+      "addLeaderError": "No se pudo agregar el líder",
+      "addLeaderTitle": "Agregar líder",
+      "primaryLeader": "Líder: {{name}}",
+      "public": "Pública",
+      "private": "Privada",
+      "joinError": "No se pudo unir a la comunidad",
+      "joined": "Unido",
+      "join": "Unirse",
+      "activeRodadas": "Rodadas activas",
+      "loadingRodadas": "Cargando rodadas...",
+      "leadersTitle": "Líderes",
+      "creator": "Creador",
+      "createRide": "Crear rodada",
+      "createTraining": "Crear entreno",
+      "searchUserPlaceholder": "Buscar usuario...",
+      "searching": "Buscando...",
+      "typeToSearch": "Escribe para buscar"
     }
   },
   "home": {
@@ -319,34 +499,49 @@
       "title": "¿Listo para rodar?",
       "subtitle": "Suscríbete para recibir rutas, eventos y novedades.",
       "emailPlaceholder": "tu@email.com",
-      "subscribe": "Suscribirme"
+      "subscribe": "Suscribirme",
+      "invalidEmailMessage": "Por favor ingresa un correo válido.",
+      "successMessage": "¡Listo! Te contactaremos pronto."
     }
   },
   "detalleParche": {
     "loading": "Cargando parche...",
     "error": "No se pudo cargar el parche",
+    "notFound": "Parche no encontrado",
     "loginRequired": "Inicia sesión",
     "loginToJoin": "Debes iniciar sesión para unirte a un parche",
-    "joinSuccess": "🎉 ¡Te uniste!",
+    "joinSuccess": "¡Te uniste!",
     "joinSuccessMessage": "Ahora eres parte de \"{{nombre}}\"",
     "joinError": "No se pudo unir al parche",
     "leaveTitle": "Salir del parche",
     "leaveConfirm": "¿Seguro que quieres salir de \"{{nombre}}\"?",
-    "leaveSuccess": "👋 Has salido del parche",
+    "leaveSuccessTitle": "Saliste del parche",
+    "leaveSuccess": "Has salido del parche correctamente",
     "leaveError": "No se pudo salir del parche",
     "leaveButton": "Salir",
     "joinButton": "Unirme al parche",
     "leaveCrewButton": "Salir del parche",
     "noPermission": "Sin permisos",
     "onlyCreatorCanAddPhotos": "Solo el creador del parche puede agregar fotos",
+    "onlyCreatorCanDeletePhotos": "Solo el creador del parche puede eliminar fotos",
     "permissionsRequired": "Permisos requeridos",
     "galleryAccess": "Necesitamos acceso a tu galería",
-    "imagesAdded": "{{count}} imagen(es) agregada(s)",
+    "imagesAdded_one": "{{count}} imagen agregada",
+    "imagesAdded_other": "{{count}} imágenes agregadas",
     "imagesError": "No se pudieron subir las imágenes",
+    "deletePhotoTitle": "Eliminar foto",
+    "deletePhotoMessage": "¿Estás seguro de que quieres eliminar esta foto?",
+    "deletePhotoError": "No se pudo eliminar la foto",
     "creatorBadge": "Eres el creador de este parche",
+    "creatorLabel": "Eres el creador",
+    "creatorRole": "Fundador del parche",
     "cancel": "Cancelar",
     "members": "Miembros",
+    "membersTitle": "Miembros ({{count}})",
     "description": "Descripción",
+    "about": "Acerca de",
+    "founder": "Fundador",
+    "contact": "Contacto",
     "addPhotos": "Agregar fotos",
     "followers": "Seguidores",
     "followersCount": "seguidores",
@@ -354,13 +549,22 @@
     "noFollowersFound": "No se encontraron seguidores",
     "noFollowersYet": "Aún no hay seguidores",
     "rodadas": "Rodadas",
+    "rodadasTitle": "Rodadas ({{count}})",
     "rodadasTotal": "rodadas",
     "allRodadas": "Todas",
     "upcomingRodadas": "Próximas",
     "pastRodadas": "Pasadas",
     "noUpcomingRodadas": "No hay rodadas próximas",
     "noPastRodadas": "No hay rodadas pasadas",
-    "noRodadasYet": "Aún no hay rodadas"
+    "noRodadasYet": "Aún no hay rodadas",
+    "noDate": "Sin fecha",
+    "rodadaStatusInProgress": "En curso",
+    "rodadaStatusUpcoming": "Próxima",
+    "startPointPending": "Punto de salida pendiente",
+    "createRide": "Crear rodada",
+    "createTraining": "Crear entreno",
+    "rodadaCreatedTitle": "¡Rodada creada!",
+    "rodadaCreatedMessage": "\"{{nombre}}\" fue creada exitosamente"
   },
   "createPost": {
     "title": "Nuevo Post",
@@ -380,21 +584,190 @@
     "camera": "Cámara",
     "gallery": "Galería"
   },
+  "components": {
+    "createPostModal": {
+      "chooseOption": "Elige una opción",
+      "selectImageError": "No se pudo seleccionar la imagen: {{error}}",
+      "takePhotoError": "No se pudo tomar la foto: {{error}}",
+      "invalidImageUri": "La imagen seleccionada no tiene una URI válida",
+      "publishSuccess": "Post publicado correctamente",
+      "publishError": "No se pudo publicar: {{error}}"
+    },
+    "postOptionsMenu": {
+      "editPost": "Editar post",
+      "deletePost": "Eliminar post",
+      "report": "Reportar",
+      "share": "Compartir"
+    },
+    "deleteConfirmModal": {
+      "title": "Eliminar post",
+      "message": "¿Estás seguro que quieres eliminar este post? Esta acción no se puede deshacer.",
+      "noDescription": "Sin descripción"
+    },
+    "errorBoundary": {
+      "title": "¡Oops! Algo salió mal",
+      "debugInfo": "Información de depuración:",
+      "retry": "Reintentar"
+    },
+    "spotCard": {
+      "locationUnavailable": "Ubicación no disponible",
+      "viewHere": "Ver aquí",
+      "googleMaps": "Google Maps"
+    },
+    "spotMap": {
+      "loading": "Cargando mapa...",
+      "title": "MAPA INTERACTIVO",
+      "subtitle_one": "{{count}} spot en {{city}}",
+      "subtitle_other": "{{count}} spots en {{city}}",
+      "openInMaps": "Abrir en Maps"
+    },
+    "spotSearchFilter": {
+      "typeStreet": "Street",
+      "typePark": "Park",
+      "typePumptrack": "Pumptrack",
+      "difficultyLow": "Baja",
+      "difficultyMedium": "Media",
+      "difficultyHigh": "Alta",
+      "difficulty": "Dificultad",
+      "search": "Buscar",
+      "searching": "Buscando...",
+      "done": "Listo"
+    },
+    "parcheOptionsMenu": {
+      "edit": "Editar parche",
+      "delete": "Eliminar parche",
+      "share": "Compartir parche",
+      "report": "Reportar parche",
+      "deleteTitle": "Eliminar parche",
+      "deleteMessage": "¿Estás seguro de que quieres eliminar \"{{name}}\"? Esta acción no se puede deshacer.",
+      "reportTitle": "Reportar parche",
+      "reportPrompt": "¿Por qué quieres reportar este parche?",
+      "reportReasonInappropriate": "Contenido inapropiado",
+      "reportReasonFalseInfo": "Información falsa",
+      "reportReasonSpam": "Spam",
+      "ownerBadge": "TU PARCHE"
+    },
+    "filterToolbar": {
+      "apply": "Aplicar filtros"
+    },
+    "crewSearchFilter": {
+      "searchPlaceholder": "Buscar parche, ciudad...",
+      "search": "Buscar",
+      "searching": "Buscando...",
+      "done": "Listo"
+    },
+    "skaterSearchFilter": {
+      "searchPlaceholder": "Buscar patinador, ciudad, disciplina...",
+      "search": "Buscar",
+      "searching": "Buscando...",
+      "done": "Listo"
+    },
+    "viewModeToggle": {
+      "list": "Lista"
+    },
+    "createParcheModal": {
+      "titleEdit": "Editar Parche",
+      "titleCreate": "Crear Nuevo Parche",
+      "savingChanges": "Guardando cambios...",
+      "creating": "Creando parche...",
+      "basicInfo": "Información Básica",
+      "namePlaceholder": "Nombre del parche",
+      "descriptionPlaceholder": "Descripción del parche (opcional)",
+      "cityPlaceholder": "Ciudad",
+      "disciplines": "Disciplinas",
+      "disciplinesHelp": "Selecciona las disciplinas que practica tu parche",
+      "details": "Detalles",
+      "membersPlaceholder": "Número aproximado de miembros",
+      "photoSection": "Foto del parche (opcional)",
+      "gallery": "Galería",
+      "camera": "Cámara",
+      "contactInfo": "Información de Contacto",
+      "contactHelp": "Información opcional para que otros skaters puedan contactarte",
+      "emailPlaceholder": "Correo electrónico",
+      "instagramPlaceholder": "Instagram (sin @)",
+      "phonePlaceholder": "Teléfono (opcional)",
+      "cancel": "Cancelar",
+      "saveChanges": "Guardar Cambios",
+      "createParche": "Crear Parche",
+      "permissionsRequired": "Permisos requeridos",
+      "galleryPermission": "Necesitamos acceso a tu galería para seleccionar fotos.",
+      "cameraPermission": "Necesitamos acceso a tu cámara para tomar fotos.",
+      "imageSelectError": "No se pudo seleccionar la imagen",
+      "takePhotoError": "No se pudo tomar la foto"
+    },
+    "createComunidadModal": {
+      "title": "Crear comunidad",
+      "create": "Crear",
+      "photos": "Fotos",
+      "selectFromGallery": "Seleccionar desde galería",
+      "cover": "Portada",
+      "nameLabel": "Nombre *",
+      "namePlaceholder": "Nombre de la comunidad",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "Describe la comunidad",
+      "cityLabel": "Ciudad",
+      "cityPlaceholder": "Ciudad",
+      "tagsLabel": "Etiquetas",
+      "privacyLabel": "Privacidad",
+      "public": "Pública",
+      "private": "Privada",
+      "tags": {
+        "street": "Street",
+        "urbano": "Urbano",
+        "freestyle": "Freestyle",
+        "slalom": "Slalom",
+        "downhill": "Downhill",
+        "fitness": "Fitness",
+        "ruta": "Ruta",
+        "aprendizaje": "Aprendizaje",
+        "nocturna": "Nocturna"
+      }
+    }
+  },
   "rodadas": {
     "title": "Rodadas",
     "create": "Crear rodada",
     "created": "🛼 ¡Rodada creada!",
     "createdMessage": "\"{{nombre}}\" ha sido programada. Los patinadores podrán verla en el mapa.",
     "great": "Genial!",
+    "deleteTitle": "Eliminar rodada",
+    "deleteMessage": "¿Seguro que quieres eliminar \"{{nombre}}\"?",
+    "deleteSuccess": "Rodada eliminada",
+    "deleteError": "No se pudo eliminar",
+    "status": {
+      "active": "En curso",
+      "upcoming": "Próxima",
+      "finished": "Finalizada"
+    },
+    "types": {
+      "rodada": "Rodada",
+      "training": "Entreno",
+      "community": "Comunidad"
+    },
+    "levels": {
+      "all": "Todos los niveles",
+      "beginner": "Principiante",
+      "intermediate": "Intermedio",
+      "advanced": "Avanzado",
+      "short": "Todos"
+    },
     "detail": {
       "title": "Rodada",
       "status": "Estado",
+      "statusActive": "En curso",
+      "statusScheduled": "Programada",
       "inProgress": "🔴 En curso",
       "scheduled": "🟢 Programada",
+      "organizer": "Organiza",
+      "youAreOrganizer": "Eres el organizador",
+      "type": "Tipo",
+      "community": "Comunidad",
       "startPoint": "Punto de salida",
       "endPoint": "Punto de llegada",
       "notSpecified": "No especificado",
       "dateTime": "Fecha y hora",
+      "noDate": "Sin fecha",
+      "noTime": "No especificada",
       "levelRequired": "Nivel requerido",
       "allLevels": "Todos los niveles",
       "participants": "Participantes",
@@ -403,16 +776,31 @@
       "viewOnMap": "Ver en mapa",
       "join": "Unirme",
       "joining": "Uniéndote...",
-      "organizer": "Eres el organizador"
+      "leave": "Abandonar",
+      "leaving": "Abandonando...",
+      "verifying": "Verificando...",
+      "delete": "Eliminar rodada",
+      "deleting": "Eliminando..."
     },
     "list": {
-      "title": "Rodadas disponibles",
+      "title": "🛼 Rodadas Programadas",
+      "loading": "Cargando rodadas...",
       "empty": "No hay rodadas programadas",
-      "emptyHint": "Sé el primero en crear una rodada"
+      "emptyHint": "¡Crea la primera rodada!",
+      "yours": "(tuya)"
+    },
+    "badge": {
+      "point": "Punto:",
+      "undefined": "Sin definir",
+      "date": "Fecha:",
+      "noDate": "Sin fecha",
+      "noTime": "Sin hora",
+      "participants": "Participantes:",
+      "level": "Nivel:"
     }
   },
   "createRodada": {
-    "title": "Crear Rodada",
+    "title": "Nueva Rodada",
     "cancel": "Cancelar",
     "create": "Crear",
     "name": "Nombre de la rodada *",
@@ -426,7 +814,7 @@
     "date": "Fecha *",
     "datePlaceholder": "DD/MM/AAAA",
     "time": "Hora *",
-    "timePlaceholder": "HH:MM",
+    "timePlaceholder": "7:00",
     "level": "Nivel requerido",
     "levels": {
       "all": "Todos los niveles",
@@ -434,6 +822,12 @@
       "intermediate": "Intermedio",
       "advanced": "Avanzado"
     }
+  },
+  "tracking": {
+    "skater": "Patinador",
+    "distanceLabel": "Distancia:",
+    "speedLabel": "Velocidad:",
+    "savedRoute": "Ruta guardada"
   }
 }
 
