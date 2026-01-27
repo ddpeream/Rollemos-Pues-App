@@ -31,6 +31,9 @@ const { width } = Dimensions.get('window');
 
 export default function Comunidad() {
   const { t } = useTranslation();
+
+  // i18next pluralization in this project uses *_one / *_other keys.
+  const pluralKey = (baseKey, count) => `${baseKey}_${count === 1 ? 'one' : 'other'}`;
   const { theme, user } = useAppStore();
   const navigation = useNavigation();
 
@@ -62,10 +65,26 @@ export default function Comunidad() {
   const [showCreateParcheModal, setShowCreateParcheModal] = useState(false);
   const [showCreateComunidadModal, setShowCreateComunidadModal] = useState(false);
 
+  const translateDiscipline = (discipline) => {
+    if (!discipline || typeof discipline !== 'string') return discipline;
+    const normalized = discipline.trim().toLowerCase();
+    if (normalized === 'street') return t('screens.shared.disciplines.street');
+    if (normalized === 'park') return t('screens.shared.disciplines.park');
+    if (normalized === 'vert') return t('screens.shared.disciplines.vert');
+    if (normalized === 'freestyle') return t('screens.shared.disciplines.freestyle');
+    if (normalized === 'downhill') return t('screens.shared.disciplines.downhill');
+    if (normalized === 'slalom') return t('screens.shared.disciplines.slalom');
+    if (normalized === 'speed') return t('screens.shared.disciplines.speed');
+    if (normalized === 'dance') return t('screens.shared.disciplines.dance');
+    return discipline;
+  };
+
   const translateOption = (option) => {
     if (option === 'Todos') return t('filters.all');
     if (option === 'Todas') return t('filters.allFeminine');
-    return option;
+    if (option === 'Parches') return t('screens.comunidad.filters.parches');
+    if (option === 'Comunidades') return t('screens.comunidad.filters.comunidades');
+    return translateDiscipline(option);
   };
 
   // Cargar data al entrar
@@ -244,7 +263,7 @@ export default function Comunidad() {
       ? item.disciplinas
       : [];
     const tags = Array.isArray(item.tags) ? item.tags : [];
-    const badges = item._type === 'parche' ? disciplinas : tags;
+    const badges = item._type === 'parche' ? disciplinas.map(translateDiscipline) : tags;
     const detailRoute =
       item._type === 'parche'
         ? { name: 'DetalleParche', params: { parcheId: item.id } }
@@ -295,8 +314,12 @@ export default function Comunidad() {
               <Ionicons name="people-outline" size={16} color={theme.colors.text.secondary} />
               <Text style={[styles.statText, { color: theme.colors.text.secondary }]}>
                 {item._type === 'parche'
-                  ? t('screens.parches.members', { count: item.miembros || 0 })
-                  : `${item.miembros || 0} miembros`}
+                  ? t(pluralKey('screens.parches.members', item.miembros || 0), {
+                      count: item.miembros || 0,
+                    })
+                  : t(pluralKey('screens.parches.members', item.miembros || 0), {
+                      count: item.miembros || 0,
+                    })}
               </Text>
             </View>
           </View>
@@ -324,7 +347,9 @@ export default function Comunidad() {
               style={[styles.viewButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => navigation.navigate(detailRoute.name, detailRoute.params)}
             >
-              <Text style={[styles.viewButtonText, { color: theme.colors.onPrimary }]}>Ver</Text>
+              <Text style={[styles.viewButtonText, { color: theme.colors.onPrimary }]}>
+                {t('screens.parches.view')}
+              </Text>
               <Ionicons name="arrow-forward" size={16} color={theme.colors.onPrimary} />
             </TouchableOpacity>
           </View>
@@ -348,7 +373,7 @@ export default function Comunidad() {
             {t('nav.comunidad')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-            {t('screens.comunidad.count', { count: filteredItems.length })}
+            {t(pluralKey('screens.comunidad.count', filteredItems.length), { count: filteredItems.length })}
           </Text>
         </View>
         <TouchableOpacity
@@ -356,7 +381,7 @@ export default function Comunidad() {
           onPress={() => setShowCreateMenu(true)}
         >
           <Ionicons name="add" size={20} color="#FFFFFF" />
-          <Text style={styles.createButtonText}>Crear</Text>
+          <Text style={styles.createButtonText}>{t('rodadas.create')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -387,7 +412,7 @@ export default function Comunidad() {
         <View style={styles.filterRow}>
           <FilterButton
             id="type"
-            label="Tipo"
+            label={t('filters.type')}
             value={selectedType}
             options={typeOptions}
             onSelect={setSelectedType}
@@ -491,7 +516,7 @@ export default function Comunidad() {
             >
               <Ionicons name="people-outline" size={18} color={theme.colors.primary} />
               <Text style={[styles.createMenuText, { color: theme.colors.text.primary }]}>
-                Comunidad
+                {t('screens.comunidad.createMenu.comunidad')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -509,7 +534,7 @@ export default function Comunidad() {
             >
               <Ionicons name="people-circle-outline" size={18} color={theme.colors.primary} />
               <Text style={[styles.createMenuText, { color: theme.colors.text.primary }]}>
-                Parche
+                {t('screens.comunidad.createMenu.parche')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -523,9 +548,15 @@ export default function Comunidad() {
         onSubmit={async (parcheData) => {
           const result = await createParche(parcheData);
           if (result.success) {
-            Alert.alert('Parche creado', `"${result.data.nombre}" fue creado.`);
+            Alert.alert(
+              t('screens.comunidad.parcheCreatedTitle'),
+              t('screens.comunidad.parcheCreatedMessage', { name: result.data.nombre })
+            );
           } else {
-            Alert.alert('Error', result.error || 'No se pudo crear el parche');
+            Alert.alert(
+              t('common.error'),
+              result.error || t('screens.comunidad.parcheCreateError')
+            );
             throw new Error(result.error);
           }
         }}
@@ -538,7 +569,10 @@ export default function Comunidad() {
           const { imagenes = [], coverIndex = 0, ...payload } = comunidadData || {};
           const result = await createComunidad(payload);
           if (!result.success) {
-            Alert.alert('Error', result.error || 'No se pudo crear la comunidad');
+            Alert.alert(
+              t('common.error'),
+              result.error || t('screens.comunidad.comunidadCreateError')
+            );
             throw new Error(result.error);
           }
 
@@ -550,15 +584,18 @@ export default function Comunidad() {
             );
             if (!uploadResult.success) {
               Alert.alert(
-                'Comunidad creada',
-                'Se creo la comunidad, pero no se pudieron subir las fotos.'
+                t('screens.comunidad.createdTitle'),
+                t('screens.comunidad.createdImagesError')
               );
               return;
             }
             await loadComunidades();
           }
 
-          Alert.alert('Comunidad creada', `"${result.data.nombre}" fue creada.`);
+          Alert.alert(
+            t('screens.comunidad.createdTitle'),
+            t('screens.comunidad.createdMessage', { name: result.data.nombre })
+          );
         }}
       />
 

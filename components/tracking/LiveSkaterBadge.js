@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { styles } from '../../screens/tracking/tracking.style';
 import { formatDistance } from '../../utils/tracking';
 
@@ -11,6 +12,8 @@ export default function LiveSkaterBadge({
   getSkaterColor,
   onDismiss,
 }) {
+  const { t } = useTranslation();
+
   if (!visible || !skater) return null;
 
   const speedKmh =
@@ -34,13 +37,13 @@ export default function LiveSkaterBadge({
           <MaterialCommunityIcons name="roller-skate" size={20} color="#FFFFFF" />
           <View style={styles.rodadaBadgeText}>
             <Text style={styles.rodadaBadgeTitle} numberOfLines={1}>
-              {skater.usuario?.nombre || 'Patinador'}
+              {skater.usuario?.nombre || t('tracking.skater')}
             </Text>
             <Text style={styles.rodadaBadgeStats}>
-              Distancia: {formatDistance(distanceMeters)}
+              {t('tracking.distanceLabel')} {formatDistance(distanceMeters)}
             </Text>
             <Text style={styles.rodadaBadgeStats}>
-              Velocidad: {speedKmh != null ? speedKmh.toFixed(1) : '--'} km/h
+              {t('tracking.speedLabel')} {speedKmh != null ? speedKmh.toFixed(1) : '--'} km/h
             </Text>
           </View>
         </View>

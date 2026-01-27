@@ -185,7 +185,7 @@ export default function MainTabs() {
         <Tab.Screen
           name="MarketRollers"
           component={Spots}
-          options={{ title: '🛍️ MarketRollers', tabBarLabel: 'MarketRollers' }}
+          options={{ title: t('nav.marketRollers'), tabBarLabel: t('nav.marketRollers') }}
         />
         <Tab.Screen
           name="Rutas"
@@ -228,9 +228,9 @@ export default function MainTabs() {
             }}
           >
             {[
-              { id: 'es', label: '\uD83C\uDDE8\uD83C\uDDF4 Espanol' },
-              { id: 'en', label: '\uD83C\uDDFA\uD83C\uDDF8 English' },
-              { id: 'fr', label: '\uD83C\uDDEB\uD83C\uDDF7 Francais' },
+              { id: 'es', label: t('common.language.es') },
+              { id: 'en', label: t('common.language.en') },
+              { id: 'fr', label: t('common.language.fr') },
             ].map((item) => (
               <TouchableOpacity
                 key={item.id}
@@ -291,7 +291,7 @@ export default function MainTabs() {
               style={{ paddingHorizontal: 16, paddingVertical: 10 }}
             >
               <Text style={{ fontSize: 16 }}>
-                {t('screens.menu.notifications', 'Notificaciones')}
+                {t('screens.menu.notifications')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

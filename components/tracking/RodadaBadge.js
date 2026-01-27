@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { styles } from '../../screens/tracking/tracking.style';
 
 export default function RodadaBadge({
@@ -9,6 +10,8 @@ export default function RodadaBadge({
   getRodadaVisuals,
   onDismiss,
 }) {
+  const { t } = useTranslation();
+
   if (!visible || !selectedRodada) return null;
 
   return (
@@ -32,23 +35,23 @@ export default function RodadaBadge({
               {selectedRodada.nombre}
             </Text>
             <Text style={styles.rodadaBadgeStats}>
-              Punto:{' '}
+              {t('rodadas.badge.point')}{' '}
               {selectedRodada.punto_salida_nombre
                 ? `${selectedRodada.punto_salida_nombre.substring(0, 30)}${
                     selectedRodada.punto_salida_nombre.length > 30 ? '...' : ''
                   }`
-                : 'Sin definir'}
+                : t('rodadas.badge.undefined')}
             </Text>
             <Text style={styles.rodadaBadgeStats}>
-              Fecha:{' '}
+              {t('rodadas.badge.date')}{' '}
               {selectedRodada.fecha_inicio
                 ? new Date(selectedRodada.fecha_inicio).toLocaleDateString('es-CO')
-                : 'Sin fecha'}{' '}
-              - {selectedRodada.hora_encuentro || 'Sin hora'}
+                : t('rodadas.badge.noDate')}{' '}
+              - {selectedRodada.hora_encuentro || t('rodadas.badge.noTime')}
             </Text>
             <Text style={styles.rodadaBadgeStats}>
-              Participantes: {selectedRodada.participantes_count || 0} - Nivel:{' '}
-              {selectedRodada.nivel_requerido || 'Todos'}
+              {t('rodadas.badge.participants')} {selectedRodada.participantes_count || 0} - {t('rodadas.badge.level')}{' '}
+              {selectedRodada.nivel_requerido || t('rodadas.levels.short')}
             </Text>
           </View>
         </View>

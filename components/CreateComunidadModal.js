@@ -20,9 +20,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 
 const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
+  const { t } = useTranslation();
   const { theme, isDark } = useTheme();
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -33,16 +35,17 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
   const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const tagOptions = [
-    'Street',
-    'Urbano',
-    'Freestyle',
-    'Slalom',
-    'Downhill',
-    'Fitness',
-    'Ruta',
-    'Aprendizaje',
-    'Nocturna',
+  // Tag keys for i18n (the actual values stored remain in Spanish for DB consistency)
+  const tagKeys = [
+    { key: 'street', value: 'Street' },
+    { key: 'urbano', value: 'Urbano' },
+    { key: 'freestyle', value: 'Freestyle' },
+    { key: 'slalom', value: 'Slalom' },
+    { key: 'downhill', value: 'Downhill' },
+    { key: 'fitness', value: 'Fitness' },
+    { key: 'ruta', value: 'Ruta' },
+    { key: 'aprendizaje', value: 'Aprendizaje' },
+    { key: 'nocturna', value: 'Nocturna' },
   ];
 
   const resetForm = () => {
@@ -156,7 +159,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
               <Ionicons name="close" size={22} color={theme.colors.text.primary} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-              Crear comunidad
+              {t('components.createComunidadModal.title')}
             </Text>
             <TouchableOpacity
               onPress={handleCreate}
@@ -169,7 +172,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
               {loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.createButtonText}>Crear</Text>
+                <Text style={styles.createButtonText}>{t('components.createComunidadModal.create')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -181,7 +184,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
           >
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                Fotos
+                {t('components.createComunidadModal.photos')}
               </Text>
               <TouchableOpacity
                 style={[
@@ -192,7 +195,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
               >
                 <Ionicons name="image-outline" size={18} color={theme.colors.text.primary} />
                 <Text style={[styles.photoActionText, { color: theme.colors.text.primary }]}>
-                  Seleccionar desde galeria
+                  {t('components.createComunidadModal.selectFromGallery')}
                 </Text>
               </TouchableOpacity>
               {selectedImages.length > 0 && (
@@ -216,7 +219,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
                               { backgroundColor: theme.colors.primary },
                             ]}
                           >
-                            <Text style={styles.photoCoverText}>Portada</Text>
+                            <Text style={styles.photoCoverText}>{t('components.createComunidadModal.cover')}</Text>
                           </View>
                         )}
                         <TouchableOpacity
@@ -233,13 +236,13 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Nombre *</Text>
+              <Text style={[styles.label, { color: theme.colors.text.secondary }]}>{t('components.createComunidadModal.nameLabel')}</Text>
               <TextInput
                 style={[
                   styles.input,
                   { backgroundColor: inputBackground, borderColor: inputBorder, color: theme.colors.text.primary },
                 ]}
-                placeholder="Nombre de la comunidad"
+                placeholder={t('components.createComunidadModal.namePlaceholder')}
                 placeholderTextColor={theme.colors.text.secondary}
                 value={nombre}
                 onChangeText={setNombre}
@@ -247,14 +250,14 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Descripcion</Text>
+              <Text style={[styles.label, { color: theme.colors.text.secondary }]}>{t('components.createComunidadModal.descriptionLabel')}</Text>
               <TextInput
                 style={[
                   styles.input,
                   styles.textArea,
                   { backgroundColor: inputBackground, borderColor: inputBorder, color: theme.colors.text.primary },
                 ]}
-                placeholder="Describe la comunidad"
+                placeholder={t('components.createComunidadModal.descriptionPlaceholder')}
                 placeholderTextColor={theme.colors.text.secondary}
                 value={descripcion}
                 onChangeText={setDescripcion}
@@ -263,13 +266,13 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Ciudad</Text>
+              <Text style={[styles.label, { color: theme.colors.text.secondary }]}>{t('components.createComunidadModal.cityLabel')}</Text>
               <TextInput
                 style={[
                   styles.input,
                   { backgroundColor: inputBackground, borderColor: inputBorder, color: theme.colors.text.primary },
                 ]}
-                placeholder="Ciudad"
+                placeholder={t('components.createComunidadModal.cityPlaceholder')}
                 placeholderTextColor={theme.colors.text.secondary}
                 value={ciudad}
                 onChangeText={setCiudad}
@@ -278,14 +281,14 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                Etiquetas
+                {t('components.createComunidadModal.tagsLabel')}
               </Text>
               <View style={styles.tagsGrid}>
-                {tagOptions.map((tag) => {
-                  const selected = selectedTags.includes(tag);
+                {tagKeys.map((tag) => {
+                  const selected = selectedTags.includes(tag.value);
                   return (
                     <TouchableOpacity
-                      key={tag}
+                      key={tag.key}
                       style={[
                         styles.tagButton,
                         {
@@ -293,7 +296,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
                           borderColor: selected ? theme.colors.primary : inputBorder,
                         },
                       ]}
-                      onPress={() => toggleTag(tag)}
+                      onPress={() => toggleTag(tag.value)}
                     >
                       <Text
                         style={[
@@ -301,7 +304,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
                           { color: selected ? theme.colors.onPrimary : theme.colors.text.primary },
                         ]}
                       >
-                        {tag}
+                        {t(`components.createComunidadModal.tags.${tag.key}`)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -311,7 +314,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                Privacidad
+                {t('components.createComunidadModal.privacyLabel')}
               </Text>
               <View style={styles.privacyRow}>
                 <TouchableOpacity
@@ -330,7 +333,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
                       { color: isPublic ? theme.colors.onPrimary : theme.colors.text.primary },
                     ]}
                   >
-                    Publica
+                    {t('components.createComunidadModal.public')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -349,7 +352,7 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
                       { color: !isPublic ? theme.colors.onPrimary : theme.colors.text.primary },
                     ]}
                   >
-                    Privada
+                    {t('components.createComunidadModal.private')}
                   </Text>
                 </TouchableOpacity>
               </View>

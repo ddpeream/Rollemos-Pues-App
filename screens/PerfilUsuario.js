@@ -27,7 +27,7 @@ import BackButton from '../components/common/BackButton';
 const { width } = Dimensions.get('window');
 
 export default function PerfilUsuario() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useTheme();
@@ -44,7 +44,7 @@ export default function PerfilUsuario() {
   useEffect(() => {
     const loadUsuario = async () => {
       if (!userId) {
-        setError('No se especificó el usuario');
+        setError(t('screens.perfilUsuario.missingUser'));
         setLoading(false);
         return;
       }
@@ -67,11 +67,11 @@ export default function PerfilUsuario() {
           setError(null);
         } else {
           console.error('❌ PerfilUsuario: Usuario no encontrado');
-          setError('Usuario no encontrado');
+          setError(t('screens.perfilUsuario.userNotFound'));
         }
       } catch (err) {
         console.error('❌ PerfilUsuario: Error cargando:', err);
-        setError('Error al cargar el perfil');
+        setError(t('screens.perfilUsuario.loadError'));
       } finally {
         setLoading(false);
       }
@@ -287,20 +287,20 @@ export default function PerfilUsuario() {
       avanzado: t('screens.shared.levels.avanzado', 'Avanzado'),
       profesional: t('screens.shared.levels.profesional', 'Profesional'),
     };
-    return niveles[nivel] || nivel || 'Sin definir';
+    return niveles[nivel] || nivel || t('common.notDefined');
   };
 
   // Traducir disciplina
   const getDisciplinaLabel = (disciplina) => {
     const disciplinas = {
-      street: 'Street',
-      park: 'Park',
-      freestyle: 'Freestyle',
-      slalom: 'Slalom',
-      downhill: 'Downhill',
-      dance: 'Dance',
+      street: t('screens.shared.disciplines.street', 'Street'),
+      park: t('screens.shared.disciplines.park', 'Park'),
+      freestyle: t('screens.shared.disciplines.freestyle', 'Freestyle'),
+      slalom: t('screens.shared.disciplines.slalom', 'Slalom'),
+      downhill: t('screens.shared.disciplines.downhill', 'Downhill'),
+      dance: t('screens.shared.disciplines.dance', 'Dance'),
     };
-    return disciplinas[disciplina] || disciplina || 'Sin definir';
+    return disciplinas[disciplina] || disciplina || t('common.notDefined');
   };
 
   // Loading state
@@ -309,7 +309,7 @@ export default function PerfilUsuario() {
       <View style={styles.container}>
         <View style={styles.header}>
           <BackButton />
-          <Text style={styles.headerTitle}>Cargando...</Text>
+          <Text style={styles.headerTitle}>{t('common.loading')}</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -324,16 +324,16 @@ export default function PerfilUsuario() {
       <View style={styles.container}>
         <View style={styles.header}>
           <BackButton />
-          <Text style={styles.headerTitle}>Perfil</Text>
+          <Text style={styles.headerTitle}>{t('screens.perfilUsuario.profileTitle')}</Text>
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="person-outline" size={64} color={theme.colors.text.tertiary} />
-          <Text style={styles.errorText}>{error || 'Usuario no encontrado'}</Text>
+          <Text style={styles.errorText}>{error || t('screens.perfilUsuario.userNotFound')}</Text>
           <TouchableOpacity
             style={[styles.actionButton, styles.primaryButton, { marginTop: spacing.lg }]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.primaryButtonText}>Volver</Text>
+            <Text style={styles.primaryButtonText}>{t('common.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -345,7 +345,7 @@ export default function PerfilUsuario() {
       {/* Header */}
       <View style={styles.header}>
         <BackButton />
-        <Text style={styles.headerTitle}>{usuario.nombre || 'Perfil'}</Text>
+        <Text style={styles.headerTitle}>{usuario.nombre || t('screens.perfilUsuario.profileTitle')}</Text>
       </View>
 
       <ScrollView 
@@ -396,43 +396,45 @@ export default function PerfilUsuario() {
 
         {/* Bio Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Biografía</Text>
+          <Text style={styles.sectionTitle}>{t('screens.perfilUsuario.bioTitle')}</Text>
           <View style={styles.bioCard}>
             {usuario.bio ? (
               <Text style={styles.bioText}>{usuario.bio}</Text>
             ) : (
-              <Text style={styles.noBioText}>Este usuario no ha agregado una biografía</Text>
+              <Text style={styles.noBioText}>{t('screens.perfilUsuario.noBio')}</Text>
             )}
           </View>
         </View>
 
         {/* Info Grid */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Información</Text>
+          <Text style={styles.sectionTitle}>{t('screens.perfilUsuario.infoTitle')}</Text>
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Nivel</Text>
+              <Text style={styles.infoLabel}>{t('screens.perfilUsuario.level')}</Text>
               <Text style={styles.infoValue}>{getNivelLabel(usuario.nivel)}</Text>
             </View>
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Disciplina</Text>
+              <Text style={styles.infoLabel}>{t('screens.perfilUsuario.discipline')}</Text>
               <Text style={styles.infoValue}>{getDisciplinaLabel(usuario.disciplina)}</Text>
             </View>
           </View>
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Ciudad</Text>
-              <Text style={styles.infoValue}>{usuario.ciudad || 'Sin especificar'}</Text>
+              <Text style={styles.infoLabel}>{t('screens.perfilUsuario.city')}</Text>
+              <Text style={styles.infoValue}>
+                {usuario.ciudad || t('common.notSpecified')}
+              </Text>
             </View>
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Miembro desde</Text>
+              <Text style={styles.infoLabel}>{t('screens.perfilUsuario.memberSince')}</Text>
               <Text style={styles.infoValue}>
                 {usuario.created_at 
-                  ? new Date(usuario.created_at).toLocaleDateString('es-CO', { 
+                  ? new Date(usuario.created_at).toLocaleDateString(i18n.language || undefined, { 
                       year: 'numeric', 
                       month: 'short' 
                     })
-                  : 'N/A'
+                  : t('common.notAvailable')
                 }
               </Text>
             </View>
@@ -443,11 +445,11 @@ export default function PerfilUsuario() {
         <View style={styles.actionsContainer}>
           <TouchableOpacity style={[styles.actionButton, styles.secondaryButton]}>
             <Ionicons name="chatbubble-outline" size={20} color={theme.colors.primary} />
-            <Text style={styles.secondaryButtonText}>Mensaje</Text>
+            <Text style={styles.secondaryButtonText}>{t('screens.perfilUsuario.message')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.actionButton, styles.primaryButton]}>
             <Ionicons name="person-add-outline" size={20} color={theme.colors.onPrimary} />
-            <Text style={styles.primaryButtonText}>Seguir</Text>
+            <Text style={styles.primaryButtonText}>{t('screens.perfilUsuario.follow')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

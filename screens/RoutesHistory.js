@@ -34,6 +34,9 @@ import BackButton from '../components/common/BackButton';
 const { width } = Dimensions.get('window');
 
 export default function RoutesHistory() {
+  // i18next pluralization in this project uses *_one / *_other keys.
+  const pluralKey = (baseKey, count) => `${baseKey}_${count === 1 ? 'one' : 'other'}`;
+
   const navigation = useNavigation();
   const { theme } = useAppStore();
   const { t } = useTranslation();
@@ -265,7 +268,7 @@ export default function RoutesHistory() {
             {t('screens.routesHistory.title')}
           </Text>
           <Text style={[styles.headerSubtitle, { color: theme.colors.text.tertiary }]}>
-            {t('screens.routesHistory.count', { count: routes.length })}
+            {t(pluralKey('screens.routesHistory.count', routes.length), { count: routes.length })}
           </Text>
         </View>
       </View>

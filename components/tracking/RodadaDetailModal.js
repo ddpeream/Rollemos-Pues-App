@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { styles } from '../../screens/tracking/tracking.style';
 
 export default function RodadaDetailModal({
@@ -19,6 +20,8 @@ export default function RodadaDetailModal({
   onLeaveRodada,
   onDeleteRodada,
 }) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -50,12 +53,12 @@ export default function RodadaDetailModal({
                 ]}
                 numberOfLines={2}
               >
-                {selectedRodada?.nombre || 'Rodada'}
+                {selectedRodada?.nombre || t('rodadas.detail.title')}
               </Text>
               {user && selectedRodada?.organizador_id === user.id && (
                 <View style={styles.organizerBadgeHeader}>
                   <MaterialCommunityIcons name="crown" size={14} color="#34C759" />
-                  <Text style={styles.organizerBadgeText}>Eres el organizador</Text>
+                  <Text style={styles.organizerBadgeText}>{t('rodadas.detail.youAreOrganizer')}</Text>
                 </View>
               )}
             </View>
@@ -76,7 +79,7 @@ export default function RodadaDetailModal({
                   { color: theme.colors.text.secondary },
                 ]}
               >
-                Estado
+                {t('rodadas.detail.status')}
               </Text>
               <View style={styles.rodadaDetailRow}>
                 <View
@@ -94,7 +97,7 @@ export default function RodadaDetailModal({
                     { color: theme.colors.text.primary },
                   ]}
                 >
-                  {selectedRodada?.estado === 'en_curso' ? 'En curso' : 'Programada'}
+                  {selectedRodada?.estado === 'en_curso' ? t('rodadas.detail.statusActive') : t('rodadas.detail.statusScheduled')}
                 </Text>
               </View>
             </View>
@@ -106,7 +109,7 @@ export default function RodadaDetailModal({
                   { color: theme.colors.text.secondary },
                 ]}
               >
-                Organiza
+                {t('rodadas.detail.organizer')}
               </Text>
               <View style={styles.rodadaDetailRow}>
                 <MaterialCommunityIcons
@@ -120,7 +123,7 @@ export default function RodadaDetailModal({
                     { color: theme.colors.text.primary, flex: 1 },
                   ]}
                 >
-                  {selectedRodada?.organizador?.nombre || 'Usuario'}
+                  {selectedRodada?.organizador?.nombre || t('common.user')}
                 </Text>
               </View>
             </View>
@@ -132,7 +135,7 @@ export default function RodadaDetailModal({
                   { color: theme.colors.text.secondary },
                 ]}
               >
-                Tipo
+                {t('rodadas.detail.type')}
               </Text>
               <View style={styles.rodadaDetailRow}>
                 <MaterialCommunityIcons
@@ -153,10 +156,10 @@ export default function RodadaDetailModal({
                   ]}
                 >
                   {selectedRodada?.tipo === 'entreno'
-                    ? 'Entreno'
+                    ? t('rodadas.types.training')
                     : selectedRodada?.comunidad_id
-                    ? 'Comunidad'
-                    : 'Rodada'}
+                    ? t('rodadas.types.community')
+                    : t('rodadas.types.rodada')}
                 </Text>
               </View>
             </View>
@@ -169,7 +172,7 @@ export default function RodadaDetailModal({
                     { color: theme.colors.text.secondary },
                   ]}
                 >
-                  Comunidad
+                  {t('rodadas.detail.community')}
                 </Text>
                 <View style={styles.rodadaDetailRow}>
                   <MaterialCommunityIcons
@@ -183,7 +186,7 @@ export default function RodadaDetailModal({
                       { color: theme.colors.text.primary },
                     ]}
                   >
-                    {selectedRodada?.comunidad?.nombre || 'No especificada'}
+                    {selectedRodada?.comunidad?.nombre || t('rodadas.detail.notSpecified')}
                   </Text>
                 </View>
               </View>
@@ -196,7 +199,7 @@ export default function RodadaDetailModal({
                   { color: theme.colors.text.secondary },
                 ]}
               >
-                Punto de salida
+                {t('rodadas.detail.startPoint')}
               </Text>
               <View style={styles.rodadaDetailRow}>
                 <Ionicons name="location" size={18} color={theme.colors.primary} />
@@ -206,7 +209,7 @@ export default function RodadaDetailModal({
                     { color: theme.colors.text.primary },
                   ]}
                 >
-                  {selectedRodada?.punto_salida_nombre || 'No especificado'}
+                  {selectedRodada?.punto_salida_nombre || t('rodadas.detail.notSpecified')}
                 </Text>
               </View>
             </View>
@@ -218,7 +221,7 @@ export default function RodadaDetailModal({
                   { color: theme.colors.text.secondary },
                 ]}
               >
-                Fecha y hora
+                {t('rodadas.detail.dateTime')}
               </Text>
               <View style={styles.rodadaDetailRow}>
                 <Ionicons name="calendar" size={18} color={theme.colors.primary} />
@@ -235,7 +238,7 @@ export default function RodadaDetailModal({
                         month: 'long',
                         day: 'numeric',
                       })
-                    : 'Sin fecha'}
+                    : t('rodadas.detail.noDate')}
                 </Text>
               </View>
               <View style={[styles.rodadaDetailRow, { marginTop: 4 }]}>
@@ -246,7 +249,7 @@ export default function RodadaDetailModal({
                     { color: theme.colors.text.primary },
                   ]}
                 >
-                  {selectedRodada?.hora_encuentro || 'No especificada'}
+                  {selectedRodada?.hora_encuentro || t('rodadas.detail.noTime')}
                 </Text>
               </View>
             </View>
@@ -258,7 +261,7 @@ export default function RodadaDetailModal({
                   { color: theme.colors.text.secondary },
                 ]}
               >
-                Nivel requerido
+                {t('rodadas.detail.levelRequired')}
               </Text>
               <View style={styles.rodadaDetailRow}>
                 <MaterialCommunityIcons name="medal" size={18} color={theme.colors.primary} />
@@ -268,7 +271,7 @@ export default function RodadaDetailModal({
                     { color: theme.colors.text.primary },
                   ]}
                 >
-                  {selectedRodada?.nivel_requerido || 'Todos los niveles'}
+                  {selectedRodada?.nivel_requerido || t('rodadas.detail.allLevels')}
                 </Text>
               </View>
             </View>
@@ -280,7 +283,7 @@ export default function RodadaDetailModal({
                   { color: theme.colors.text.secondary },
                 ]}
               >
-                Participantes
+                {t('rodadas.detail.participants')}
               </Text>
               <View style={styles.rodadaDetailRow}>
                 <Ionicons name="people" size={18} color={theme.colors.primary} />
@@ -290,7 +293,7 @@ export default function RodadaDetailModal({
                     { color: theme.colors.text.primary },
                   ]}
                 >
-                  {selectedRodada?.participantes_count || 0} personas se han unido
+                  {t('rodadas.detail.participantsCount', { count: selectedRodada?.participantes_count || 0 })}
                 </Text>
               </View>
               {Array.isArray(selectedRodada?.participantes) &&
@@ -304,7 +307,7 @@ export default function RodadaDetailModal({
                           { color: theme.colors.text.primary },
                         ]}
                       >
-                        - {item.usuario?.nombre || 'Usuario'}
+                        - {item.usuario?.nombre || t('common.user')}
                       </Text>
                     ))}
                   </View>
@@ -319,7 +322,7 @@ export default function RodadaDetailModal({
                     { color: theme.colors.text.secondary },
                   ]}
                 >
-                  Descripción
+                  {t('rodadas.detail.description')}
                 </Text>
                 <Text
                   style={[
@@ -352,7 +355,7 @@ export default function RodadaDetailModal({
                   { color: theme.colors.text.primary },
                 ]}
               >
-                Ver en mapa
+                {t('rodadas.detail.viewOnMap')}
               </Text>
             </TouchableOpacity>
 
@@ -375,7 +378,7 @@ export default function RodadaDetailModal({
                       { color: theme.colors.text.secondary },
                     ]}
                   >
-                    Verificando...
+                    {t('rodadas.detail.verifying')}
                   </Text>
                 </View>
               ) : isUserJoined ? (
@@ -398,7 +401,7 @@ export default function RodadaDetailModal({
                         { color: '#FF3B30' },
                       ]}
                     >
-                      Abandonando...
+                      {t('rodadas.detail.leaving')}
                     </Text>
                   ) : (
                     <>
@@ -409,7 +412,7 @@ export default function RodadaDetailModal({
                           { color: '#FF3B30' },
                         ]}
                       >
-                        Abandonar
+                        {t('rodadas.detail.leave')}
                       </Text>
                     </>
                   )}
@@ -424,11 +427,11 @@ export default function RodadaDetailModal({
                   disabled={joiningRodada === selectedRodada?.id}
                 >
                   {joiningRodada === selectedRodada?.id ? (
-                    <Text style={styles.rodadaDetailButtonText}>Uniéndote...</Text>
+                    <Text style={styles.rodadaDetailButtonText}>{t('rodadas.detail.joining')}</Text>
                   ) : (
                     <>
                       <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                      <Text style={styles.rodadaDetailButtonText}>Unirme</Text>
+                      <Text style={styles.rodadaDetailButtonText}>{t('rodadas.detail.join')}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -444,11 +447,11 @@ export default function RodadaDetailModal({
                 disabled={deletingRodada}
               >
                 {deletingRodada ? (
-                  <Text style={styles.rodadaDetailButtonText}>Eliminando...</Text>
+                  <Text style={styles.rodadaDetailButtonText}>{t('rodadas.detail.deleting')}</Text>
                 ) : (
                   <>
                     <Ionicons name="trash" size={20} color="#FFFFFF" />
-                    <Text style={styles.rodadaDetailButtonText}>Eliminar rodada</Text>
+                    <Text style={styles.rodadaDetailButtonText}>{t('rodadas.detail.delete')}</Text>
                   </>
                 )}
               </TouchableOpacity>

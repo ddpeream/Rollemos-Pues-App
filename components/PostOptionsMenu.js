@@ -15,6 +15,7 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, borderRadius } from '../theme';
 
@@ -29,6 +30,7 @@ const PostOptionsMenu = ({
   isOwnPost = false 
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
@@ -66,7 +68,7 @@ const PostOptionsMenu = ({
   const menuOptions = [
     {
       id: 'edit',
-      title: 'Editar post',
+      title: t('components.postOptionsMenu.editPost'),
       icon: 'create-outline',
       action: onEdit,
       show: isOwnPost,
@@ -74,7 +76,7 @@ const PostOptionsMenu = ({
     },
     {
       id: 'delete',
-      title: 'Eliminar post',
+      title: t('components.postOptionsMenu.deletePost'),
       icon: 'trash-outline',
       action: onDelete,
       show: isOwnPost,
@@ -82,7 +84,7 @@ const PostOptionsMenu = ({
     },
     {
       id: 'report',
-      title: 'Reportar',
+      title: t('components.postOptionsMenu.report'),
       icon: 'flag-outline',
       action: () => {
         onClose();
@@ -93,7 +95,7 @@ const PostOptionsMenu = ({
     },
     {
       id: 'share',
-      title: 'Compartir',
+      title: t('components.postOptionsMenu.share'),
       icon: 'share-outline',
       action: () => {
         onClose();

@@ -39,6 +39,9 @@ import { spacing, typography, borderRadius } from '../theme';
 const { width, height } = Dimensions.get('window');
 
 export default function Galeria() {
+  // i18next pluralization in this project uses *_one / *_other keys.
+  const pluralKey = (baseKey, count) => `${baseKey}_${count === 1 ? 'one' : 'other'}`;
+
   const navigation = useNavigation();
   const route = useRoute();
   const { user, theme } = useAppStore();
@@ -147,7 +150,7 @@ export default function Galeria() {
     } catch (error) {
       return { 
         success: false, 
-        error: error.message || 'Error al crear post'
+        error: error.message || t('createPost.createError')
       };
     }
   };
@@ -161,18 +164,18 @@ export default function Galeria() {
   // Eliminar post
   const handleDeletePost = async (postId) => {
     Alert.alert(
-      'Eliminar Foto',
-      '¿Estás seguro de que deseas eliminar esta foto?',
+      t('screens.galeria.deletePhotoTitle'),
+      t('screens.galeria.deletePhotoMessage'),
       [
         { 
-          text: 'Cancelar', 
+          text: t('common.cancel'), 
           onPress: () => {
             setShowPostMenu(false);
           }, 
           style: 'cancel' 
         },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           onPress: async () => {
             try {
               const { supabase } = await import('../config/supabase');
@@ -185,10 +188,10 @@ export default function Galeria() {
 
               setShowPostMenu(false);
               setMenuPost(null);
-              Alert.alert('Éxito', 'Foto eliminada correctamente');
+              Alert.alert(t('common.success'), t('screens.galeria.deletePhotoSuccess'));
               loadPosts();
             } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar la foto');
+              Alert.alert(t('common.error'), t('screens.galeria.deletePhotoError'));
             }
           },
           style: 'destructive',
@@ -210,12 +213,12 @@ export default function Galeria() {
 
   const handleDeleteComment = async (comentario) => {
     Alert.alert(
-      'Eliminar comentario',
-      '¿Quieres eliminar este comentario?',
+      t('screens.galeria.deleteCommentTitle'),
+      t('screens.galeria.deleteCommentMessage'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             const result = await deleteComment(comentario.id);
@@ -223,7 +226,10 @@ export default function Galeria() {
               setCommentsList((prev) => prev.filter((item) => item.id !== comentario.id));
               loadPosts();
             } else {
-              Alert.alert('Error', result.error || 'No se pudo eliminar el comentario');
+              Alert.alert(
+                t('common.error'),
+                result.error || t('screens.galeria.deleteCommentError')
+              );
             }
           },
         },
@@ -256,9 +262,21 @@ export default function Galeria() {
     const diffInSeconds = Math.floor((now - date) / 1000);
 
     if (diffInSeconds < 60) return t('screens.galeria.time.now');
-    if (diffInSeconds < 3600) return t('screens.galeria.time.minutes', { count: Math.floor(diffInSeconds / 60) });
-    if (diffInSeconds < 86400) return t('screens.galeria.time.hours', { count: Math.floor(diffInSeconds / 3600) });
-    if (diffInSeconds < 604800) return t('screens.galeria.time.days', { count: Math.floor(diffInSeconds / 86400) });
+
+    if (diffInSeconds < 3600) {
+      const count = Math.floor(diffInSeconds / 60);
+      return t(pluralKey('screens.galeria.time.minutes', count), { count });
+    }
+
+    if (diffInSeconds < 86400) {
+      const count = Math.floor(diffInSeconds / 3600);
+      return t(pluralKey('screens.galeria.time.hours', count), { count });
+    }
+
+    if (diffInSeconds < 604800) {
+      const count = Math.floor(diffInSeconds / 86400);
+      return t(pluralKey('screens.galeria.time.days', count), { count });
+    }
     return date.toLocaleDateString();
   };
 
@@ -395,7 +413,7 @@ export default function Galeria() {
         {commentsCount > 0 && (
           <TouchableOpacity onPress={() => openCommentsModal(item.id)}>
               <Text style={[styles.viewCommentsText, { color: theme.colors.text.tertiary }]}>
-                {t('screens.galeria.viewComments', { count: commentsCount })}
+                {t(pluralKey('screens.galeria.viewComments', commentsCount), { count: commentsCount })}
               </Text>
           </TouchableOpacity>
         )}
@@ -413,7 +431,7 @@ export default function Galeria() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border.primary }]}>
         <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-          Rollemos Pues
+          {t('common.appName')}
         </Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -513,7 +531,7 @@ export default function Galeria() {
               >
               <View style={styles.commentsModalHeader}>
                 <Text style={[styles.commentsModalTitle, { color: theme.colors.text.primary }]}>
-                  Comentarios
+                  {t('screens.galeria.commentsTitle')}
                 </Text>
                 <TouchableOpacity onPress={closeCommentsModal}>
                   <Ionicons name="close" size={22} color={theme.colors.text.primary} />
@@ -524,7 +542,7 @@ export default function Galeria() {
                 <View style={styles.commentsLoading}>
                   <ActivityIndicator size="small" color={theme.colors.primary} />
                   <Text style={[styles.loadingText, { color: theme.colors.text.tertiary }]}>
-                    Cargando comentarios...
+                    {t('screens.galeria.loadingComments')}
                   </Text>
                 </View>
               ) : commentsList.length > 0 ? (
@@ -540,7 +558,9 @@ export default function Galeria() {
                     return (
                       <View style={styles.commentItem}>
                         <Text style={[styles.commentText, { color: theme.colors.text.primary }]}>
-                          <Text style={styles.boldText}>{item.usuario?.nombre || 'Usuario'} </Text>
+                          <Text style={styles.boldText}>
+                            {item.usuario?.nombre || t('screens.galeria.user')}{' '}
+                          </Text>
                           {item.texto}
                         </Text>
                         {canDelete && (
@@ -559,7 +579,7 @@ export default function Galeria() {
               ) : (
                 <View style={styles.commentsEmpty}>
                   <Text style={[styles.noCommentsText, { color: theme.colors.text.tertiary }]}>
-                    No hay comentarios aun
+                    {t('screens.galeria.noComments')}
                   </Text>
                 </View>
               )}
@@ -568,7 +588,7 @@ export default function Galeria() {
                 <View style={[styles.commentInputContainer, { borderTopColor: theme.colors.border }]}>
                   <TextInput
                     style={[styles.commentInput, { color: theme.colors.text.primary }]}
-                    placeholder="Escribe un comentario..."
+                    placeholder={t('screens.galeria.commentPlaceholder')}
                     placeholderTextColor={theme.colors.text.tertiary}
                     value={commentText}
                     onChangeText={setCommentText}
@@ -633,7 +653,7 @@ export default function Galeria() {
               >
                 <Ionicons name="trash-outline" size={20} color="#FF4757" />
                 <Text style={[styles.menuItemText, { color: '#FF4757' }]}>
-                  Eliminar foto
+                  {t('screens.galeria.deletePhotoTitle')}
                 </Text>
               </TouchableOpacity>
               
@@ -643,7 +663,7 @@ export default function Galeria() {
               >
                 <Ionicons name="close" size={20} color={theme.colors.text.primary} />
                 <Text style={[styles.menuItemText, { color: theme.colors.text.primary }]}>
-                  Cancelar
+                  {t('common.cancel')}
                 </Text>
               </TouchableOpacity>
             </View>

@@ -8,6 +8,7 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, borderRadius, typography } from '../theme';
 
@@ -24,6 +25,7 @@ export default function SpotCard({
   style = null 
 }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const difficultyColor = useMemo(() => {
     switch (spot.dificultad) {
@@ -236,7 +238,7 @@ export default function SpotCard({
           <Text style={styles.locationText}>
             {spot.lat && spot.lng ? 
               `${spot.lat.toFixed(4)}, ${spot.lng.toFixed(4)}` : 
-              'Ubicación no disponible'
+              t('components.spotCard.locationUnavailable')
             }
           </Text>
         </View>
@@ -248,7 +250,9 @@ export default function SpotCard({
         >
           <Ionicons name="map" size={18} color="#000" />
           <Text style={styles.mapButtonText}>
-            {onMapPress ? 'Ver aquí' : 'Google Maps'}
+            {onMapPress
+              ? t('components.spotCard.viewHere')
+              : t('components.spotCard.googleMaps')}
           </Text>
         </TouchableOpacity>
       </View>

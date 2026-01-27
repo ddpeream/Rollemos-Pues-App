@@ -8,6 +8,7 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, borderRadius, typography } from '../theme';
 
@@ -30,6 +31,7 @@ export default function SpotMap({
   style = null,
 }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [mapReady, setMapReady] = useState(false);
 
   // Iconos para diferentes tipos de spots
@@ -286,7 +288,9 @@ export default function SpotMap({
             size={64} 
             color={theme.colors.text.secondary} 
           />
-          <Text style={styles.loadingText}>Cargando mapa...</Text>
+          <Text style={styles.loadingText}>
+            {t('components.spotMap.loading')}
+          </Text>
         </View>
       </View>
     );
@@ -297,9 +301,14 @@ export default function SpotMap({
       <View style={styles.mapContainer}>
         {/* Fondo del mapa con grid */}
         <View style={styles.mapBackground}>
-          <Text style={styles.mapTitle}>MAPA INTERACTIVO</Text>
+          <Text style={styles.mapTitle}>
+            {t('components.spotMap.title')}
+          </Text>
           <Text style={styles.mapSubtitle}>
-            {spots.length} spots en Medellín
+            {t('components.spotMap.subtitle', {
+              count: spots.length,
+              city: 'Medellín',
+            })}
           </Text>
         </View>
 
@@ -409,7 +418,9 @@ export default function SpotMap({
                 onPress={() => openExternalMap(selectedSpot)}
               >
                 <Ionicons name="map" size={18} color="#000" />
-                <Text style={styles.infoButtonText}>Abrir en Maps</Text>
+                <Text style={styles.infoButtonText}>
+                  {t('components.spotMap.openInMaps')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

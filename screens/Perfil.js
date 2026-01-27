@@ -69,13 +69,13 @@ export default function Perfil() {
             setError(null);
           } else {
             console.error('❌ Perfil: No se pudo cargar usuario');
-            setError('Error al cargar el perfil');
+            setError(t('screens.perfil.loadingError'));
             setDisplayUser(user); // Usar datos locales como fallback
           }
         } catch (err) {
           console.error('❌ Perfil: Error sincronizando:', err);
           console.error('📌 Perfil: Stack trace:', err.stack);
-          setError('Error al sincronizar datos');
+          setError(t('screens.perfil.syncError'));
           setDisplayUser(user);
         } finally {
           setLoading(false);
@@ -290,7 +290,7 @@ export default function Perfil() {
   return (
     <ScrollView style={styles.container}>
       {/* Back Button */}
-      <BackButton title="Mi Perfil" />
+      <BackButton title={strings.title} />
       
       {/* Header con avatar */}
       <View style={styles.header}>
@@ -302,10 +302,11 @@ export default function Perfil() {
           )}
         </View>
         <Text style={styles.greetings}>
-          {strings.greetings} <Text style={styles.userName}>{displayUser?.nombre || 'Usuario'}</Text>!
+          {strings.greetings}{' '}
+          <Text style={styles.userName}>{displayUser?.nombre || t('common.user')}</Text>!
         </Text>
         <Text style={{ fontSize: typography.fontSize.sm, color: theme.colors.text.secondary }}>
-          {displayUser?.ciudad || 'Sin ubicación'}
+          {displayUser?.ciudad || t('screens.perfil.noLocation')}
         </Text>
       </View>
 
@@ -326,7 +327,7 @@ export default function Perfil() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             <Ionicons name="information-circle" size={20} color={theme.colors.primary} />
-            Información Personal
+            {t('screens.perfil.personalInfo')}
           </Text>
           <View style={styles.infoGrid}>
             <View style={styles.infoBox}>
@@ -338,7 +339,9 @@ export default function Perfil() {
             <View style={styles.infoBox}>
               <Text style={styles.infoLabel}>{strings.level}</Text>
               <Text style={styles.infoValue}>
-                {displayUser?.nivel ? displayUser.nivel.charAt(0).toUpperCase() + displayUser.nivel.slice(1) : 'N/A'}
+                {displayUser?.nivel
+                  ? displayUser.nivel.charAt(0).toUpperCase() + displayUser.nivel.slice(1)
+                  : t('common.notAvailable')}
               </Text>
             </View>
           </View>
@@ -348,7 +351,7 @@ export default function Perfil() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             <Ionicons name="call" size={20} color={theme.colors.primary} />
-            Contacto
+            {t('screens.perfil.contact')}
           </Text>
           <View style={styles.contactSection}>
             <Ionicons

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import BackButton from '../components/common/BackButton';
 import { supabase } from '../config/supabase';
 import { useAppStore } from '../store/useAppStore';
@@ -17,6 +18,7 @@ import { spacing, typography, borderRadius } from '../theme';
 
 export default function Notificaciones() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const { user, theme } = useAppStore();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -143,7 +145,7 @@ export default function Notificaciones() {
           </View>
           <View style={styles.cardText}>
             <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-              {item.titulo || 'Notificacion'}
+              {item.titulo || t('screens.notificaciones.defaultTitle')}
             </Text>
             <Text style={[styles.body, { color: theme.colors.text.secondary }]}>
               {item.body}
@@ -164,12 +166,12 @@ export default function Notificaciones() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-      <BackButton title="Notificaciones" />
+      <BackButton title={t('screens.notificaciones.title')} />
       {loading ? (
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-            Cargando notificaciones...
+            {t('screens.notificaciones.loading')}
           </Text>
         </View>
       ) : (
@@ -189,10 +191,10 @@ export default function Notificaciones() {
             <View style={styles.empty}>
               <Ionicons name="notifications-off" size={48} color={theme.colors.text.tertiary} />
               <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-                No hay notificaciones
+                {t('screens.notificaciones.emptyTitle')}
               </Text>
               <Text style={[styles.emptyText, { color: theme.colors.text.tertiary }]}>
-                Cuando tengas actividad, aparecera aqui.
+                {t('screens.notificaciones.emptyMessage')}
               </Text>
             </View>
           }

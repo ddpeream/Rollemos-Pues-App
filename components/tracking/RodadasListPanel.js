@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { styles } from '../../screens/tracking/tracking.style';
 
 export default function RodadasListPanel({
@@ -15,6 +16,8 @@ export default function RodadasListPanel({
   onSelectRodada,
   onOpenRodadaDetail,
 }) {
+  const { t } = useTranslation();
+
   if (!visible) return null;
 
   return (
@@ -40,7 +43,7 @@ export default function RodadasListPanel({
       >
         <View style={styles.rodadasListHeader}>
           <Text style={[styles.rodadasListTitle, { color: theme.colors.text.primary }]}>
-            🛼 Rodadas Programadas
+            {t('rodadas.list.title')}
           </Text>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={24} color={theme.colors.text.secondary} />
@@ -50,7 +53,7 @@ export default function RodadasListPanel({
         {isLoadingRodadas ? (
           <View style={styles.rodadasListEmpty}>
             <Text style={{ color: theme.colors.text.secondary }}>
-              Cargando rodadas...
+              {t('rodadas.list.loading')}
             </Text>
           </View>
         ) : filteredRodadas.length === 0 ? (
@@ -66,7 +69,7 @@ export default function RodadasListPanel({
                 { color: theme.colors.text.secondary },
               ]}
             >
-              No hay rodadas programadas
+              {t('rodadas.list.empty')}
             </Text>
             <Text
               style={[
@@ -74,7 +77,7 @@ export default function RodadasListPanel({
                 { color: theme.colors.text.disabled },
               ]}
             >
-              ¡Crea la primera rodada!
+              {t('rodadas.list.emptyHint')}
             </Text>
           </View>
         ) : (
@@ -121,7 +124,7 @@ export default function RodadasListPanel({
                       >
                         {rodada.nombre}
                         {isOrganizer && (
-                          <Text style={{ color: theme.colors.primary }}> (tuya)</Text>
+                          <Text style={{ color: theme.colors.primary }}> {t('rodadas.list.yours')}</Text>
                         )}
                       </Text>
                       <Text

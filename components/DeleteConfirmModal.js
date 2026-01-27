@@ -15,6 +15,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
 
@@ -26,6 +27,7 @@ const DeleteConfirmModal = ({
   post = null,
 }) => {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const iconScale = useRef(new Animated.Value(0)).current;
@@ -116,12 +118,12 @@ const DeleteConfirmModal = ({
 
           {/* Título */}
           <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-            Eliminar post
+            {t('components.deleteConfirmModal.title')}
           </Text>
 
           {/* Descripción */}
           <Text style={[styles.description, { color: theme.colors.text.secondary }]}>
-            ¿Estás seguro que quieres eliminar este post? Esta acción no se puede deshacer.
+            {t('components.deleteConfirmModal.message')}
           </Text>
 
           {/* Preview del Post (opcional) */}
@@ -136,7 +138,7 @@ const DeleteConfirmModal = ({
                   style={[styles.previewText, { color: theme.colors.text.primary }]}
                   numberOfLines={2}
                 >
-                  {post.descripcion || 'Sin descripción'}
+                  {post.descripcion || t('components.deleteConfirmModal.noDescription')}
                 </Text>
                 <View style={styles.previewStats}>
                   <View style={styles.statItem}>
@@ -168,7 +170,7 @@ const DeleteConfirmModal = ({
               disabled={loading}
             >
               <Text style={[styles.cancelButtonText, { color: theme.colors.text.secondary }]}>
-                Cancelar
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
 
@@ -186,7 +188,9 @@ const DeleteConfirmModal = ({
               ) : (
                 <>
                   <Ionicons name="trash" size={16} color={theme.colors.onSecondary} />
-                  <Text style={[styles.deleteButtonText, { color: theme.colors.onSecondary }]}>Eliminar</Text>
+                  <Text style={[styles.deleteButtonText, { color: theme.colors.onSecondary }]}>
+                    {t('common.delete')}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>

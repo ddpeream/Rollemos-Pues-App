@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 /**
  * SpotSearchFilter - Componente independiente de filtrado para spots
@@ -37,36 +38,53 @@ export default function SpotSearchFilter({
   typography,
   borderRadius,
 }) {
+  const { t } = useTranslation();
+
   // Local state para el Picker modal
   const [pickerModalVisible, setPickerModalVisible] = useState(false);
   const [activePickerField, setActivePickerField] = useState(null);
+
+  const uiStrings = useMemo(() => ({
+    allCities: strings?.allCities ?? t('filters.allFeminine'),
+    allTypes: strings?.allTypes ?? t('filters.all'),
+    typeStreet: strings?.typeStreet ?? t('components.spotSearchFilter.typeStreet'),
+    typePark: strings?.typePark ?? t('components.spotSearchFilter.typePark'),
+    typePumptrack: strings?.typePumptrack ?? t('components.spotSearchFilter.typePumptrack'),
+    difficultyAll: strings?.difficultyAll ?? t('filters.allFeminine'),
+    difficultyLow: strings?.difficultyLow ?? t('components.spotSearchFilter.difficultyLow'),
+    difficultyMedium: strings?.difficultyMedium ?? t('components.spotSearchFilter.difficultyMedium'),
+    difficultyHigh: strings?.difficultyHigh ?? t('components.spotSearchFilter.difficultyHigh'),
+    search: strings?.search ?? t('components.spotSearchFilter.search'),
+    searching: strings?.searching ?? t('components.spotSearchFilter.searching'),
+    done: strings?.done ?? t('components.spotSearchFilter.done'),
+  }), [strings, t]);
 
   // Función local para obtener opciones del picker según el campo
   const getPickerOptions = useCallback((fieldKey) => {
     switch (fieldKey) {
       case 'ciudad':
         return [
-          { label: strings.allCities, value: '' },
+          { label: uiStrings.allCities, value: '' },
           ...allCities.map(city => ({ label: city, value: city }))
         ];
       case 'tipo':
         return [
-          { label: strings.allTypes, value: '' },
-          { label: strings.typeStreet, value: 'street' },
-          { label: strings.typePark, value: 'park' },
-          { label: strings.typePumptrack, value: 'pumptrack' },
+          { label: uiStrings.allTypes, value: '' },
+          { label: uiStrings.typeStreet, value: 'street' },
+          { label: uiStrings.typePark, value: 'park' },
+          { label: uiStrings.typePumptrack, value: 'pumptrack' },
         ];
       case 'dificultad':
         return [
-          { label: strings.difficultyAll, value: '' },
-          { label: strings.difficultyLow, value: 'baja' },
-          { label: strings.difficultyMedium, value: 'media' },
-          { label: strings.difficultyHigh, value: 'alta' },
+          { label: uiStrings.difficultyAll, value: '' },
+          { label: uiStrings.difficultyLow, value: 'baja' },
+          { label: uiStrings.difficultyMedium, value: 'media' },
+          { label: uiStrings.difficultyHigh, value: 'alta' },
         ];
       default:
         return [];
     }
-  }, [allCities, strings]);
+  }, [allCities, uiStrings]);
 
   // Abre el modal del picker
   const openPickerModal = useCallback((fieldKey) => {
@@ -198,9 +216,9 @@ export default function SpotSearchFilter({
         style={styles.filtersChipsScroll}
       >
         {[
-          { icon: 'location', label: 'Ciudad', key: 'ciudad', active: draftFilters.ciudad },
-          { icon: 'cube', label: 'Tipo', key: 'tipo', active: draftFilters.tipo },
-          { icon: 'trending-up', label: 'Dificultad', key: 'dificultad', active: draftFilters.dificultad },
+          { icon: 'location', label: t('filters.city'), key: 'ciudad', active: draftFilters.ciudad },
+          { icon: 'cube', label: t('filters.type'), key: 'tipo', active: draftFilters.tipo },
+          { icon: 'trending-up', label: t('components.spotSearchFilter.difficulty'), key: 'dificultad', active: draftFilters.dificultad },
         ].map(filter => (
           <TouchableOpacity
             key={filter.key}
@@ -239,7 +257,7 @@ export default function SpotSearchFilter({
       >
         <Ionicons name="search" size={18} color="#000" />
         <Text style={styles.applyButtonText}>
-          {isLoading ? 'Buscando...' : 'Buscar'}
+          {isLoading ? uiStrings.searching : uiStrings.search}
         </Text>
       </TouchableOpacity>
 
@@ -262,7 +280,7 @@ export default function SpotSearchFilter({
                 onPress={closePickerModal}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={styles.pickerModalDone}>Listo</Text>
+                <Text style={styles.pickerModalDone}>{uiStrings.done}</Text>
               </TouchableOpacity>
             </View>
             {activePickerField && (

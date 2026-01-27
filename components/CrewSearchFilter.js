@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 /**
  * CrewSearchFilter - Componente independiente de búsqueda y filtrado para parches/crews
@@ -40,27 +41,37 @@ export default function CrewSearchFilter({
   typography,
   borderRadius,
 }) {
+  const { t } = useTranslation();
   // Local state para el Picker modal
   const [pickerModalVisible, setPickerModalVisible] = useState(false);
   const [activePickerField, setActivePickerField] = useState(null);
+
+  const uiStrings = useMemo(() => ({
+    allCities: strings?.allCities ?? t('filters.allFeminine'),
+    allDisciplines: strings?.allDisciplines ?? t('filters.allFeminine'),
+    searchPlaceholder: strings?.searchPlaceholder ?? t('components.crewSearchFilter.searchPlaceholder'),
+    search: strings?.search ?? t('components.crewSearchFilter.search'),
+    searching: strings?.searching ?? t('components.crewSearchFilter.searching'),
+    done: strings?.done ?? t('components.crewSearchFilter.done'),
+  }), [strings, t]);
 
   // Función local para obtener opciones del picker según el campo
   const getPickerOptions = useCallback((fieldKey) => {
     switch (fieldKey) {
       case 'ciudad':
         return [
-          { label: strings.allCities, value: '' },
+          { label: uiStrings.allCities, value: '' },
           ...allCities.map(city => ({ label: city, value: city }))
         ];
       case 'disciplina':
         return [
-          { label: strings.allDisciplines, value: '' },
+          { label: uiStrings.allDisciplines, value: '' },
           ...allDisciplines.map(discipline => ({ label: discipline, value: discipline }))
         ];
       default:
         return [];
     }
-  }, [allCities, allDisciplines, strings]);
+  }, [allCities, allDisciplines, uiStrings]);
 
   // Abre el modal del picker
   const openPickerModal = useCallback((fieldKey) => {
@@ -223,7 +234,7 @@ export default function CrewSearchFilter({
         <Ionicons name="search" size={20} color={theme.colors.text.secondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar parche, ciudad..."
+          placeholder={uiStrings.searchPlaceholder}
           placeholderTextColor={theme.colors.text.secondary}
           value={draftFilters.text}
           onChangeText={handleSearchTextChange}
@@ -243,8 +254,8 @@ export default function CrewSearchFilter({
         style={styles.filtersChipsScroll}
       >
         {[
-          { icon: 'location', label: 'Ciudad', key: 'ciudad', active: draftFilters.ciudad },
-          { icon: 'cube', label: 'Disciplina', key: 'disciplina', active: draftFilters.disciplina },
+          { icon: 'location', label: t('filters.city'), key: 'ciudad', active: draftFilters.ciudad },
+          { icon: 'cube', label: t('filters.discipline'), key: 'disciplina', active: draftFilters.disciplina },
         ].map(filter => (
           <TouchableOpacity
             key={filter.key}
@@ -283,7 +294,7 @@ export default function CrewSearchFilter({
       >
         <Ionicons name="search" size={18} color="#000" />
         <Text style={styles.applyButtonText}>
-          {isLoading ? 'Buscando...' : 'Buscar'}
+          {isLoading ? uiStrings.searching : uiStrings.search}
         </Text>
       </TouchableOpacity>
 
@@ -306,7 +317,7 @@ export default function CrewSearchFilter({
                 onPress={closePickerModal}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={styles.pickerModalDone}>Listo</Text>
+                <Text style={styles.pickerModalDone}>{uiStrings.done}</Text>
               </TouchableOpacity>
             </View>
             {activePickerField && (

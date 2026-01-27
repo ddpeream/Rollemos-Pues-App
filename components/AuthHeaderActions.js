@@ -11,7 +11,7 @@ import useAppStore from '../store/useAppStore';
 export default function AuthHeaderActions() {
   const { theme } = useAppStore();
   const setLanguage = useAppStore((state) => state.setLanguage);
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   
   const [languageVisible, setLanguageVisible] = useState(false);
   const currentLang = i18n.language;
@@ -106,9 +106,9 @@ export default function AuthHeaderActions() {
         >
           <View style={styles.languageMenu}>
             {[
-              { id: 'es', label: '🇨🇴 Español' },
-              { id: 'en', label: '🇺🇸 English' },
-              { id: 'fr', label: '🇫🇷 Français' },
+              { id: 'es', label: t('common.language.es') },
+              { id: 'en', label: t('common.language.en') },
+              { id: 'fr', label: t('common.language.fr') },
             ].map((item) => (
               <TouchableOpacity
                 key={item.id}

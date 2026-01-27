@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import useAppStore from '../store/useAppStore';
 import { useMarketplace } from '../hooks/useMarketplace';
 
@@ -28,6 +29,7 @@ const CARD_WIDTH = (width - 42) / 2; // 2 columnas con padding perfecto
 
 export default function MarketRollers({ navigation }) {
   const { theme, user } = useAppStore();
+  const { t } = useTranslation();
   const tabBarHeight = useBottomTabBarHeight();
   const {
     products,
@@ -71,7 +73,14 @@ export default function MarketRollers({ navigation }) {
     });
   }, [searchQuery, selectedCategory, products]);
 
-  const categories = ['Todos', 'Tablas', 'Ruedas', 'Proteccion', 'Accesorios', 'Partes'];
+  const categories = useMemo(() => ([
+    { value: 'Todos', label: t('filters.all') },
+    { value: 'Tablas', label: t('screens.marketplace.categories.tablas') },
+    { value: 'Ruedas', label: t('screens.marketplace.categories.ruedas') },
+    { value: 'Proteccion', label: t('screens.marketplace.categories.proteccion') },
+    { value: 'Accesorios', label: t('screens.marketplace.categories.accesorios') },
+    { value: 'Partes', label: t('screens.marketplace.categories.partes') },
+  ]), [t]);
   const formatPrice = (value) => Number(value || 0).toLocaleString('es-CO');
   const normalizeWhatsapp = (value) => String(value || '').replace(/[^\d]/g, '');
   const getWhatsappLink = (value, message) => {
@@ -108,13 +117,17 @@ export default function MarketRollers({ navigation }) {
     const images = parseImages(product?.imagenes);
     return images.length > 0 ? images : ['https://via.placeholder.com/400x300'];
   };
-  const getVendedorNombre = (product) => product?.vendedor?.nombre || 'Vendedor';
+  const getVendedorNombre = (product) =>
+    product?.vendedor?.nombre || t('screens.marketplace.vendorFallback');
   const getVendedorCiudad = (product) => product?.vendedor?.ciudad || '---';
 
   // Crear nuevo producto
   const handleCreateProduct = async () => {
     if (!user?.id) {
-      Alert.alert('Error', 'Debes iniciar sesion para crear productos');
+      Alert.alert(
+        t('common.error'),
+        t('screens.marketplace.authRequiredCreate')
+      );
       return;
     }
 
@@ -125,7 +138,10 @@ export default function MarketRollers({ navigation }) {
       !formData.whatsapp.trim() ||
       formData.imagenes.length === 0
     ) {
-      Alert.alert('Error', 'Completa nombre, precio, descripcion, WhatsApp y al menos una imagen');
+      Alert.alert(
+        t('common.error'),
+        t('screens.marketplace.validationMissingFields')
+      );
       return;
     }
 
@@ -142,9 +158,12 @@ export default function MarketRollers({ navigation }) {
           whatsapp: '',
         });
         setShowCreateModal(false);
-        Alert.alert('Exito', 'Producto creado correctamente');
+        Alert.alert(t('common.success'), t('screens.marketplace.createSuccess'));
       } else {
-        Alert.alert('Error', result?.error || 'No se pudo crear el producto');
+        Alert.alert(
+          t('common.error'),
+          result?.error || t('screens.marketplace.createError')
+        );
       }
     } finally {
       setCreatingProduct(false);
@@ -154,24 +173,33 @@ export default function MarketRollers({ navigation }) {
     // Eliminar producto
   const handleDeleteProduct = (id) => {
     if (!user?.id) {
-      Alert.alert('Error', 'Debes iniciar sesion para eliminar productos');
+      Alert.alert(
+        t('common.error'),
+        t('screens.marketplace.authRequiredDelete')
+      );
       return;
     }
 
     Alert.alert(
-      'Eliminar Producto',
-      'Estas seguro de que deseas eliminar este producto?',
+      t('screens.marketplace.deleteTitle'),
+      t('screens.marketplace.deleteConfirm'),
       [
-        { text: 'Cancelar', onPress: () => {}, style: 'cancel' },
+        { text: t('common.cancel'), onPress: () => {}, style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           onPress: async () => {
             const result = await removeProduct(id, user.id);
             if (result?.success) {
               setShowDetailModal(false);
-              Alert.alert('Exito', 'Producto eliminado correctamente');
+              Alert.alert(
+                t('common.success'),
+                t('screens.marketplace.deleteSuccess')
+              );
             } else {
-              Alert.alert('Error', result?.error || 'No se pudo eliminar el producto');
+              Alert.alert(
+                t('common.error'),
+                result?.error || t('screens.marketplace.deleteError')
+              );
             }
           },
           style: 'destructive',
@@ -217,15 +245,25 @@ export default function MarketRollers({ navigation }) {
 
   // Compartir producto
   const handleShareProduct = (product) => {
-    const mensaje = `Te comparto este producto:\n\n${product.nombre}\n\nPrecio: $${formatPrice(product.precio)}\nCategoria: ${product.categoria}\n\nTe interesa?`;
+    const mensaje = t('screens.marketplace.shareMessage', {
+      name: product.nombre,
+      price: formatPrice(product.precio),
+      category: product.categoria,
+    });
     Linking.openURL(`https://wa.me/?text=${encodeURIComponent(mensaje)}`);
   };
 
   const handleContact = (product) => {
-    const mensaje = `Hola, me interesa el producto: ${product.nombre} por $${formatPrice(product.precio)}. Esta disponible?`;
+    const mensaje = t('screens.marketplace.contactMessage', {
+      name: product.nombre,
+      price: formatPrice(product.precio),
+    });
     const whatsappUrl = getWhatsappLink(product?.whatsapp, mensaje);
     if (!whatsappUrl) {
-      Alert.alert('WhatsApp no disponible', 'El vendedor no tiene WhatsApp configurado');
+      Alert.alert(
+        t('screens.marketplace.whatsappUnavailableTitle'),
+        t('screens.marketplace.whatsappUnavailableMessage')
+      );
       return;
     }
     Linking.openURL(whatsappUrl);
@@ -235,8 +273,8 @@ export default function MarketRollers({ navigation }) {
   const renderProduct = ({ item }) => {
     const images = getProductImages(item);
     const firstImage = images[0] || 'https://via.placeholder.com/400x300';
-    const vendedorNombre = item.vendedor?.nombre || 'Vendedor';
-    const vendedorCiudad = item.vendedor?.ciudad || '---';
+    const vendedorNombre = getVendedorNombre(item);
+    const vendedorCiudad = getVendedorCiudad(item);
     const isOwner = item.vendedor_id === user?.id;
 
     return (
@@ -288,7 +326,7 @@ export default function MarketRollers({ navigation }) {
           <Text
             style={[styles.priceLabel, { color: theme.colors.text.secondary }]}
           >
-            Precio
+            {t('screens.marketplace.priceLabel')}
           </Text>
           <Text style={[styles.price, { color: theme.colors.primary }]}>
             ${formatPrice(item.precio)}
@@ -345,7 +383,9 @@ export default function MarketRollers({ navigation }) {
             onPress={() => handleContact(item)}
           >
             <MaterialCommunityIcons name="whatsapp" size={16} color="#FFF" />
-            <Text style={styles.contactButtonText}>Contactar</Text>
+            <Text style={styles.contactButtonText}>
+              {t('screens.marketplace.contactAction')}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -367,10 +407,12 @@ export default function MarketRollers({ navigation }) {
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
             <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-              🛍️ MarketRollers
+              {t('screens.marketplace.brandTitle')}
             </Text>
             <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-              {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
+              {t('screens.marketplace.productsCount', {
+                count: filteredProducts.length,
+              })}
             </Text>
           </View>
           <TouchableOpacity
@@ -400,7 +442,7 @@ export default function MarketRollers({ navigation }) {
           />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.text.primary }]}
-            placeholder="Buscar producto..."
+            placeholder={t('screens.marketplace.searchPlaceholderProducts')}
             placeholderTextColor={theme.colors.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -424,12 +466,12 @@ export default function MarketRollers({ navigation }) {
         style={styles.categoriesScroll}
         contentContainerStyle={styles.categoriesContent}
       >
-        {categories.map(cat => (
+        {categories.map(({ value, label }) => (
           <TouchableOpacity
-            key={cat}
+            key={value}
             style={[
               styles.categoryButton,
-              selectedCategory === cat
+              selectedCategory === value
                 ? { backgroundColor: theme.colors.primary, borderWidth: 0 }
                 : {
                     backgroundColor: theme.colors.glass.background,
@@ -437,20 +479,20 @@ export default function MarketRollers({ navigation }) {
                     borderWidth: 1,
                   },
             ]}
-            onPress={() => setSelectedCategory(cat)}
+            onPress={() => setSelectedCategory(value)}
           >
             <Text
               style={[
                 styles.categoryButtonText,
                 {
                   color:
-                    selectedCategory === cat
+                    selectedCategory === value
                       ? theme.colors.onPrimary
                       : theme.colors.text.primary,
                 },
               ]}
             >
-              {cat}
+              {label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -485,7 +527,7 @@ export default function MarketRollers({ navigation }) {
                     { color: theme.colors.text.secondary },
                   ]}
                 >
-                  No hay productos disponibles
+                  {t('screens.marketplace.emptyProducts')}
                 </Text>
               </>
             )}
@@ -521,7 +563,7 @@ export default function MarketRollers({ navigation }) {
             <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
           </TouchableOpacity>
           <Text style={[styles.detailTitle, { color: theme.colors.text.primary }]}>
-            Detalles
+            {t('screens.marketplace.detailsTitle')}
           </Text>
           <View style={styles.backButton} />
         </View>
@@ -612,7 +654,7 @@ export default function MarketRollers({ navigation }) {
                       { color: theme.colors.text.secondary },
                     ]}
                   >
-                    Vendedor
+                    {t('screens.marketplace.vendorLabel')}
                   </Text>
                   <View style={styles.vendorDetailCard}>
                     <View
@@ -678,7 +720,9 @@ export default function MarketRollers({ navigation }) {
                 }}
               >
                 <MaterialCommunityIcons name="whatsapp" size={20} color="#FFF" />
-                <Text style={styles.detailActionButtonText}>Contactar</Text>
+                <Text style={styles.detailActionButtonText}>
+                  {t('screens.marketplace.contactAction')}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -698,7 +742,9 @@ export default function MarketRollers({ navigation }) {
                   color="#FFF"
                 />
                 <Text style={styles.detailActionButtonText}>
-                  {favorites.includes(selectedProduct?.id) ? 'Guardado' : 'Guardar'}
+                  {favorites.includes(selectedProduct?.id)
+                    ? t('screens.marketplace.savedAction')
+                    : t('screens.marketplace.saveAction')}
                 </Text>
               </TouchableOpacity>
             </>
@@ -716,7 +762,9 @@ export default function MarketRollers({ navigation }) {
             }}
           >
             <MaterialCommunityIcons name="share-variant" size={20} color="#FFF" />
-            <Text style={styles.detailActionButtonText}>Compartir</Text>
+            <Text style={styles.detailActionButtonText}>
+              {t('screens.marketplace.shareAction')}
+            </Text>
           </TouchableOpacity>
 
           {/* Botón Eliminar - Solo si eres el vendedor */}
@@ -731,10 +779,12 @@ export default function MarketRollers({ navigation }) {
                   handleDeleteProduct(selectedProduct.id);
                 }
               }}
-            >
-              <Ionicons name="trash" size={20} color="#FFF" />
-              <Text style={styles.detailActionButtonText}>Eliminar</Text>
-            </TouchableOpacity>
+          >
+            <Ionicons name="trash" size={20} color="#FFF" />
+            <Text style={styles.detailActionButtonText}>
+              {t('common.delete')}
+            </Text>
+          </TouchableOpacity>
           )}
         </View>
       </SafeAreaView>
@@ -771,7 +821,7 @@ export default function MarketRollers({ navigation }) {
               <Ionicons name="close" size={24} color={theme.colors.text.primary} />
             </TouchableOpacity>
             <Text style={[styles.createTitle, { color: theme.colors.text.primary }]}>
-              Crear Producto
+              {t('screens.marketplace.createTitle')}
             </Text>
             <View style={styles.createCloseButton} />
           </View>
@@ -782,7 +832,7 @@ export default function MarketRollers({ navigation }) {
               {/* Nombre */}
               <View style={styles.createFieldGroup}>
                 <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
-                  Nombre del Producto
+                  {t('screens.marketplace.form.nameLabel')}
                 </Text>
                 <TextInput
                   style={[
@@ -793,7 +843,7 @@ export default function MarketRollers({ navigation }) {
                       color: theme.colors.text.primary,
                     },
                   ]}
-                  placeholder="Ej: Tabla Skateboard"
+                  placeholder={t('screens.marketplace.form.namePlaceholder')}
                   placeholderTextColor={theme.colors.text.secondary}
                   value={formData.nombre}
                   onChangeText={(text) =>
@@ -805,7 +855,7 @@ export default function MarketRollers({ navigation }) {
               {/* Precio */}
               <View style={styles.createFieldGroup}>
                 <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
-                  Precio (COP)
+                  {t('screens.marketplace.form.priceLabel')}
                 </Text>
                 <TextInput
                   style={[
@@ -816,7 +866,7 @@ export default function MarketRollers({ navigation }) {
                       color: theme.colors.text.primary,
                     },
                   ]}
-                  placeholder="Ej: 280000"
+                  placeholder={t('screens.marketplace.form.pricePlaceholder')}
                   placeholderTextColor={theme.colors.text.secondary}
                   keyboardType="numeric"
                   value={formData.precio}
@@ -829,7 +879,7 @@ export default function MarketRollers({ navigation }) {
               {/* Descripcion */}
               <View style={styles.createFieldGroup}>
                 <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
-                  Descripcion
+                  {t('screens.marketplace.form.descriptionLabel')}
                 </Text>
                 <TextInput
                   style={[
@@ -841,7 +891,7 @@ export default function MarketRollers({ navigation }) {
                       color: theme.colors.text.primary,
                     },
                   ]}
-                  placeholder="Describe el producto"
+                  placeholder={t('screens.marketplace.form.descriptionPlaceholder')}
                   placeholderTextColor={theme.colors.text.secondary}
                   value={formData.descripcion}
                   onChangeText={(text) =>
@@ -854,7 +904,7 @@ export default function MarketRollers({ navigation }) {
               {/* WhatsApp */}
               <View style={styles.createFieldGroup}>
                 <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
-                  WhatsApp (numero con codigo pais)
+                  {t('screens.marketplace.form.whatsappLabel')}
                 </Text>
                 <TextInput
                   style={[
@@ -865,7 +915,7 @@ export default function MarketRollers({ navigation }) {
                       color: theme.colors.text.primary,
                     },
                   ]}
-                  placeholder="Ej: 573001234567"
+                  placeholder={t('screens.marketplace.form.whatsappPlaceholder')}
                   placeholderTextColor={theme.colors.text.secondary}
                   keyboardType="phone-pad"
                   value={formData.whatsapp}
@@ -878,7 +928,7 @@ export default function MarketRollers({ navigation }) {
               {/* Categoría */}
               <View style={styles.createFieldGroup}>
                 <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
-                  Categoría
+                  {t('screens.marketplace.form.categoryLabel')}
                 </Text>
                 <View style={styles.categorySelectWrapper}>
                   <ScrollView
@@ -886,12 +936,14 @@ export default function MarketRollers({ navigation }) {
                     showsHorizontalScrollIndicator={false}
                     style={styles.categorySelectScroll}
                   >
-                    {categories.slice(1).map(cat => (
+                    {categories
+                      .filter((category) => category.value !== 'Todos')
+                      .map(({ value, label }) => (
                       <TouchableOpacity
-                        key={cat}
+                        key={value}
                         style={[
                           styles.categorySelectButton,
-                          formData.categoria === cat
+                          formData.categoria === value
                             ? { backgroundColor: theme.colors.primary }
                             : {
                                 backgroundColor: theme.colors.glass.background,
@@ -899,20 +951,20 @@ export default function MarketRollers({ navigation }) {
                                 borderWidth: 1,
                               },
                         ]}
-                        onPress={() => setFormData({ ...formData, categoria: cat })}
+                        onPress={() => setFormData({ ...formData, categoria: value })}
                       >
                         <Text
                           style={[
                             styles.categorySelectText,
                             {
                               color:
-                                formData.categoria === cat
+                                formData.categoria === value
                                   ? '#FFF'
                                   : theme.colors.text.primary,
                             },
                           ]}
                         >
-                          {cat}
+                          {label}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -924,7 +976,9 @@ export default function MarketRollers({ navigation }) {
               <View style={styles.createFieldGroup}>
                 <View style={styles.imagesHeaderRow}>
                   <Text style={[styles.createLabel, { color: theme.colors.text.primary }]}>
-                    Imágenes ({formData.imagenes.length})
+                    {t('screens.marketplace.form.imagesLabel', {
+                      count: formData.imagenes.length,
+                    })}
                   </Text>
                   <TouchableOpacity
                     style={[styles.addImageButton, { backgroundColor: theme.colors.primary }]}
@@ -976,7 +1030,7 @@ export default function MarketRollers({ navigation }) {
               disabled={creatingProduct}
             >
               <Text style={[styles.createActionButtonText, { color: theme.colors.text.primary }]}>
-                Cancelar
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
 
@@ -994,7 +1048,7 @@ export default function MarketRollers({ navigation }) {
                 <>
                   <Ionicons name="add" size={20} color="#FFF" />
                   <Text style={[styles.createActionButtonText, { color: '#FFF' }]}>
-                    Crear
+                    {t('screens.marketplace.createAction')}
                   </Text>
                 </>
               )}

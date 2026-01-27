@@ -25,6 +25,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, typography, borderRadius } from '../theme';
 
@@ -42,6 +43,7 @@ export default function ParcheOptionsMenu({
   buttonPosition = { x: 0, y: 0 }, // Posición del botón que abrió el menú
 }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [scaleAnim] = useState(new Animated.Value(0));
   const [opacityAnim] = useState(new Animated.Value(0));
 
@@ -59,7 +61,7 @@ export default function ParcheOptionsMenu({
         {
           id: 'edit',
           icon: 'pencil',
-          label: 'Editar parche',
+          label: t('components.parcheOptionsMenu.edit'),
           color: theme.colors.primary,
           onPress: () => {
             onClose();
@@ -69,17 +71,19 @@ export default function ParcheOptionsMenu({
         {
           id: 'delete',
           icon: 'trash',
-          label: 'Eliminar parche',
+          label: t('components.parcheOptionsMenu.delete'),
           color: '#EF4444',
           onPress: () => {
             onClose();
             Alert.alert(
-              'Eliminar Parche',
-              `¿Estás seguro de que quieres eliminar "${parche?.nombre}"? Esta acción no se puede deshacer.`,
+              t('components.parcheOptionsMenu.deleteTitle'),
+              t('components.parcheOptionsMenu.deleteMessage', {
+                name: parche?.nombre ?? '',
+              }),
               [
-                { text: 'Cancelar', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 { 
-                  text: 'Eliminar', 
+                  text: t('common.delete'), 
                   style: 'destructive',
                   onPress: () => onDelete?.(parche)
                 }
@@ -95,7 +99,7 @@ export default function ParcheOptionsMenu({
       {
         id: 'share',
         icon: 'share',
-        label: 'Compartir parche',
+        label: t('components.parcheOptionsMenu.share'),
         color: theme.colors.text.primary,
         onPress: () => {
           onClose();
@@ -109,25 +113,25 @@ export default function ParcheOptionsMenu({
       options.push({
         id: 'report',
         icon: 'flag',
-        label: 'Reportar parche',
+        label: t('components.parcheOptionsMenu.report'),
         color: '#F59E0B',
         onPress: () => {
           onClose();
           Alert.alert(
-            'Reportar Parche',
-            '¿Por qué quieres reportar este parche?',
+            t('components.parcheOptionsMenu.reportTitle'),
+            t('components.parcheOptionsMenu.reportPrompt'),
             [
-              { text: 'Cancelar', style: 'cancel' },
+              { text: t('common.cancel'), style: 'cancel' },
               { 
-                text: 'Contenido inapropiado',
+                text: t('components.parcheOptionsMenu.reportReasonInappropriate'),
                 onPress: () => onReport?.(parche, 'inappropriate')
               },
               { 
-                text: 'Información falsa',
+                text: t('components.parcheOptionsMenu.reportReasonFalseInfo'),
                 onPress: () => onReport?.(parche, 'false_info')
               },
               { 
-                text: 'Spam',
+                text: t('components.parcheOptionsMenu.reportReasonSpam'),
                 onPress: () => onReport?.(parche, 'spam')
               }
             ]
@@ -137,7 +141,7 @@ export default function ParcheOptionsMenu({
     }
 
     return options;
-  }, [isOwner, theme, parche, onClose, onEdit, onDelete, onShare, onReport]);
+  }, [isOwner, theme, parche, onClose, onEdit, onDelete, onShare, onReport, t]);
 
   // Calcular posición del menú
   const menuPosition = useMemo(() => {
@@ -308,7 +312,9 @@ export default function ParcheOptionsMenu({
               {/* Mostrar badge si es el dueño */}
               {option.id === 'edit' && isOwner && (
                 <View style={styles.ownerBadge}>
-                  <Text style={styles.ownerBadgeText}>TU PARCHE</Text>
+                  <Text style={styles.ownerBadgeText}>
+                    {t('components.parcheOptionsMenu.ownerBadge')}
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -41,39 +42,59 @@ export default function SkaterSearchFilter({
   typography,
   borderRadius,
 }) {
+  const { t } = useTranslation();
   // Local state para el Picker modal
   const [pickerModalVisible, setPickerModalVisible] = useState(false);
   const [activePickerField, setActivePickerField] = useState(null);
+
+  const uiStrings = useMemo(() => ({
+    allCities: strings?.allCities ?? t('filters.allFeminine'),
+    allDisciplines: strings?.allDisciplines ?? t('filters.allFeminine'),
+    allLevels: strings?.allLevels ?? t('filters.allFeminine'),
+    disciplineStreet: strings?.disciplineStreet ?? t('screens.shared.disciplines.street'),
+    disciplinePark: strings?.disciplinePark ?? t('screens.shared.disciplines.park'),
+    disciplineSlalom: strings?.disciplineSlalom ?? t('screens.shared.disciplines.slalom'),
+    disciplineDownhill: strings?.disciplineDownhill ?? t('screens.shared.disciplines.downhill'),
+    disciplineFreestyle: strings?.disciplineFreestyle ?? t('screens.shared.disciplines.freestyle'),
+    levelBeginner: strings?.levelBeginner ?? t('screens.shared.levels.principiante'),
+    levelIntermediate: strings?.levelIntermediate ?? t('screens.shared.levels.intermedio'),
+    levelAdvanced: strings?.levelAdvanced ?? t('screens.shared.levels.avanzado'),
+    levelProfessional: strings?.levelProfessional ?? t('screens.shared.levels.profesional'),
+    searchPlaceholder: strings?.searchPlaceholder ?? t('components.skaterSearchFilter.searchPlaceholder'),
+    search: strings?.search ?? t('components.skaterSearchFilter.search'),
+    searching: strings?.searching ?? t('components.skaterSearchFilter.searching'),
+    done: strings?.done ?? t('components.skaterSearchFilter.done'),
+  }), [strings, t]);
 
   // Función local para obtener opciones del picker según el campo
   const getPickerOptions = useCallback((fieldKey) => {
     switch (fieldKey) {
       case 'ciudad':
         return [
-          { label: strings.allCities, value: '' },
+          { label: uiStrings.allCities, value: '' },
           ...allCities.map(city => ({ label: city, value: city }))
         ];
       case 'disciplina':
         return [
-          { label: strings.allDisciplines, value: '' },
-          { label: strings.disciplineStreet, value: 'street' },
-          { label: strings.disciplinePark, value: 'park' },
-          { label: strings.disciplineSlalom, value: 'slalom' },
-          { label: strings.disciplineDownhill, value: 'downhill' },
-          { label: strings.disciplineFreestyle, value: 'freestyle' },
+          { label: uiStrings.allDisciplines, value: '' },
+          { label: uiStrings.disciplineStreet, value: 'street' },
+          { label: uiStrings.disciplinePark, value: 'park' },
+          { label: uiStrings.disciplineSlalom, value: 'slalom' },
+          { label: uiStrings.disciplineDownhill, value: 'downhill' },
+          { label: uiStrings.disciplineFreestyle, value: 'freestyle' },
         ];
       case 'nivel':
         return [
-          { label: strings.allLevels, value: '' },
-          { label: strings.levelBeginner, value: 'principiante' },
-          { label: strings.levelIntermediate, value: 'intermedio' },
-          { label: strings.levelAdvanced, value: 'avanzado' },
-          { label: strings.levelProfessional, value: 'profesional' },
+          { label: uiStrings.allLevels, value: '' },
+          { label: uiStrings.levelBeginner, value: 'principiante' },
+          { label: uiStrings.levelIntermediate, value: 'intermedio' },
+          { label: uiStrings.levelAdvanced, value: 'avanzado' },
+          { label: uiStrings.levelProfessional, value: 'profesional' },
         ];
       default:
         return [];
     }
-  }, [allCities, strings]);
+  }, [allCities, uiStrings]);
 
   // Abre el modal del picker
   const openPickerModal = useCallback((fieldKey) => {
@@ -236,7 +257,7 @@ export default function SkaterSearchFilter({
         <Ionicons name="search" size={20} color={theme.colors.text.secondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar patinador, ciudad, disciplina..."
+          placeholder={uiStrings.searchPlaceholder}
           placeholderTextColor={theme.colors.text.secondary}
           value={draftFilters.searchText}
           onChangeText={handleSearchTextChange}
@@ -256,9 +277,9 @@ export default function SkaterSearchFilter({
         style={styles.filtersChipsScroll}
       >
         {[
-          { icon: 'location', label: 'Ciudad', key: 'ciudad', active: draftFilters.ciudad },
-          { icon: 'cube', label: 'Disciplina', key: 'disciplina', active: draftFilters.disciplina },
-          { icon: 'bar-chart', label: 'Nivel', key: 'nivel', active: draftFilters.nivel },
+          { icon: 'location', label: t('filters.city'), key: 'ciudad', active: draftFilters.ciudad },
+          { icon: 'cube', label: t('filters.discipline'), key: 'disciplina', active: draftFilters.disciplina },
+          { icon: 'bar-chart', label: t('filters.level'), key: 'nivel', active: draftFilters.nivel },
         ].map(filter => (
           <TouchableOpacity
             key={filter.key}
@@ -297,7 +318,7 @@ export default function SkaterSearchFilter({
       >
         <Ionicons name="search" size={18} color="#000" />
         <Text style={styles.applySearchButtonText}>
-          {isLoading ? 'Buscando...' : 'Buscar'}
+          {isLoading ? uiStrings.searching : uiStrings.search}
         </Text>
       </TouchableOpacity>
 
@@ -320,7 +341,7 @@ export default function SkaterSearchFilter({
                 onPress={closePickerModal}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={styles.pickerModalDone}>Listo</Text>
+                <Text style={styles.pickerModalDone}>{uiStrings.done}</Text>
               </TouchableOpacity>
             </View>
             {activePickerField && (

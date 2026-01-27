@@ -18,6 +18,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../store/useAppStore';
 import { useRodadas } from '../../hooks/useRodadas';
 import { useAuth } from '../../hooks/useAuth';
@@ -37,11 +38,12 @@ const useDebounce = (callback, delay) => {
 };
 
 const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comunidadId = null, rodadaTipo = 'rodada' }) => {
+  const { t } = useTranslation();
   const { theme, isDark } = useTheme();
   const { user } = useAuth();
-  const { 
-    crearRodada, 
-    buscarLugares, 
+  const {
+    crearRodada,
+    buscarLugares,
     obtenerDetallesLugar,
     placeSearchResults,
     isSearchingPlaces,
@@ -225,10 +227,10 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
   );
 
   const niveles = [
-    { value: 'todos', label: 'Todos los niveles' },
-    { value: 'principiante', label: 'Principiante' },
-    { value: 'intermedio', label: 'Intermedio' },
-    { value: 'avanzado', label: 'Avanzado' },
+    { value: 'todos', labelKey: 'createRodada.levels.all' },
+    { value: 'principiante', labelKey: 'createRodada.levels.beginner' },
+    { value: 'intermedio', labelKey: 'createRodada.levels.intermediate' },
+    { value: 'avanzado', labelKey: 'createRodada.levels.advanced' },
   ];
 
   // Estilos glassmorphism dinámicos según el tema
@@ -274,9 +276,9 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
               <Ionicons name="close" size={24} color={theme.colors.text.primary} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
-              Nueva Rodada
+              {t('createRodada.title')}
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleCreate}
               disabled={!isFormValid() || isLoading}
               style={[
@@ -287,7 +289,7 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.createButtonText}>Crear</Text>
+                <Text style={styles.createButtonText}>{t('createRodada.create')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -300,19 +302,19 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
             {/* Nombre */}
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                Nombre de la rodada *
+                {t('createRodada.name')}
               </Text>
               <TextInput
                 style={[
                   styles.input,
-                  { 
+                  {
                     backgroundColor: inputBackground,
                     borderColor: inputBorder,
                     color: theme.colors.text.primary,
                     borderColor: theme.colors.border,
                   }
                 ]}
-                placeholder="Ej: Rodada nocturna por El Poblado"
+                placeholder={t('createRodada.namePlaceholder')}
                 placeholderTextColor={theme.colors.text.disabled}
                 value={nombre}
                 onChangeText={setNombre}
@@ -323,19 +325,19 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
             {/* Descripción */}
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                Descripción (opcional)
+                {t('createRodada.description')}
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   styles.textArea,
-                  { 
+                  {
                     backgroundColor: inputBackground,
                     color: theme.colors.text.primary,
                     borderColor: inputBorder,
                   }
                 ]}
-                placeholder="Describe la rodada, nivel recomendado, qué llevar..."
+                placeholder={t('createRodada.descriptionPlaceholder')}
                 placeholderTextColor={theme.colors.text.disabled}
                 value={descripcion}
                 onChangeText={setDescripcion}
@@ -348,19 +350,19 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
             {/* Punto de Salida */}
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                <Ionicons name="flag" size={14} color={theme.colors.success} /> Punto de salida *
+                <Ionicons name="flag" size={14} color={theme.colors.success} /> {t('createRodada.startPoint')}
               </Text>
               <View style={styles.searchContainer}>
                 <TextInput
                   style={[
                     styles.input,
-                    { 
+                    {
                       backgroundColor: inputBackground,
                       color: theme.colors.text.primary,
                       borderColor: puntoSalida ? theme.colors.success : inputBorder,
                     }
                   ]}
-                  placeholder="Buscar lugar de encuentro..."
+                  placeholder={t('createRodada.startPointPlaceholder')}
                   placeholderTextColor={theme.colors.text.disabled}
                   value={puntoSalidaQuery}
                   onChangeText={handleSalidaChange}
@@ -407,19 +409,19 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
             {/* Punto de Llegada */}
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                <Ionicons name="flag" size={14} color={theme.colors.error} /> Punto de llegada (opcional)
+                <Ionicons name="flag" size={14} color={theme.colors.error} /> {t('createRodada.endPoint')}
               </Text>
               <View style={styles.searchContainer}>
                 <TextInput
                   style={[
                     styles.input,
-                    { 
+                    {
                       backgroundColor: inputBackground,
                       color: theme.colors.text.primary,
                       borderColor: puntoLlegada ? theme.colors.error : inputBorder,
                     }
                   ]}
-                  placeholder="Buscar destino final..."
+                  placeholder={t('createRodada.endPointPlaceholder')}
                   placeholderTextColor={theme.colors.text.disabled}
                   value={puntoLlegadaQuery}
                   onChangeText={handleLlegadaChange}
@@ -467,18 +469,18 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
             <View style={styles.rowInputs}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                 <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                  Fecha *
+                  {t('createRodada.date')}
                 </Text>
                 <TextInput
                   style={[
                     styles.input,
-                    { 
+                    {
                       backgroundColor: inputBackground,
                       color: theme.colors.text.primary,
                       borderColor: inputBorder,
                     }
                   ]}
-                  placeholder="DD/MM/AAAA"
+                  placeholder={t('createRodada.datePlaceholder')}
                   placeholderTextColor={theme.colors.text.disabled}
                   value={fecha}
                   onChangeText={setFecha}
@@ -488,20 +490,20 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
               </View>
               <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                 <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                  Hora *
+                  {t('createRodada.time')}
                 </Text>
                 <View style={styles.horaContainer}>
                   <TextInput
                     style={[
                       styles.input,
                       styles.horaInput,
-                      { 
+                      {
                         backgroundColor: inputBackground,
                         color: theme.colors.text.primary,
                         borderColor: inputBorder,
                       }
                     ]}
-                    placeholder="7:00"
+                    placeholder={t('createRodada.timePlaceholder')}
                     placeholderTextColor={theme.colors.text.disabled}
                     value={hora}
                     onChangeText={setHora}
@@ -549,7 +551,7 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
             {/* Nivel requerido */}
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.colors.text.secondary }]}>
-                Nivel requerido
+                {t('createRodada.level')}
               </Text>
               <View style={styles.nivelContainer}>
                 {niveles.map((nivel) => (
@@ -557,28 +559,28 @@ const CreateRodadaModal = ({ visible, onClose, onSuccess, parcheId = null, comun
                     key={nivel.value}
                     style={[
                       styles.nivelOption,
-                      { 
-                        backgroundColor: nivelRequerido === nivel.value 
-                          ? theme.colors.primary 
+                      {
+                        backgroundColor: nivelRequerido === nivel.value
+                          ? theme.colors.primary
                           : inputBackground,
-                        borderColor: nivelRequerido === nivel.value 
-                          ? theme.colors.primary 
+                        borderColor: nivelRequerido === nivel.value
+                          ? theme.colors.primary
                           : inputBorder,
                       }
                     ]}
                     onPress={() => setNivelRequerido(nivel.value)}
                   >
-                    <Text 
+                    <Text
                       style={[
                         styles.nivelText,
-                        { 
-                          color: nivelRequerido === nivel.value 
-                            ? '#FFF' 
-                            : theme.colors.text.primary 
+                        {
+                          color: nivelRequerido === nivel.value
+                            ? '#FFF'
+                            : theme.colors.text.primary
                         }
                       ]}
                     >
-                      {nivel.label}
+                      {t(nivel.labelKey)}
                     </Text>
                   </TouchableOpacity>
                 ))}

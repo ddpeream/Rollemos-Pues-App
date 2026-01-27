@@ -149,7 +149,10 @@ export default function SpotsMarketplace() {
 
   // 💬 Enviar WhatsApp
   const handleWhatsApp = (numero, item) => {
-    const mensaje = `Hola, me interesa el artículo: ${item.nombre} por $${item.precio}. ¿Todavía está disponible?`;
+    const mensaje = t('screens.marketplace.contactItemMessage', {
+      name: item.nombre,
+      price: item.precio,
+    });
     const urlWhatsApp = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
     Linking.openURL(urlWhatsApp);
   };
@@ -221,7 +224,7 @@ export default function SpotsMarketplace() {
           >
             <Ionicons name="call" size={16} color={theme.colors.primary} />
             <Text style={[styles.contactBtnText, { color: theme.colors.primary }]}>
-              Llamar
+              {t('screens.marketplace.callAction')}
             </Text>
           </TouchableOpacity>
 
@@ -231,7 +234,7 @@ export default function SpotsMarketplace() {
           >
             <MaterialCommunityIcons name="whatsapp" size={16} color="#FFFFFF" />
             <Text style={[styles.contactBtnText, { color: '#FFFFFF' }]}>
-              WhatsApp
+              {t('screens.marketplace.whatsappAction')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -315,7 +318,14 @@ export default function SpotsMarketplace() {
     </View>
   );
 
-  const categories = ['Todos', 'Tablas', 'Ruedas', 'Partes', 'Protección', 'Accesorios'];
+  const categories = React.useMemo(() => ([
+    { value: 'Todos', label: t('filters.all') },
+    { value: 'Tablas', label: t('screens.marketplace.categories.tablas') },
+    { value: 'Ruedas', label: t('screens.marketplace.categories.ruedas') },
+    { value: 'Partes', label: t('screens.marketplace.categories.partes') },
+    { value: 'Protección', label: t('screens.marketplace.categories.proteccion') },
+    { value: 'Accesorios', label: t('screens.marketplace.categories.accesorios') },
+  ]), [t]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
@@ -323,10 +333,10 @@ export default function SpotsMarketplace() {
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <View>
           <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-            🛒 Marketplace
+            {t('screens.marketplace.title')}
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-            {filteredItems.length} artículos
+            {t('screens.marketplace.itemsCount', { count: filteredItems.length })}
           </Text>
         </View>
 
@@ -372,7 +382,7 @@ export default function SpotsMarketplace() {
           <Ionicons name="search" size={20} color={theme.colors.text.secondary} />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.text.primary }]}
-            placeholder="Buscar artículos..."
+            placeholder={t('screens.marketplace.searchPlaceholderItems')}
             placeholderTextColor={theme.colors.text.secondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -391,32 +401,32 @@ export default function SpotsMarketplace() {
         showsHorizontalScrollIndicator={false}
         style={styles.categoriesScroll}
       >
-        {categories.map((cat) => (
+        {categories.map(({ value, label }) => (
           <TouchableOpacity
-            key={cat}
+            key={value}
             style={[
               styles.categoryButton,
-              selectedCategory === cat && { backgroundColor: theme.colors.primary },
-              selectedCategory !== cat && {
+              selectedCategory === value && { backgroundColor: theme.colors.primary },
+              selectedCategory !== value && {
                 backgroundColor: theme.colors.glass.background,
                 borderColor: theme.colors.border,
                 borderWidth: 1,
               },
             ]}
-            onPress={() => setSelectedCategory(cat)}
+            onPress={() => setSelectedCategory(value)}
           >
             <Text
               style={[
                 styles.categoryText,
                 {
                   color:
-                    selectedCategory === cat
+                    selectedCategory === value
                       ? theme.colors.onPrimary
                       : theme.colors.text.primary,
                 },
               ]}
             >
-              {cat}
+              {label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -441,7 +451,7 @@ export default function SpotsMarketplace() {
             color={theme.colors.text.secondary}
           />
           <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
-            No hay artículos disponibles
+            {t('screens.marketplace.emptyItems')}
           </Text>
         </View>
       )}

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-nativ
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/useAppStore';
 import { spacing, borderRadius, typography } from '../theme';
 
@@ -20,6 +21,8 @@ export default function FilterToolbar({
   showApply = true,
 }) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
+  const resolvedApplyLabel = applyLabel ?? t('components.filterToolbar.apply');
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -137,7 +140,7 @@ export default function FilterToolbar({
               color="#000"
               style={styles.applyButtonIcon}
             />
-            <Text style={styles.applyLabel}>{applyLabel}</Text>
+            <Text style={styles.applyLabel}>{resolvedApplyLabel}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -173,7 +176,7 @@ FilterToolbar.defaultProps = {
   values: {},
   onValueChange: undefined,
   onApply: undefined,
-  applyLabel: 'Aplicar filtros',
+  applyLabel: undefined,
   style: null,
   showApply: true,
 };

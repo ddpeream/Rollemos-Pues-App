@@ -27,6 +27,7 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import useAppStore from '../store/useAppStore';
@@ -52,6 +53,10 @@ export default function DetalleParche() {
   console.log('🆔 parcheId:', parcheId);
   
   const { theme, user } = useAppStore();
+  const { t, i18n } = useTranslation();
+
+  // i18next pluralization in this project uses *_one / *_other keys.
+  const pluralKey = (baseKey, count) => `${baseKey}_${count === 1 ? 'one' : 'other'}`;
   const { 
     loadParche, 
     joinParche, 
@@ -95,12 +100,12 @@ export default function DetalleParche() {
       if (result.success) {
         setParche(result.data);
       } else {
-        Alert.alert('Error', 'No se pudo cargar el parche');
+        Alert.alert(t('common.error'), t('detalleParche.error'));
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error cargando parche:', error);
-      Alert.alert('Error', 'No se pudo cargar el parche');
+      Alert.alert(t('common.error'), t('detalleParche.error'));
     } finally {
       setLoading(false);
     }
@@ -144,7 +149,7 @@ export default function DetalleParche() {
   // Unirse al parche
   const handleJoin = async () => {
     if (!user) {
-      Alert.alert('Inicia sesión', 'Debes iniciar sesión para unirte a un parche');
+      Alert.alert(t('detalleParche.loginRequired'), t('detalleParche.loginToJoin'));
       return;
     }
 
@@ -152,13 +157,16 @@ export default function DetalleParche() {
     try {
       const result = await joinParche(parcheId);
       if (result.success) {
-        Alert.alert('🎉 ¡Te uniste!', `Ahora eres parte de "${parche.nombre}"`);
+        Alert.alert(
+          t('detalleParche.joinSuccess'),
+          t('detalleParche.joinSuccessMessage', { nombre: parche.nombre })
+        );
         await fetchParche(); // Recargar para actualizar miembros
       } else {
-        Alert.alert('Error', result.error || 'No se pudo unir al parche');
+        Alert.alert(t('common.error'), result.error || t('detalleParche.joinError'));
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo unir al parche');
+      Alert.alert(t('common.error'), t('detalleParche.joinError'));
     } finally {
       setJoining(false);
     }
@@ -167,25 +175,31 @@ export default function DetalleParche() {
   // Salirse del parche
   const handleLeave = async () => {
     Alert.alert(
-      'Salir del parche',
-      `¿Seguro que quieres salir de "${parche.nombre}"?`,
+      t('detalleParche.leaveTitle'),
+      t('detalleParche.leaveConfirm', { nombre: parche.nombre }),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('detalleParche.cancel'), style: 'cancel' },
         {
-          text: 'Salir',
+          text: t('detalleParche.leaveButton'),
           style: 'destructive',
           onPress: async () => {
             setJoining(true);
             try {
               const result = await leaveParche(parcheId);
               if (result.success) {
-                Alert.alert('👋', 'Has salido del parche');
+                Alert.alert(
+                  t('detalleParche.leaveSuccessTitle'),
+                  t('detalleParche.leaveSuccess')
+                );
                 await fetchParche();
               } else {
-                Alert.alert('Error', result.error || 'No se pudo salir del parche');
+                Alert.alert(
+                  t('common.error'),
+                  result.error || t('detalleParche.leaveError')
+                );
               }
             } catch (error) {
-              Alert.alert('Error', 'No se pudo salir del parche');
+              Alert.alert(t('common.error'), t('detalleParche.leaveError'));
             } finally {
               setJoining(false);
             }
@@ -198,14 +212,14 @@ export default function DetalleParche() {
   // Seleccionar múltiples imágenes
   const handleAddImages = async () => {
     if (!isCreator) {
-      Alert.alert('Sin permisos', 'Solo el creador del parche puede agregar fotos');
+      Alert.alert(t('detalleParche.noPermission'), t('detalleParche.onlyCreatorCanAddPhotos'));
       return;
     }
 
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permisos requeridos', 'Necesitamos acceso a tu galería');
+        Alert.alert(t('detalleParche.permissionsRequired'), t('detalleParche.galleryAccess'));
         return;
       }
 
@@ -224,10 +238,15 @@ export default function DetalleParche() {
         const uploadResult = await addParcheImages(parcheId, imageUris);
         
         if (uploadResult.success) {
-          Alert.alert('✅', `${imageUris.length} imagen(es) agregada(s)`);
+          Alert.alert(
+            t('common.done'),
+            t(pluralKey('detalleParche.imagesAdded', imageUris.length), {
+              count: imageUris.length,
+            })
+          );
           await fetchParche();
         } else {
-          Alert.alert('Error', uploadResult.error || 'No se pudieron subir las imágenes');
+          Alert.alert(t('common.error'), uploadResult.error || t('detalleParche.imagesError'));
         }
         setUploadingImages(false);
       }
@@ -298,7 +317,7 @@ export default function DetalleParche() {
 
   const handleRemoveImage = async () => {
     if (!isCreator) {
-      Alert.alert('Sin permisos', 'Solo el creador puede eliminar fotos');
+      Alert.alert(t('detalleParche.noPermission'), t('detalleParche.onlyCreatorCanDeletePhotos'));
       return;
     }
 
@@ -308,12 +327,12 @@ export default function DetalleParche() {
     }
 
     Alert.alert(
-      'Eliminar foto',
-      '¿Quieres eliminar esta foto?',
+      t('detalleParche.deletePhotoTitle'),
+      t('detalleParche.deletePhotoMessage'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             const result = await deleteParcheImage(parcheId, imageUrl);
@@ -321,7 +340,10 @@ export default function DetalleParche() {
               await fetchParche();
               setViewerImageIndex(0);
             } else {
-              Alert.alert('Error', result.error || 'No se pudo eliminar la foto');
+              Alert.alert(
+                t('common.error'),
+                result.error || t('detalleParche.deletePhotoError')
+              );
             }
           },
         },
@@ -360,7 +382,7 @@ export default function DetalleParche() {
       <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background.primary }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-          Cargando parche...
+          {t('detalleParche.loading')}
         </Text>
       </View>
     );
@@ -371,13 +393,13 @@ export default function DetalleParche() {
       <View style={[styles.errorContainer, { backgroundColor: theme.colors.background.primary }]}>
         <Ionicons name="alert-circle-outline" size={60} color={theme.colors.text.tertiary} />
         <Text style={[styles.errorText, { color: theme.colors.text.secondary }]}>
-          No se encontró el parche
+          {t('detalleParche.notFound')}
         </Text>
         <TouchableOpacity 
           style={[styles.backButton, { backgroundColor: theme.colors.primary }]}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>Volver</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -524,7 +546,7 @@ export default function DetalleParche() {
           {parche.descripcion && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-                Acerca del parche
+                {t('detalleParche.about')}
               </Text>
               <Text style={[styles.description, { color: theme.colors.text.secondary }]}>
                 {parche.descripcion}
@@ -536,7 +558,7 @@ export default function DetalleParche() {
           {parche.usuario_creador && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-                Fundador
+                {t('detalleParche.founder')}
               </Text>
               <TouchableOpacity 
                 style={[styles.creatorCard, { 
@@ -554,7 +576,7 @@ export default function DetalleParche() {
                     {parche.usuario_creador.nombre}
                   </Text>
                   <Text style={[styles.creatorRole, { color: theme.colors.text.tertiary }]}>
-                    Creador del parche
+                    {t('detalleParche.creatorRole')}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
@@ -566,7 +588,7 @@ export default function DetalleParche() {
           {parche.contacto && Object.keys(parche.contacto).length > 0 && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-                Contacto
+                {t('detalleParche.contact')}
               </Text>
               
               <View style={styles.contactGrid}>
@@ -613,7 +635,7 @@ export default function DetalleParche() {
           {parche.miembros && parche.miembros.length > 0 && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-                Miembros ({parche.miembros.length})
+                {t('detalleParche.membersTitle', { count: parche.miembros.length })}
               </Text>
               
               <ScrollView 
@@ -635,7 +657,7 @@ export default function DetalleParche() {
                       style={[styles.memberName, { color: theme.colors.text.secondary }]}
                       numberOfLines={1}
                     >
-                      {miembro.usuario?.nombre?.split(' ')[0] || 'Usuario'}
+                      {miembro.usuario?.nombre?.split(' ')[0] || t('common.user')}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -648,7 +670,7 @@ export default function DetalleParche() {
                       </Text>
                     </View>
                     <Text style={[styles.memberName, { color: theme.colors.text.tertiary }]}>
-                      más
+                      {t('common.more')}
                     </Text>
                   </View>
                 )}
@@ -660,7 +682,7 @@ export default function DetalleParche() {
           {parcheRodadas.length > 0 && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
-                🛼 Rodadas ({parcheRodadas.length})
+                {t('detalleParche.rodadasTitle', { count: parcheRodadas.length })}
               </Text>
               
               {parcheRodadas.map((rodada, index) => (
@@ -678,12 +700,12 @@ export default function DetalleParche() {
                         <Ionicons name="calendar-outline" size={14} color={theme.colors.text.secondary} />
                         <Text style={[styles.rodadaDate, { color: theme.colors.text.secondary }]}>
                           {rodada.fecha_inicio 
-                            ? new Date(rodada.fecha_inicio).toLocaleDateString('es-CO', { 
+                            ? new Date(rodada.fecha_inicio).toLocaleDateString(i18n.language || undefined, { 
                                 weekday: 'short', 
                                 day: 'numeric', 
                                 month: 'short' 
                               })
-                            : 'Sin fecha'}
+                            : t('detalleParche.noDate')}
                         </Text>
                         <Text style={[styles.rodadaTime, { color: theme.colors.primary }]}>
                           {rodada.hora_encuentro || ''}
@@ -695,14 +717,16 @@ export default function DetalleParche() {
                       { backgroundColor: rodada.estado === 'en_curso' ? '#FF3B30' : '#34C759' }
                     ]}>
                       <Text style={styles.rodadaStatusText}>
-                        {rodada.estado === 'en_curso' ? 'En curso' : 'Próxima'}
+                        {rodada.estado === 'en_curso'
+                          ? t('detalleParche.rodadaStatusInProgress')
+                          : t('detalleParche.rodadaStatusUpcoming')}
                       </Text>
                     </View>
                   </View>
                   <View style={styles.rodadaFooter}>
                     <Ionicons name="location-outline" size={14} color={theme.colors.text.tertiary} />
                     <Text style={[styles.rodadaLocation, { color: theme.colors.text.tertiary }]} numberOfLines={1}>
-                      {rodada.punto_salida_nombre || 'Punto por definir'}
+                      {rodada.punto_salida_nombre || t('detalleParche.startPointPending')}
                     </Text>
                     <View style={styles.rodadaParticipants}>
                       <Ionicons name="people-outline" size={14} color={theme.colors.text.tertiary} />
@@ -749,7 +773,7 @@ export default function DetalleParche() {
                   styles.actionButtonText,
                   { color: isMember ? theme.colors.primary : '#000' }
                 ]}>
-                  {isMember ? 'Salir del parche' : 'Unirme al parche'}
+                  {isMember ? t('detalleParche.leaveCrewButton') : t('detalleParche.joinButton')}
                 </Text>
               </>
             )}
@@ -770,7 +794,7 @@ export default function DetalleParche() {
             >
               <Ionicons name="bicycle" size={20} color="#000" />
               <Text style={[styles.creatorButtonText, { color: '#000' }]}>
-                Crear rodada
+                {t('detalleParche.createRide')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -782,14 +806,14 @@ export default function DetalleParche() {
             >
               <Ionicons name="barbell-outline" size={20} color="#000" />
               <Text style={[styles.creatorButtonText, { color: '#000' }]}>
-                Crear entreno
+                {t('detalleParche.createTraining')}
               </Text>
             </TouchableOpacity>
           </View>
           <View style={[styles.creatorBadge, { backgroundColor: theme.colors.alpha.primary15 }]}>
             <Ionicons name="star" size={16} color={theme.colors.primary} />
             <Text style={[styles.creatorBadgeText, { color: theme.colors.primary }]}>
-              Creador
+              {t('detalleParche.creatorLabel')}
             </Text>
           </View>
         </View>
@@ -807,9 +831,9 @@ export default function DetalleParche() {
         onSuccess={(rodada) => {
           fetchRodadas({ parcheId }); // Recargar lista de rodadas
           Alert.alert(
-            '🛼 ¡Rodada creada!',
-            `"${rodada.nombre}" ha sido programada. Los miembros del parche podrán verla.`,
-            [{ text: 'Genial!' }]
+            t('detalleParche.rodadaCreatedTitle'),
+            t('detalleParche.rodadaCreatedMessage', { nombre: rodada.nombre }),
+            [{ text: t('common.great') }]
           );
         }}
       />
