@@ -35,17 +35,21 @@ const CreateComunidadModal = ({ visible, onClose, onSubmit }) => {
   const [isPublic, setIsPublic] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Tag keys for i18n (the actual values stored remain in Spanish for DB consistency)
+  // Tag keys for i18n (the actual values stored remain as values for DB consistency)
   const tagKeys = [
-    { key: 'street', value: 'Street' },
     { key: 'urbano', value: 'Urbano' },
     { key: 'freestyle', value: 'Freestyle' },
-    { key: 'slalom', value: 'Slalom' },
     { key: 'downhill', value: 'Downhill' },
-    { key: 'fitness', value: 'Fitness' },
+    { key: 'agresivo', value: 'Agresivo' },
+    { key: 'patinajeArtistico', value: 'Patinaje Artístico' },
+    { key: 'hokey', value: 'Hokey' },
+    { key: 'patinajeDeVelocidad', value: 'Patinaje De Velocidad' },
+    { key: 'street', value: 'Street' },
+    { key: 'slalom', value: 'Slalom' },
     { key: 'ruta', value: 'Ruta' },
     { key: 'aprendizaje', value: 'Aprendizaje' },
     { key: 'nocturna', value: 'Nocturna' },
+    { key: 'rollerDerby', value: 'Roller Derby' },
   ];
 
   const resetForm = () => {

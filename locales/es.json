@@ -712,15 +712,19 @@
       "public": "Pública",
       "private": "Privada",
       "tags": {
-        "street": "Street",
         "urbano": "Urbano",
-        "freestyle": "Freestyle",
+        "freestyle": "Estilo libre",
+        "downhill": "Descenso",
+        "agresivo": "Agresivo",
+        "patinajeArtistico": "Patinaje Artístico",
+        "hokey": "Hokey",
+        "patinajeDeVelocidad": "Patinaje De Velocidad",
+        "street": "Calle",
         "slalom": "Slalom",
-        "downhill": "Downhill",
-        "fitness": "Fitness",
-        "ruta": "Ruta",
+        "ruta": "Ruta-Recorrido",
         "aprendizaje": "Aprendizaje",
-        "nocturna": "Nocturna"
+        "nocturna": "Nocturno",
+        "rollerDerby": "Roller Derby"
       }
     }
   },

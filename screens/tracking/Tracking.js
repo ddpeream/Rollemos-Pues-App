@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Animated, StatusBar, Alert, Platform } from 'react-native';
+import { Animated, StatusBar, Alert, Platform, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -334,10 +334,15 @@ export default function Tracking() {
         const startResult = await startTracking();
         console.log('[Tracking] startTracking result', startResult);
         if (startResult?.success) {
-          Alert.alert(
-            t('screens.tracking.startingTitle'),
-            t('screens.tracking.startingMessage')
-          );
+          // Diferir el Alert hasta que el render del marker esté completo
+          // Esto evita que Alert.alert() bloquee el JS thread antes de que
+          // el marker del usuario se renderice correctamente en Android
+          InteractionManager.runAfterInteractions(() => {
+            Alert.alert(
+              t('screens.tracking.startingTitle'),
+              t('screens.tracking.startingMessage')
+            );
+          });
         } else {
           Alert.alert(
             t('screens.tracking.errorTitle'),
