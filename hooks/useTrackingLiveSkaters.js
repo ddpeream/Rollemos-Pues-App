@@ -66,21 +66,10 @@ export const useTrackingLiveSkaters = ({ userId }) => {
   );
 
   const visibleLiveSkaters = useMemo(() => {
-    console.log('👥 visibleLiveSkaters filter:', liveSkaters.length, 'total, userId:', userId);
     return liveSkaters.filter((skater) => {
-      if (!skater.isActive) {
-        console.log('  ❌ filtered (inactive):', skater.userId);
-        return false;
-      }
-      if (!Number.isFinite(skater.lat) || !Number.isFinite(skater.lng)) {
-        console.log('  ❌ filtered (invalid coords):', skater.userId, skater.lat, skater.lng);
-        return false;
-      }
-      if (userId && skater.userId === userId) {
-        console.log('  ❌ filtered (self):', skater.userId);
-        return false;
-      }
-      console.log('  ✅ visible:', skater.userId, 'lat:', skater.lat, 'lng:', skater.lng);
+      if (!skater.isActive) return false;
+      if (!Number.isFinite(skater.lat) || !Number.isFinite(skater.lng)) return false;
+      if (userId && skater.userId === userId) return false;
       return true;
     });
   }, [liveSkaters, userId]);

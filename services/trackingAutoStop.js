@@ -14,10 +14,11 @@ import { supabase } from '../config/supabase';
 // Keys para AsyncStorage
 const TRACKING_STATE_KEY = '@rollemos_tracking_state';
 const LAST_MOVEMENT_KEY = '@rollemos_last_movement';
+const BG_ROUTE_BUFFER_KEY = '@rollemos_bg_route_buffer';
 
 // Configuración de tiempos (en milisegundos)
 export const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 20 minutos
-export const MIN_MOVEMENT_DISTANCE = 10; // metros mínimos para considerar movimiento
+export const MIN_MOVEMENT_DISTANCE = 5; // metros mínimos para considerar movimiento
 
 /**
  * 💾 Guardar estado del tracking al iniciar
@@ -90,14 +91,6 @@ export const updateLastMovement = async () => {
   try {
     const now = Date.now();
     await AsyncStorage.setItem(LAST_MOVEMENT_KEY, now.toString());
-    
-    // También actualizar en el estado general
-    const state = await getTrackingState();
-    if (state) {
-      state.lastMovementTime = now;
-      await AsyncStorage.setItem(TRACKING_STATE_KEY, JSON.stringify(state));
-    }
-    
     return now;
   } catch (error) {
     console.error('❌ Error actualizando último movimiento:', error);
@@ -272,5 +265,40 @@ export const cleanupOrphanedTracking = async () => {
   } catch (error) {
     console.error('❌ Error en cleanup de tracking:', error);
     return { cleaned: false, reason: 'error', error: error.message };
+  }
+};
+
+/**
+ * 📍 Buffer de puntos GPS capturados en background.
+ * El background task guarda cada punto aquí para que al volver
+ * al foreground se fusionen con la ruta.
+ */
+export const appendBgRoutePoint = async (coord) => {
+  try {
+    const raw = await AsyncStorage.getItem(BG_ROUTE_BUFFER_KEY);
+    const buffer = raw ? JSON.parse(raw) : [];
+    buffer.push(coord);
+    await AsyncStorage.setItem(BG_ROUTE_BUFFER_KEY, JSON.stringify(buffer));
+  } catch (e) {
+    console.error('❌ Error appending bg route point:', e);
+  }
+};
+
+export const consumeBgRouteBuffer = async () => {
+  try {
+    const raw = await AsyncStorage.getItem(BG_ROUTE_BUFFER_KEY);
+    await AsyncStorage.removeItem(BG_ROUTE_BUFFER_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error('❌ Error consuming bg route buffer:', e);
+    return [];
+  }
+};
+
+export const clearBgRouteBuffer = async () => {
+  try {
+    await AsyncStorage.removeItem(BG_ROUTE_BUFFER_KEY);
+  } catch (e) {
+    // silent
   }
 };

@@ -1,8 +1,119 @@
-import React, { useRef, memo, useCallback } from 'react';
+import React, { useRef, useState, useEffect, memo, useCallback } from 'react';
 import { View, Text, Platform } from 'react-native';
-import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Polyline, Marker, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles, darkMapStyle } from '../../screens/tracking/tracking.style';
+
+// Marker que arranca con tracksViewChanges=true para que Android renderice el bitmap,
+// luego lo apaga para no gastar CPU cada frame.
+const AndroidSafeMarker = memo(({ children, ...markerProps }) => {
+  const [trackChanges, setTrackChanges] = useState(Platform.OS === 'android');
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const timer = setTimeout(() => setTrackChanges(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  return (
+    <Marker {...markerProps} tracksViewChanges={trackChanges}>
+      {children}
+    </Marker>
+  );
+});
+
+// Marker animado del usuario: se desliza suavemente entre posiciones GPS.
+// Android: Marker nativo + animateMarkerToCoordinate (más confiable)
+// iOS: Marker.Animated + AnimatedRegion.timing()
+const AnimatedUserMarker = memo(({ coordinate, theme }) => {
+  const markerRef = useRef(null);
+  const [trackChanges, setTrackChanges] = useState(true);
+
+  // Android: coordenada estable (no cambia con re-renders).
+  // Todo el movimiento se hace con animateMarkerToCoordinate.
+  const stableCoord = useRef({
+    latitude: coordinate.latitude,
+    longitude: coordinate.longitude,
+  }).current;
+
+  // iOS: AnimatedRegion para interpolación suave
+  const animatedCoord = useRef(
+    new AnimatedRegion({
+      latitude: coordinate.latitude,
+      longitude: coordinate.longitude,
+      latitudeDelta: 0,
+      longitudeDelta: 0,
+    })
+  ).current;
+
+  // Desactivar tracksViewChanges después de que el bitmap esté renderizado
+  useEffect(() => {
+    const timer = setTimeout(() => setTrackChanges(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Animar marker suavemente a cada nueva posición GPS
+  useEffect(() => {
+    const duration = 2000;
+    if (Platform.OS === 'android') {
+      if (markerRef.current?.animateMarkerToCoordinate) {
+        markerRef.current.animateMarkerToCoordinate(
+          { latitude: coordinate.latitude, longitude: coordinate.longitude },
+          duration,
+        );
+      }
+    } else {
+      animatedCoord
+        .timing({
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude,
+          latitudeDelta: 0,
+          longitudeDelta: 0,
+          duration,
+          useNativeDriver: false,
+        })
+        .start();
+    }
+  }, [coordinate.latitude, coordinate.longitude]);
+
+  const markerContent = (
+    <View
+      style={[
+        styles.currentPositionMarker,
+        { backgroundColor: theme.colors.primary },
+      ]}
+    >
+      <MaterialCommunityIcons name="roller-skate" size={18} color="#FFFFFF" />
+    </View>
+  );
+
+  if (Platform.OS === 'android') {
+    return (
+      <Marker
+        ref={markerRef}
+        coordinate={stableCoord}
+        anchor={{ x: 0.5, y: 0.5 }}
+        tracksViewChanges={trackChanges}
+        zIndex={100}
+      >
+        {markerContent}
+      </Marker>
+    );
+  }
+
+  return (
+    <Marker.Animated
+      ref={markerRef}
+      coordinate={animatedCoord}
+      anchor={{ x: 0.5, y: 0.5 }}
+      tracksViewChanges={trackChanges}
+      zIndex={100}
+    >
+      {markerContent}
+    </Marker.Animated>
+  );
+});
 
 function TrackingMap({
   mapRef,
@@ -79,34 +190,11 @@ function TrackingMap({
       })}
 
       {currentLocation && (
-        <Marker
-          coordinate={{
-            latitude: currentLocation.latitude,
-            longitude: currentLocation.longitude,
-          }}
-          anchor={{ x: 0.5, y: 0.5 }}
-          // En Android, los markers custom (View + icon) pueden no renderizarse/"desaparecer" si tracksViewChanges=false.
-          // Lo dejamos en true para el marker del usuario actual.
-          tracksViewChanges={true}
-          zIndex={100}
-        >
-          <View
-            style={[
-              styles.currentPositionMarker,
-              { backgroundColor: theme.colors.primary },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="roller-skate"
-              size={18}
-              color="#FFFFFF"
-            />
-          </View>
-        </Marker>
+        <AnimatedUserMarker coordinate={currentLocation} theme={theme} />
       )}
 
       {visibleLiveSkaters.map((skater) => (
-        <Marker
+        <AndroidSafeMarker
           key={skater.userId}
           coordinate={{
             latitude: skater.lat,
@@ -114,7 +202,6 @@ function TrackingMap({
           }}
           rotation={skater.heading || 0}
           anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={Platform.OS === 'ios'}
           zIndex={90}
           onPress={() => onSelectSkater?.(skater)}
         >
@@ -130,7 +217,7 @@ function TrackingMap({
               color="#FFFFFF"
             />
           </View>
-        </Marker>
+        </AndroidSafeMarker>
       ))}
 
       {showRodadasOnMap &&

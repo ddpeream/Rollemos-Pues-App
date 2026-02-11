@@ -178,8 +178,10 @@ export default function Auth({ navigation }) {
     passwordToggle: {
       position: 'absolute',
       right: spacing.base,
-      top: '50%',
-      marginTop: 0,
+      top: 0,
+      height: '100%',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.xs,
     },
     button: {
       backgroundColor: theme.colors.primary,
@@ -293,7 +295,7 @@ export default function Auth({ navigation }) {
               >
                 <Ionicons
                   name={showPassword ? 'eye' : 'eye-off'}
-                  size={18}
+                  size={24}
                   color={theme.colors.text.secondary}
                 />
               </TouchableOpacity>

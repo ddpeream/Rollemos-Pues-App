@@ -31,6 +31,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTrackingLiveSkaters, getSkaterColor } from '../../hooks/useTrackingLiveSkaters';
 import { useTrackingRodadas } from '../../hooks/useTrackingRodadas';
 import { useTrackingHistory } from '../../hooks/useTrackingHistory';
+import { useSnapToRoads } from '../../hooks/useSnapToRoads';
 import CreateRodadaModal from '../../components/tracking/CreateRodadaModal';
 import TrackingHeader from '../../components/tracking/TrackingHeader';
 import TrackingMap from '../../components/tracking/TrackingMap';
@@ -105,6 +106,7 @@ export default function Tracking() {
   const [showSpotsOnMap] = useState(true);
   const [selectedLiveSkaterId, setSelectedLiveSkaterId] = useState(null);
   const [showLiveSkaterBadge, setShowLiveSkaterBadge] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
 
   const getRodadaType = React.useCallback((rodada) => {
     const tipo = String(rodada?.tipo || '').toLowerCase();
@@ -189,6 +191,12 @@ export default function Tracking() {
     stopTracking,
   } = useRouteTracker({ isPrivateTracking, skipRestore: skipRestoring });
 
+  // Snap-to-roads: ajusta coordenadas GPS a las calles reales
+  const displayRouteCoordinates = useSnapToRoads(
+    routeCoordinates,
+    status === TRACKER_STATUS.TRACKING,
+  );
+
   const mapRef = useRef(null);
 
   const { historicalRoute, clearHistoricalRoute } = useTrackingHistory({
@@ -229,23 +237,41 @@ export default function Tracking() {
     React.useCallback(() => {
       const centerOnUserLocation = async () => {
         try {
-          console.log('Centrando mapa en ubicacion del usuario...');
+          // Posición rápida (cache) para mostrar el marker de inmediato
+          const lastKnown = await Location.getLastKnownPositionAsync({
+            maxAge: 120000,
+            requiredAccuracy: 200,
+          });
+          if (lastKnown?.coords) {
+            setUserLocation({
+              latitude: lastKnown.coords.latitude,
+              longitude: lastKnown.coords.longitude,
+            });
+          }
+        } catch (_) {}
+
+        try {
           const location = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,
           });
 
-          if (location && mapRef.current) {
-            mapRef.current.animateToRegion(
-              {
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-              },
-              1000
-            );
-            setIsMapAutoCenter(true);
-            console.log('Mapa centrado en:', location.coords.latitude, location.coords.longitude);
+          if (location?.coords) {
+            const loc = {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            };
+            setUserLocation(loc);
+            if (mapRef.current) {
+              mapRef.current.animateToRegion(
+                {
+                  ...loc,
+                  latitudeDelta: 0.05,
+                  longitudeDelta: 0.05,
+                },
+                1000
+              );
+              setIsMapAutoCenter(true);
+            }
           }
         } catch (error) {
           console.error('Error obteniendo ubicacion inicial:', error);
@@ -258,6 +284,14 @@ export default function Tracking() {
       }
     }, [route.params?.historicalRoute])
   );
+
+  // Sincronizar userLocation con currentLocation durante tracking
+  // para que al detener, el marker quede en la última posición conocida
+  useEffect(() => {
+    if (currentLocation) {
+      setUserLocation(currentLocation);
+    }
+  }, [currentLocation]);
 
   useEffect(() => {
     if (status === TRACKER_STATUS.TRACKING) {
@@ -658,11 +692,11 @@ const statsContainerStyle = {
         mapType={mapType}
         onMapPan={handleMapPan}
         initialRegion={INITIAL_REGION_MEDELLIN}
-        routeCoordinates={routeCoordinates}
+        routeCoordinates={displayRouteCoordinates}
         theme={theme}
         isDark={isDark}
         livePaths={livePaths}
-        currentLocation={currentLocation}
+        currentLocation={currentLocation || userLocation}
         visibleLiveSkaters={visibleLiveSkaters}
         getSkaterColor={getSkaterColor}
         showRodadasOnMap={showRodadasOnMap}

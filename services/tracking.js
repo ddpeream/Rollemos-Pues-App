@@ -33,12 +33,10 @@ export const upsertTrackingLive = async ({
     return { ok: false, error: error.message };
   }
 
-  console.log('✅ upsert tracking_live result:', data);
   return { ok: true, data };
 };
 
 export const fetchTrackingLive = async () => {
-  console.log('📡 fetchTrackingLive: fetching active skaters...');
   const { data, error } = await supabase
     .from('tracking_live')
     .select('user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( * )')
@@ -47,11 +45,6 @@ export const fetchTrackingLive = async () => {
   if (error) {
     console.error('❌ fetchTrackingLive error:', error.message);
     return { ok: false, error: error.message, data: [] };
-  }
-
-  console.log('✅ fetchTrackingLive result:', data?.length || 0, 'skaters');
-  if (data?.length > 0) {
-    data.forEach(s => console.log('  - skater:', s.user_id, 'active:', s.is_active, 'lat:', s.lat, 'lng:', s.lng));
   }
 
   return { ok: true, data: data || [] };
@@ -64,9 +57,7 @@ export const subscribeTrackingLive = (onChange) => {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'tracking_live' },
       async (payload) => {
-        console.log('📡 tracking_live realtime:', payload.eventType, payload.new?.user_id);
-
-        // 📡 Si viene del realtime, necesitamos enriquecer con los datos del usuario
+        // Si viene del realtime, necesitamos enriquecer con los datos del usuario
         if (payload.new) {
           const { data: userdata, error } = await supabase
             .from('tracking_live')
@@ -79,7 +70,6 @@ export const subscribeTrackingLive = (onChange) => {
           }
 
           if (!error && userdata) {
-            console.log('✅ tracking_live enriched:', userdata.user_id, 'is_active:', userdata.is_active);
             payload.new = userdata;
           }
         }
