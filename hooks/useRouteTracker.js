@@ -124,7 +124,7 @@ export const useRouteTracker = (options = {}) => {
   const [error, setError] = useState(null);
   const [authUid, setAuthUid] = useState(null);
 
-  // Estado combinado para datos de tracking (evita múltiples re-renders)
+  // Estados combinado para datos de tracking (evita múltiples re-renders)
   const [trackingData, setTrackingData] = useState({
     currentLocation: null,
     routeCoordinates: [],
@@ -136,8 +136,17 @@ export const useRouteTracker = (options = {}) => {
     startFlag: null, // Bandera de salida
   });
 
+  // Estados de carga para sincronización de UI
+  const [loadingStates, setLoadingStates] = useState({
+    isStarting: false,
+    isPausing: false,
+    isStopping: false,
+    isResuming: false,
+  });
+
   // Destructuring para compatibilidad con el código existente
   const { currentLocation, routeCoordinates, distance, speed, avgSpeed, maxSpeed, calories, startFlag } = trackingData;
+  const { isStarting, isPausing, isStopping, isResuming } = loadingStates;
   const isStoppingRef = useRef(false);
 
   // Refs para tracking
@@ -170,6 +179,12 @@ export const useRouteTracker = (options = {}) => {
   const isPrivateTrackingRef = useRef(isPrivateTracking);
   const startFlagPlacedRef = useRef(false);
 
+  // Refs para timeouts y validación
+  const startTimeoutRef = useRef(null);
+  const pauseTimeoutRef = useRef(null);
+  const stopTimeoutRef = useRef(null);
+  const resumeTimeoutRef = useRef(null);
+
   // 🏎️ MV Speed refs
   const lastSpeedUiUpdateRef = useRef(0);
   const lastGoodSpeedKmhRef = useRef(0);
@@ -192,6 +207,31 @@ export const useRouteTracker = (options = {}) => {
       reduced.push(last);
     }
     return reduced;
+  }, []);
+
+  // Validación de transiciones de estado
+  const validateStateTransition = useCallback((from, to) => {
+    const validTransitions = {
+      [TRACKER_STATUS.IDLE]: [TRACKER_STATUS.TRACKING],
+      [TRACKER_STATUS.TRACKING]: [TRACKER_STATUS.PAUSED, TRACKER_STATUS.IDLE],
+      [TRACKER_STATUS.PAUSED]: [TRACKER_STATUS.TRACKING, TRACKER_STATUS.IDLE],
+    };
+    return validTransitions[from]?.includes(to) || false;
+  }, []);
+
+  // Limpiar timeouts
+  const clearTimeouts = useCallback(() => {
+    [startTimeoutRef, pauseTimeoutRef, stopTimeoutRef, resumeTimeoutRef].forEach(ref => {
+      if (ref.current) {
+        clearTimeout(ref.current);
+        ref.current = null;
+      }
+    });
+  }, []);
+
+  // Actualizar estados de carga de forma segura
+  const setLoadingState = useCallback((key, value) => {
+    setLoadingStates(prev => ({ ...prev, [key]: value }));
   }, []);
 
   useEffect(() => {
@@ -1058,8 +1098,25 @@ export const useRouteTracker = (options = {}) => {
    */
   const startTracking = useCallback(async () => {
     console.log('Iniciando tracking...');
+    
+    // Validar transición de estado
+    if (!validateStateTransition(status, TRACKER_STATUS.TRACKING)) {
+      console.log('[startTracking] Transición de estado inválida:', status, '-> TRACKING');
+      return { success: false, error: 'Estado inválido para iniciar tracking' };
+    }
+
     isStoppingRef.current = false;
     await clearBgRouteBuffer();
+
+    // Actualizar estado de carga inmediatamente
+    setLoadingState('isStarting', true);
+    
+    // Timeout para evitar bloqueos infinitos
+    startTimeoutRef.current = setTimeout(() => {
+      setLoadingState('isStarting', false);
+      setError('Tiempo de espera agotado al iniciar tracking');
+      setStatus(TRACKER_STATUS.IDLE);
+    }, 15000); // 15 segundos
 
     try {
       const cleanupStartFailure = async () => {
@@ -1231,6 +1288,14 @@ export const useRouteTracker = (options = {}) => {
       }
 
       console.log('Tracking iniciado correctamente');
+      
+      // Limpiar timeout de inicio
+      if (startTimeoutRef.current) {
+        clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = null;
+      }
+      
+      setLoadingState('isStarting', false);
       return { success: true };
     } catch (err) {
       console.error('Error general en startTracking:', err);
@@ -1238,6 +1303,14 @@ export const useRouteTracker = (options = {}) => {
       await stopBackgroundTracking();
       setStatus(TRACKER_STATUS.IDLE);
       stopTimer();
+      
+      // Limpiar timeout en caso de error
+      if (startTimeoutRef.current) {
+        clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = null;
+      }
+      
+      setLoadingState('isStarting', false);
       return { success: false };
     }
   }, [
@@ -1251,65 +1324,143 @@ export const useRouteTracker = (options = {}) => {
     startLocationWatcher,
     startTimer,
     stopTimer,
+    validateStateTransition,
+    setLoadingState,
   ]);
 
   const pauseTracking = useCallback(async () => {
     if (status !== TRACKER_STATUS.TRACKING) return;
+    
+    // Validar transición de estado
+    if (!validateStateTransition(status, TRACKER_STATUS.PAUSED)) {
+      console.log('[pauseTracking] Transición de estado inválida:', status, '-> PAUSED');
+      return;
+    }
+    
     console.log('[useRouteTracker] pausing');
+    
+    // Actualizar estado de carga inmediatamente
+    setLoadingState('isPausing', true);
+    
+    // Timeout para evitar bloqueos
+    pauseTimeoutRef.current = setTimeout(() => {
+      setLoadingState('isPausing', false);
+      setError('Tiempo de espera agotado al pausar tracking');
+    }, 8000); // 8 segundos
+    
     const now = Date.now();
-    await autoPauseTracking(now);
-    await persistTrackingState({
-      isPaused: true,
-      pausedAt: now,
-      totalPausedMs: totalPausedMsRef.current,
-    });
-  }, [autoPauseTracking, persistTrackingState, status]);
+    
+    try {
+      await autoPauseTracking(now);
+      await persistTrackingState({
+        isPaused: true,
+        pausedAt: now,
+        totalPausedMs: totalPausedMsRef.current,
+      });
+      
+      // Limpiar timeout
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current);
+        pauseTimeoutRef.current = null;
+      }
+      
+      setLoadingState('isPausing', false);
+    } catch (err) {
+      console.error('Error pausando tracking:', err);
+      setError(`Error al pausar: ${err.message}`);
+      
+      // Limpiar timeout en caso de error
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current);
+        pauseTimeoutRef.current = null;
+      }
+      
+      setLoadingState('isPausing', false);
+    }
+  }, [autoPauseTracking, persistTrackingState, status, validateStateTransition, setLoadingState]);
 
   /**
    * ?? Reanudar tracking
    */
   const resumeTracking = useCallback(async () => {
+    // Validar transición de estado
+    if (!validateStateTransition(status, TRACKER_STATUS.TRACKING)) {
+      console.log('[resumeTracking] Transición de estado inválida:', status, '-> TRACKING');
+      return;
+    }
+    
     console.log('?? Reanudando tracking...');
-    setStatus(TRACKER_STATUS.TRACKING);
+    
+    // Actualizar estado de carga inmediatamente
+    setLoadingState('isResuming', true);
+    
+    // Timeout para evitar bloqueos
+    resumeTimeoutRef.current = setTimeout(() => {
+      setLoadingState('isResuming', false);
+      setError('Tiempo de espera agotado al reanudar tracking');
+    }, 8000); // 8 segundos
+    
+    try {
+      setStatus(TRACKER_STATUS.TRACKING);
 
-    if (pausedAtRef.current) {
-      totalPausedMsRef.current += Date.now() - pausedAtRef.current;
-      pausedAtRef.current = null;
-    }
-
-    if (authUserIdRef.current) {
-      try {
-        await startBackgroundTracking(authUserIdRef.current);
-      } catch (bgErr) {
-        console.warn('?? Error reanudando background tracking:', bgErr.message);
+      if (pausedAtRef.current) {
+        totalPausedMsRef.current += Date.now() - pausedAtRef.current;
+        pausedAtRef.current = null;
       }
-    }
 
-    // Reanudar timer
-    startTimer();
-
-    // Reiniciar chequeo de inactividad
-    startInactivityCheck();
-
-    if (!locationSubscription.current) {
-      try {
-        await startLocationWatcher();
-      } catch (watchErr) {
-        console.error('? Error reanudando watcher:', watchErr);
+      if (authUserIdRef.current) {
+        try {
+          await startBackgroundTracking(authUserIdRef.current);
+        } catch (bgErr) {
+          console.warn('?? Error reanudando background tracking:', bgErr.message);
+        }
       }
-    }
 
-    saveTrackingState(
-      authUserIdRef.current,
-      startTime.current,
-      currentLocation,
-      {
-        isPaused: false,
-        pausedAt: null,
-        totalPausedMs: totalPausedMsRef.current,
+      // Reanudar timer
+      startTimer();
+
+      // Reiniciar chequeo de inactividad
+      startInactivityCheck();
+
+      if (!locationSubscription.current) {
+        try {
+          await startLocationWatcher();
+        } catch (watchErr) {
+          console.error('? Error reanudando watcher:', watchErr);
+        }
       }
-    ).catch(console.error);
-  }, [trackingData, startInactivityCheck, startLocationWatcher, startTimer]);
+
+      await saveTrackingState(
+        authUserIdRef.current,
+        startTime.current,
+        currentLocation,
+        {
+          isPaused: false,
+          pausedAt: null,
+          totalPausedMs: totalPausedMsRef.current,
+        }
+      );
+      
+      // Limpiar timeout
+      if (resumeTimeoutRef.current) {
+        clearTimeout(resumeTimeoutRef.current);
+        resumeTimeoutRef.current = null;
+      }
+      
+      setLoadingState('isResuming', false);
+    } catch (err) {
+      console.error('Error reanudando tracking:', err);
+      setError(`Error al reanudar: ${err.message}`);
+      
+      // Limpiar timeout en caso de error
+      if (resumeTimeoutRef.current) {
+        clearTimeout(resumeTimeoutRef.current);
+        resumeTimeoutRef.current = null;
+      }
+      
+      setLoadingState('isResuming', false);
+    }
+  }, [trackingData, startInactivityCheck, startLocationWatcher, startTimer, status, validateStateTransition, setLoadingState]);
 
   /**
    * ?? Detener tracking y guardar ruta
@@ -1318,7 +1469,25 @@ export const useRouteTracker = (options = {}) => {
     if (isStoppingRef.current) {
       return null;
     }
+    
+    // Validar transición de estado
+    if (!validateStateTransition(status, TRACKER_STATUS.IDLE)) {
+      console.log('[stopTracking] Transición de estado inválida:', status, '-> IDLE');
+      return null;
+    }
+    
     isStoppingRef.current = true;
+    
+    // Actualizar estado de carga inmediatamente
+    setLoadingState('isStopping', true);
+    
+    // Timeout para evitar bloqueos
+    stopTimeoutRef.current = setTimeout(() => {
+      setLoadingState('isStopping', false);
+      setError('Tiempo de espera agotado al detener tracking');
+      isStoppingRef.current = false;
+    }, 10000); // 10 segundos
+    
     try {
       console.log('[useRouteTracker] stopTracking begin', {
         status,
@@ -1413,13 +1582,34 @@ export const useRouteTracker = (options = {}) => {
       await clearBgRouteBuffer();
 
       console.log('Tracking detenido');
+      
+      // Limpiar timeout
+      if (stopTimeoutRef.current) {
+        clearTimeout(stopTimeoutRef.current);
+        stopTimeoutRef.current = null;
+      }
+      
+      setLoadingState('isStopping', false);
       return savedRoute;
+    } catch (err) {
+      console.error('Error deteniendo tracking:', err);
+      setError(`Error al detener: ${err.message}`);
+      
+      // Limpiar timeout en caso de error
+      if (stopTimeoutRef.current) {
+        clearTimeout(stopTimeoutRef.current);
+        stopTimeoutRef.current = null;
+      }
+      
+      setLoadingState('isStopping', false);
+      isStoppingRef.current = false;
+      return null;
     } finally {
       setTimeout(() => {
         isStoppingRef.current = false;
       }, 500);
     }
-  }, [trackingData, sendLiveUpdate, saveRoute, stopTimer]);
+  }, [trackingData, sendLiveUpdate, saveRoute, stopTimer, status, validateStateTransition, setLoadingState]);
 
   const saveRoute = useCallback(async () => {
     let routeId = null;
@@ -1604,8 +1794,11 @@ export const useRouteTracker = (options = {}) => {
       }
       stopLiveHeartbeat();
       stopTimer();
+      
+      // Limpiar todos los timeouts
+      clearTimeouts();
     };
-  }, [stopLiveHeartbeat, stopTimer]);
+  }, [stopLiveHeartbeat, stopTimer, clearTimeouts]);
 
   return {
     // Estados
@@ -1622,6 +1815,12 @@ export const useRouteTracker = (options = {}) => {
     startFlag,
     hasPermission,
     error,
+    
+    // Estados de carga para sincronización de UI
+    isStarting,
+    isPausing,
+    isStopping,
+    isResuming,
 
     // Métodos
     requestLocationPermission,

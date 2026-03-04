@@ -16,7 +16,7 @@
  * - Toggle para mostrar/ocultar spots
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Fragment } from 'react';
 import { Animated, StatusBar, Alert, Platform, InteractionManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -44,6 +44,7 @@ import RodadaDetailModal from '../../components/tracking/RodadaDetailModal';
 import HistoricalRouteBadge from '../../components/tracking/HistoricalRouteBadge';
 import TrackingErrorBanner from '../../components/tracking/TrackingErrorBanner';
 import LiveSkaterBadge from '../../components/tracking/LiveSkaterBadge';
+import TrackingErrorBoundary from '../../components/tracking/TrackingErrorBoundary';
 import { styles } from './tracking.style';
 import { formatDuration, formatDistance } from '../../utils/tracking';
 
@@ -185,6 +186,10 @@ export default function Tracking() {
     startFlag,
     hasPermission,
     error,
+    isStarting,
+    isPausing,
+    isStopping,
+    isResuming,
     requestLocationPermission,
     startTracking,
     pauseTracking,
@@ -230,18 +235,23 @@ export default function Tracking() {
 
   useEffect(() => {
     const initPermissions = async () => {
-      if (!hasPermission) {
-        try {
-          console.log('Solicitando permisos en Tracking...');
+      try {
+        if (!hasPermission) {
+          console.log('Solicitando permisos de ubicación...');
           await requestLocationPermission();
-        } catch (err) {
-          console.error('Error en inicializacion de permisos:', err);
         }
+      } catch (err) {
+        console.error('Error en inicializacion de permisos:', err);
+        // No mostrar alerta para evitar crash, solo loggear
+        console.warn('Permisos no disponibles - algunas funciones pueden no funcionar');
       }
     };
-    initPermissions();
+    
+    // Ejecutar con retraso para evitar race conditions
+    setTimeout(() => {
+      initPermissions();
+    }, 200);
   }, [hasPermission, requestLocationPermission]);
-
 
   useFocusEffect(
     React.useCallback(() => {
@@ -258,11 +268,15 @@ export default function Tracking() {
               longitude: lastKnown.coords.longitude,
             });
           }
-        } catch (_) {}
+        } catch (error) {
+          console.warn('Error obteniendo última posición conocida:', error.message);
+        }
 
         try {
           const location = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,
+            timeout: 10000, // 10 segundos timeout
+            maximumAge: 60000, // 1 minuto
           });
 
           if (location?.coords) {
@@ -286,11 +300,22 @@ export default function Tracking() {
         } catch (error) {
           console.error('Error obteniendo ubicacion inicial:', error);
           setIsMapAutoCenter(true);
+          
+          // No mostrar alerta inmediatamente para evitar crash
+          // Solo loggear el error para debugging
+          if (error.message?.includes('timeout')) {
+            console.warn('Timeout obteniendo ubicación - usando valores por defecto');
+          }
         }
       };
 
       if (!route.params?.historicalRoute) {
-        centerOnUserLocation();
+        // Ejecutar con un pequeño retraso para evitar race conditions
+        setTimeout(() => {
+          centerOnUserLocation().catch(err => {
+            console.error('Error crítico en centerOnUserLocation:', err);
+          });
+        }, 100);
       }
     }, [route.params?.historicalRoute])
   );
@@ -353,13 +378,18 @@ export default function Tracking() {
 
   const handleMainButton = async () => {
     console.log('[Tracking] mainButton', { status });
-    if (stopActionInProgressRef.current || startActionInProgressRef.current) {
-      console.log('[Tracking] mainButton blocked', {
-        stopActionInProgress: stopActionInProgressRef.current,
-        startActionInProgress: startActionInProgressRef.current,
+    
+    // Bloquear si alguna operación está en progreso
+    if (isStarting || isPausing || isStopping || isResuming) {
+      console.log('[Tracking] mainButton blocked - operation in progress', {
+        isStarting,
+        isPausing,
+        isStopping,
+        isResuming,
       });
       return;
     }
+    
     if (status === TRACKER_STATUS.IDLE) {
       console.log('[Tracking] mainButton -> start');
       if (!hasPermission) {
@@ -373,36 +403,32 @@ export default function Tracking() {
           return;
         }
       }
-      startActionInProgressRef.current = true;
-      try {
-        const startResult = await startTracking();
-        console.log('[Tracking] startTracking result', startResult);
-        if (startResult?.success) {
-          // Diferir el Alert hasta que el render del marker esté completo
-          // Esto evita que Alert.alert() bloquee el JS thread antes de que
-          // el marker del usuario se renderice correctamente en Android
-          InteractionManager.runAfterInteractions(() => {
-            Alert.alert(
-              t('screens.tracking.startingTitle'),
-              t('screens.tracking.startingMessage')
-            );
-          });
-        } else {
+      
+      const startResult = await startTracking();
+      console.log('[Tracking] startTracking result', startResult);
+      if (startResult?.success) {
+        // Diferir el Alert hasta que el render del marker esté completo
+        // Esto evita que Alert.alert() bloquee el JS thread antes de que
+        // el marker del usuario se renderice correctamente en Android
+        InteractionManager.runAfterInteractions(() => {
           Alert.alert(
-            t('screens.tracking.errorTitle'),
-            startResult?.error || t('screens.tracking.permissionsMessage'),
-            [{ text: t('common.ok') }]
+            t('screens.tracking.startingTitle'),
+            t('screens.tracking.startingMessage')
           );
-        }
-      } finally {
-        startActionInProgressRef.current = false;
+        });
+      } else {
+        Alert.alert(
+          t('screens.tracking.errorTitle'),
+          startResult?.error || t('screens.tracking.permissionsMessage'),
+          [{ text: t('common.ok') }]
+        );
       }
     } else if (status === TRACKER_STATUS.TRACKING) {
       console.log('[Tracking] mainButton -> pause');
-      pauseTracking();
+      await pauseTracking();
     } else if (status === TRACKER_STATUS.PAUSED) {
       console.log('[Tracking] mainButton -> resume');
-      resumeTracking();
+      await resumeTracking();
     }
   };
 
@@ -412,18 +438,21 @@ export default function Tracking() {
       console.log('[Tracking] stopButton ignored: idle');
       return;
     }
+    
+    // Bloquear si ya está deteniendo
+    if (isStopping) {
+      console.log('[Tracking] stopButton blocked - already stopping');
+      return;
+    }
+    
     const runStopTracking = async () => {
-      if (stopActionInProgressRef.current) return;
-      stopActionInProgressRef.current = true;
-      setSkipRestoring(true);
       console.log('[Tracking] stopTracking begin');
       let result = null;
       try {
         result = await stopTracking();
         console.log('[Tracking] stopTracking done');
       } finally {
-        stopActionInProgressRef.current = false;
-        setTimeout(() => setSkipRestoring(false), 500);
+        setSkipRestoring(false);
       }
       return result;
     };
@@ -685,40 +714,39 @@ const statsContainerStyle = {
   const statsTextSecondary = isDark ? '#E2E8F0' : '#1E293B';
 
   return (
-    <SafeAreaView
-      edges={['top', 'left', 'right']}
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.background.primary },
-      ]}
-    >
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+    <TrackingErrorBoundary>
+      <SafeAreaView
+        edges={['top', 'left', 'right']}
+        style={[
+          styles.container,
+          { backgroundColor: theme.colors.background.primary },
+        ]}
+      >
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-
-
-
-      <TrackingMap
-        mapRef={mapRef}
-        mapType={mapType}
-        onMapPan={handleMapPan}
-        initialRegion={INITIAL_REGION_MEDELLIN}
-        routeCoordinates={displayRouteCoordinates}
-        theme={theme}
-        isDark={isDark}
-        livePaths={livePaths}
-        currentLocation={mapMarkerLocation}
-        visibleLiveSkaters={visibleLiveSkaters}
-        getSkaterColor={getSkaterColor}
-        showRodadasOnMap={showRodadasOnMap}
-        filteredRodadas={filteredRodadas}
-        getRodadaVisuals={getRodadaVisuals}
-        onSelectRodada={handleSelectRodadaFromMap}
-        onDoublePressRodada={handleOpenRodadaDetailFromMap}
-        onSelectSkater={handleSelectLiveSkater}
-        spots={spots}
-        showSpotsOnMap={showSpotsOnMap}
-        startFlag={startFlag}
-      />
+        <Fragment>
+        <TrackingMap
+          mapRef={mapRef}
+          mapType={mapType}
+          onMapPan={handleMapPan}
+          initialRegion={INITIAL_REGION_MEDELLIN}
+          routeCoordinates={displayRouteCoordinates}
+          theme={theme}
+          isDark={isDark}
+          livePaths={livePaths}
+          currentLocation={mapMarkerLocation}
+          visibleLiveSkaters={visibleLiveSkaters}
+          getSkaterColor={getSkaterColor}
+          showRodadasOnMap={showRodadasOnMap}
+          filteredRodadas={filteredRodadas}
+          getRodadaVisuals={getRodadaVisuals}
+          onSelectRodada={handleSelectRodadaFromMap}
+          onDoublePressRodada={handleOpenRodadaDetailFromMap}
+          onSelectSkater={handleSelectLiveSkater}
+          spots={spots}
+          showSpotsOnMap={showSpotsOnMap}
+          startFlag={startFlag}
+        />
 
       <HistoricalRouteBadge
         historicalRoute={historicalRoute}
@@ -808,6 +836,10 @@ const statsContainerStyle = {
         onCenterMap={handleCenterMap}
         isPrivateTracking={isPrivateTracking}
         onToggleTrackingPrivacy={() => setIsPrivateTracking((prev) => !prev)}
+        isStarting={isStarting}
+        isPausing={isPausing}
+        isStopping={isStopping}
+        isResuming={isResuming}
       />
 
       <TrackingErrorBanner
@@ -849,6 +881,8 @@ const statsContainerStyle = {
         onLeaveRodada={handleLeaveRodada}
         onDeleteRodada={handleDeleteRodada}
       />
-    </SafeAreaView>
+        </Fragment>
+      </SafeAreaView>
+    </TrackingErrorBoundary>
   );
 }

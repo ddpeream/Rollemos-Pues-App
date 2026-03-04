@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Animated } from 'react-native';
+import { View, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from '../../screens/tracking/tracking.style';
 
@@ -16,6 +16,10 @@ export default function TrackingControls({
   onCenterMap,
   isPrivateTracking,
   onToggleTrackingPrivacy,
+  isStarting,
+  isPausing,
+  isStopping,
+  isResuming,
 }) {
   return (
     <View style={[styles.controlsContainer, { bottom: bottomOffset }]}>
@@ -38,6 +42,7 @@ export default function TrackingControls({
             style={styles.stopButton}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            disabled={isStopping}
           >
             <View
               style={[
@@ -47,10 +52,15 @@ export default function TrackingControls({
                   backgroundColor: isDark
                     ? 'rgba(255, 255, 255, 0.04)'
                     : 'rgba(255, 255, 255, 0.6)',
+                  opacity: isStopping ? 0.5 : 1,
                 },
               ]}
             >
-              <Ionicons name="stop" size={16} color={theme.colors.error} />
+              {isStopping ? (
+                <ActivityIndicator size={16} color={theme.colors.error} />
+              ) : (
+                <Ionicons name="stop" size={16} color={theme.colors.error} />
+              )}
             </View>
           </TouchableOpacity>
         ) : (
@@ -68,16 +78,22 @@ export default function TrackingControls({
                 borderColor: isDark
                   ? 'rgba(255, 255, 255, 0.18)'
                   : 'rgba(15, 23, 42, 0.12)',
+                opacity: (isStarting || isPausing || isResuming) ? 0.7 : 1,
               },
               isIdle && styles.mainButtonLarge,
             ]}
             activeOpacity={0.8}
+            disabled={isStarting || isPausing || isResuming}
           >
-            <Ionicons
-              name={buttonConfig.icon}
-              size={isIdle ? 28 : 24}
-              color={theme.colors.onPrimary}
-            />
+            {(isStarting || isPausing || isResuming) ? (
+              <ActivityIndicator size={isIdle ? 28 : 24} color={theme.colors.onPrimary} />
+            ) : (
+              <Ionicons
+                name={buttonConfig.icon}
+                size={isIdle ? 28 : 24}
+                color={theme.colors.onPrimary}
+              />
+            )}
           </TouchableOpacity>
         </Animated.View>
 
