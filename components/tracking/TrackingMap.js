@@ -1,8 +1,25 @@
-import React, { useRef, useState, useEffect, memo, useCallback } from 'react';
+import React, { useRef, useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { View, Text, Platform } from 'react-native';
-import MapView, { Polyline, Marker, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles, darkMapStyle } from '../../screens/tracking/tracking.style';
+
+const toRadians = (value) => (value * Math.PI) / 180;
+
+const calculateBearing = (from, to) => {
+  if (!from || !to) return null;
+  const lat1 = toRadians(from.latitude);
+  const lon1 = toRadians(from.longitude);
+  const lat2 = toRadians(to.latitude);
+  const lon2 = toRadians(to.longitude);
+  const dLon = lon2 - lon1;
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  const heading = (Math.atan2(y, x) * 180) / Math.PI;
+  return ((heading % 360) + 360) % 360;
+};
 
 // Marker que arranca con tracksViewChanges=true para que Android renderice el bitmap,
 // luego lo apaga para no gastar CPU cada frame.
@@ -23,95 +40,30 @@ const AndroidSafeMarker = memo(({ children, ...markerProps }) => {
   );
 });
 
-// Marker animado del usuario: se desliza suavemente entre posiciones GPS.
-// Android: Marker nativo + animateMarkerToCoordinate (más confiable)
-// iOS: Marker.Animated + AnimatedRegion.timing()
-const AnimatedUserMarker = memo(({ coordinate, theme }) => {
-  const markerRef = useRef(null);
-  const [trackChanges, setTrackChanges] = useState(true);
-
-  // Android: coordenada estable (no cambia con re-renders).
-  // Todo el movimiento se hace con animateMarkerToCoordinate.
-  const stableCoord = useRef({
-    latitude: coordinate.latitude,
-    longitude: coordinate.longitude,
-  }).current;
-
-  // iOS: AnimatedRegion para interpolación suave
-  const animatedCoord = useRef(
-    new AnimatedRegion({
-      latitude: coordinate.latitude,
-      longitude: coordinate.longitude,
-      latitudeDelta: 0,
-      longitudeDelta: 0,
-    })
-  ).current;
-
-  // Desactivar tracksViewChanges después de que el bitmap esté renderizado
-  useEffect(() => {
-    const timer = setTimeout(() => setTrackChanges(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Animar marker suavemente a cada nueva posición GPS
-  useEffect(() => {
-    const duration = 2000;
-    if (Platform.OS === 'android') {
-      if (markerRef.current?.animateMarkerToCoordinate) {
-        markerRef.current.animateMarkerToCoordinate(
-          { latitude: coordinate.latitude, longitude: coordinate.longitude },
-          duration,
-        );
-      }
-    } else {
-      animatedCoord
-        .timing({
-          latitude: coordinate.latitude,
-          longitude: coordinate.longitude,
-          latitudeDelta: 0,
-          longitudeDelta: 0,
-          duration,
-          useNativeDriver: false,
-        })
-        .start();
-    }
-  }, [coordinate.latitude, coordinate.longitude]);
-
-  const markerContent = (
-    <View
-      style={[
-        styles.currentPositionMarker,
-        { backgroundColor: theme.colors.primary },
-      ]}
-    >
-      <MaterialCommunityIcons name="roller-skate" size={18} color="#FFFFFF" />
-    </View>
-  );
-
-  if (Platform.OS === 'android') {
-    return (
-      <Marker
-        ref={markerRef}
-        coordinate={stableCoord}
-        anchor={{ x: 0.5, y: 0.5 }}
-        tracksViewChanges={trackChanges}
-        zIndex={100}
-      >
-        {markerContent}
-      </Marker>
-    );
-  }
-
+// Marker del usuario: usa coordenada directa para máxima confiabilidad.
+// Evita depender de APIs de animación nativa que en algunos Android dejan el marker fijo.
+const AnimatedUserMarker = memo(({ coordinate, theme, heading = 0 }) => {
   return (
-    <Marker.Animated
-      ref={markerRef}
-      coordinate={animatedCoord}
+    <Marker
+      coordinate={{
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+      }}
       anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={trackChanges}
+      tracksViewChanges={Platform.OS === 'android'}
       zIndex={100}
+      rotation={heading}
+      flat={Platform.OS === 'android'}
     >
-      {markerContent}
-    </Marker.Animated>
+      <View
+        style={[
+          styles.currentPositionMarker,
+          { backgroundColor: theme.colors.primary },
+        ]}
+      >
+        <MaterialCommunityIcons name="roller-skate" size={18} color="#FFFFFF" />
+      </View>
+    </Marker>
   );
 });
 
@@ -152,6 +104,22 @@ function TrackingMap({
     onSelectRodada(rodada);
   }, [onSelectRodada, onDoublePressRodada]);
 
+  const userHeading = useMemo(() => {
+    const directHeading = Number.isFinite(currentLocation?.heading)
+      ? ((currentLocation.heading % 360) + 360) % 360
+      : null;
+    if (directHeading != null) return directHeading;
+
+    if (routeCoordinates.length >= 2) {
+      const prev = routeCoordinates[routeCoordinates.length - 2];
+      const last = routeCoordinates[routeCoordinates.length - 1];
+      const fallbackHeading = calculateBearing(prev, last);
+      if (fallbackHeading != null) return fallbackHeading;
+    }
+
+    return 0;
+  }, [currentLocation?.heading, routeCoordinates]);
+
   return (
     <MapView
       ref={mapRef}
@@ -190,7 +158,11 @@ function TrackingMap({
       })}
 
       {currentLocation && (
-        <AnimatedUserMarker coordinate={currentLocation} theme={theme} />
+        <AnimatedUserMarker
+          coordinate={currentLocation}
+          theme={theme}
+          heading={userHeading}
+        />
       )}
 
       {visibleLiveSkaters.map((skater) => (

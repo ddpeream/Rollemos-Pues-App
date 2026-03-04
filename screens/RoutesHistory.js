@@ -40,7 +40,7 @@ export default function RoutesHistory() {
   const navigation = useNavigation();
   const { theme } = useAppStore();
   const { t } = useTranslation();
-  const { loadRoutes, deleteRoute } = useRouteTracker();
+  const { loadRoutes, hydrateRouteCoordinates, deleteRoute } = useRouteTracker();
 
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,8 +63,14 @@ export default function RoutesHistory() {
   };
 
   // Navegar a ver la ruta en el mapa
-  const handleViewRoute = (route) => {
-    navigation.navigate('TrackingMain', { historicalRoute: route });
+  const handleViewRoute = async (route) => {
+    try {
+      const hydratedRoute = await hydrateRouteCoordinates(route);
+      navigation.navigate('TrackingMain', { historicalRoute: hydratedRoute });
+    } catch (err) {
+      console.error('Error cargando ruta completa:', err);
+      navigation.navigate('TrackingMain', { historicalRoute: route });
+    }
   };
 
   const handleRefresh = async () => {
@@ -224,7 +230,7 @@ export default function RoutesHistory() {
               {t('screens.routesHistory.points')}
             </Text>
             <Text style={[styles.secondaryValue, { color: theme.colors.text.primary }]}>
-              {item.coordinates.length}
+              {item.pointsCount || item.coordinates.length}
             </Text>
           </View>
         </View>

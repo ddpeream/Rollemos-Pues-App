@@ -191,11 +191,20 @@ export default function Tracking() {
     stopTracking,
   } = useRouteTracker({ isPrivateTracking, skipRestore: skipRestoring });
 
-  // Snap-to-roads: ajusta coordenadas GPS a las calles reales
-  const displayRouteCoordinates = useSnapToRoads(
+  // Snap-to-roads solo fuera del tracking activo.
+  // En tracking activo usamos coordenadas raw para máxima fidelidad visual.
+  const snappedRouteCoordinates = useSnapToRoads(
     routeCoordinates,
-    status === TRACKER_STATUS.TRACKING,
+    status !== TRACKER_STATUS.TRACKING,
   );
+  const displayRouteCoordinates =
+    status === TRACKER_STATUS.TRACKING ? routeCoordinates : snappedRouteCoordinates;
+  const mapMarkerLocation = React.useMemo(() => {
+    if (displayRouteCoordinates.length > 0) {
+      return displayRouteCoordinates[displayRouteCoordinates.length - 1];
+    }
+    return currentLocation || userLocation || null;
+  }, [displayRouteCoordinates, currentLocation, userLocation]);
 
   const mapRef = useRef(null);
 
@@ -696,7 +705,7 @@ const statsContainerStyle = {
         theme={theme}
         isDark={isDark}
         livePaths={livePaths}
-        currentLocation={currentLocation || userLocation}
+        currentLocation={mapMarkerLocation}
         visibleLiveSkaters={visibleLiveSkaters}
         getSkaterColor={getSkaterColor}
         showRodadasOnMap={showRodadasOnMap}
