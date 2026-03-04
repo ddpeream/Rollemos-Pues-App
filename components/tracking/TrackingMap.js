@@ -1,10 +1,39 @@
 import React, { useRef, useState, useEffect, memo, useCallback, useMemo } from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Text, Platform, Animated } from 'react-native';
 import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles, darkMapStyle } from '../../screens/tracking/tracking.style';
 
 const toRadians = (value) => (value * Math.PI) / 180;
+
+// Algoritmo Douglas-Peucker para reducción de puntos en polyline
+const simplifyPolyline = (points, tolerance = 0.0001) => {
+  if (!points || points.length <= 2) return points;
+  
+  const simplified = [points[0]];
+  let prevPoint = points[0];
+  
+  for (let i = 1; i < points.length; i++) {
+    const currentPoint = points[i];
+    const distance = Math.sqrt(
+      Math.pow(currentPoint.latitude - prevPoint.latitude, 2) +
+      Math.pow(currentPoint.longitude - prevPoint.longitude, 2)
+    );
+    
+    if (distance >= tolerance) {
+      simplified.push(currentPoint);
+      prevPoint = currentPoint;
+    }
+  }
+  
+  // Siempre incluir el último punto
+  const lastPoint = points[points.length - 1];
+  if (simplified[simplified.length - 1] !== lastPoint) {
+    simplified.push(lastPoint);
+  }
+  
+  return simplified;
+};
 
 const calculateBearing = (from, to) => {
   if (!from || !to) return null;
@@ -40,15 +69,89 @@ const AndroidSafeMarker = memo(({ children, ...markerProps }) => {
   );
 });
 
-// Marker del usuario: usa coordenada directa para máxima confiabilidad.
-// Evita depender de APIs de animación nativa que en algunos Android dejan el marker fijo.
-const AnimatedUserMarker = memo(({ coordinate, theme, heading = 0 }) => {
+// Marker de bandera de salida
+const StartFlagMarker = memo(({ coordinate }) => {
   return (
     <Marker
-      coordinate={{
-        latitude: coordinate.latitude,
-        longitude: coordinate.longitude,
-      }}
+      coordinate={coordinate}
+      anchor={{ x: 0.5, y: 1 }}
+      zIndex={95}
+    >
+      <View style={styles.rodadaMarkerContainer}>
+        <View
+          style={[
+            styles.rodadaCallout,
+            { backgroundColor: '#4CAF50' },
+          ]}
+        >
+          <Text
+            style={[styles.rodadaCalloutText, { color: '#000' }]}
+            numberOfLines={1}
+          >
+            🚩 Salida
+          </Text>
+          <View
+            style={[
+              styles.rodadaCalloutArrow,
+              { borderTopColor: '#4CAF50' },
+            ]}
+          />
+        </View>
+        <View
+          style={[
+            styles.rodadaMarker,
+            { backgroundColor: '#4CAF50' },
+          ]}
+        >
+          <Ionicons name="flag-outline" size={18} color="#000" />
+        </View>
+      </View>
+    </Marker>
+  );
+});
+const AnimatedSkateMarker = memo(({ coordinate, theme, heading = 0 }) => {
+  const animatedValue = useRef(new Animated.ValueXY()).current;
+  const lastCoordinate = useRef(null);
+
+  useEffect(() => {
+    if (!coordinate || !lastCoordinate.current) {
+      lastCoordinate.current = coordinate;
+      if (coordinate) {
+        animatedValue.setValue({
+          x: coordinate.longitude,
+          y: coordinate.latitude,
+        });
+      }
+      return;
+    }
+
+    const { latitude: lastLat, longitude: lastLng } = lastCoordinate.current;
+    const { latitude, longitude } = coordinate;
+
+    // Solo animar si hay cambio significativo
+    if (Math.abs(latitude - lastLat) > 0.00001 || Math.abs(longitude - lastLng) > 0.00001) {
+      Animated.spring(animatedValue, {
+        toValue: { x: longitude, y: latitude },
+        useNativeDriver: false,
+        tension: 20,
+        friction: 8,
+        duration: 600, // Animación de 600ms
+      }).start();
+      lastCoordinate.current = coordinate;
+    }
+  }, [coordinate, animatedValue]);
+
+  const animatedCoordinate = useMemo(() => {
+    const { x, y } = animatedValue;
+    return {
+      latitude: y,
+      longitude: x,
+    };
+  }, [animatedValue]);
+
+  return (
+    <Marker
+      coordinate={animatedCoordinate}
       anchor={{ x: 0.5, y: 0.5 }}
       tracksViewChanges={Platform.OS === 'android'}
       zIndex={100}
@@ -87,8 +190,14 @@ function TrackingMap({
   onSelectSkater,
   spots,
   showSpotsOnMap,
+  startFlag,
 }) {
   const lastRodadaTapRef = useRef({ id: null, at: 0 });
+
+  // Optimizar polyline para mejor performance
+  const optimizedRouteCoordinates = useMemo(() => {
+    return simplifyPolyline(routeCoordinates, 0.0001);
+  }, [routeCoordinates]);
 
   const handleRodadaPress = useCallback((rodada) => {
     const now = Date.now();
@@ -131,14 +240,18 @@ function TrackingMap({
       moveOnMarkerPress={false}
       customMapStyle={isDark && mapType === "standard" ? darkMapStyle : undefined}
     >
-      {routeCoordinates.length > 1 && (
+      {optimizedRouteCoordinates.length > 1 && (
         <Polyline
-          coordinates={routeCoordinates}
+          coordinates={optimizedRouteCoordinates}
           strokeColor={theme.colors.primary}
           strokeWidth={4}
           lineCap="round"
           lineJoin="round"
         />
+      )}
+
+      {startFlag && (
+        <StartFlagMarker coordinate={startFlag} />
       )}
 
       {Object.keys(livePaths).map((userId) => {
@@ -158,7 +271,7 @@ function TrackingMap({
       })}
 
       {currentLocation && (
-        <AnimatedUserMarker
+        <AnimatedSkateMarker
           coordinate={currentLocation}
           theme={theme}
           heading={userHeading}

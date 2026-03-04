@@ -182,6 +182,7 @@ export default function Tracking() {
     avgSpeed,
     maxSpeed,
     calories,
+    startFlag,
     hasPermission,
     error,
     requestLocationPermission,
@@ -716,6 +717,7 @@ const statsContainerStyle = {
         onSelectSkater={handleSelectLiveSkater}
         spots={spots}
         showSpotsOnMap={showSpotsOnMap}
+        startFlag={startFlag}
       />
 
       <HistoricalRouteBadge

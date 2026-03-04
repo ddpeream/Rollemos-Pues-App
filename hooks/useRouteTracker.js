@@ -103,8 +103,8 @@ export const useRouteTracker = (options = {}) => {
   const DEBUG_SPEED = true;
 
   // Fidelidad de tracking
-  const ROUTE_POINT_MIN_DISTANCE_M = 1.5;
-  const ROUTE_POINT_MIN_DISTANCE_BG_M = 1.5;
+  const ROUTE_POINT_MIN_DISTANCE_M = 3.0;
+  const ROUTE_POINT_MIN_DISTANCE_BG_M = 3.0;
   const STATS_MIN_DISTANCE_M = MIN_MOVEMENT_DISTANCE;
   const TURN_MIN_DISTANCE_M = 1.0;
   const TURN_ANGLE_THRESHOLD_DEG = 12;
@@ -133,10 +133,11 @@ export const useRouteTracker = (options = {}) => {
     avgSpeed: 0,
     maxSpeed: 0,
     calories: 0,
+    startFlag: null, // Bandera de salida
   });
 
   // Destructuring para compatibilidad con el código existente
-  const { currentLocation, routeCoordinates, distance, speed, avgSpeed, maxSpeed, calories } = trackingData;
+  const { currentLocation, routeCoordinates, distance, speed, avgSpeed, maxSpeed, calories, startFlag } = trackingData;
   const isStoppingRef = useRef(false);
 
   // Refs para tracking
@@ -167,6 +168,7 @@ export const useRouteTracker = (options = {}) => {
   const lastUiUpdateRef = useRef(0);
   const lastMovementPersistRef = useRef(0);
   const isPrivateTrackingRef = useRef(isPrivateTracking);
+  const startFlagPlacedRef = useRef(false);
 
   // 🏎️ MV Speed refs
   const lastSpeedUiUpdateRef = useRef(0);
@@ -413,12 +415,12 @@ export const useRouteTracker = (options = {}) => {
         ? {
             accuracy: Location.Accuracy.BestForNavigation,
             timeInterval: 1000,
-            distanceInterval: 1,
+            distanceInterval: 3,
           }
         : {
             accuracy: Location.Accuracy.BestForNavigation,
             timeInterval: 1000,
-            distanceInterval: 1,
+            distanceInterval: 3,
           };
 
     locationSubscription.current = await Location.watchPositionAsync(
@@ -463,11 +465,24 @@ export const useRouteTracker = (options = {}) => {
             setRoutePointCount(1);
             const reduced = buildReducedCoordinates(seeded);
             routeCoordinatesRef.current = reduced;
-            setTrackingData(prev => ({
-              ...prev,
-              currentLocation: newCoord,
-              routeCoordinates: reduced,
-            }));
+            
+            // Colocar bandera de salida en el primer punto
+            if (!startFlagPlacedRef.current) {
+              startFlagPlacedRef.current = true;
+              setTrackingData(prev => ({
+                ...prev,
+                currentLocation: newCoord,
+                routeCoordinates: reduced,
+                startFlag: { ...newCoord },
+              }));
+            } else {
+              setTrackingData(prev => ({
+                ...prev,
+                currentLocation: newCoord,
+                routeCoordinates: reduced,
+              }));
+            }
+            
             lastUiUpdateRef.current = Date.now();
             if (!isPrivateTrackingRef.current) {
               sendLiveUpdate(newCoord, true);
@@ -654,14 +669,15 @@ export const useRouteTracker = (options = {}) => {
 
             const shouldUpdateUi =
               uiUpdateIntervalMs === 0 ||
-              now - lastUiUpdateRef.current >= uiUpdateIntervalMs;
+              now - lastUiUpdateRef.current >= 500; // Debounce de 500ms
 
             if (shouldUpdateUi) {
               lastUiUpdateRef.current = now;
               const reduced = buildReducedCoordinates(prevFullCoords);
               routeCoordinatesRef.current = reduced;
               setRoutePointCount(prevFullCoords.length);
-              setTrackingData({
+              setTrackingData(prev => ({
+                ...prev,
                 currentLocation: newCoord,
                 routeCoordinates: reduced,
                 distance: nextDistance,
@@ -669,7 +685,7 @@ export const useRouteTracker = (options = {}) => {
                 avgSpeed: avgSpd,
                 maxSpeed: nextMaxSpeed,
                 calories: caloriesRef.current,
-              });
+              }));
             }
 
             if (now - lastLiveUpdateRef.current > liveUpdateIntervalMs) {
@@ -908,6 +924,7 @@ export const useRouteTracker = (options = {}) => {
       avgSpeed: 0,
       maxSpeed: 0,
       calories: 0,
+      startFlag: null,
     });
     setDuration(0);
     speedHistory.current = [];
@@ -916,6 +933,7 @@ export const useRouteTracker = (options = {}) => {
     totalPausedMsRef.current = 0;
     pausedAtRef.current = null;
     lastMovementTime.current = Date.now();
+    startFlagPlacedRef.current = false;
 
     console.log('✅ Tracking auto-detenido');
   }, []);
@@ -1549,6 +1567,7 @@ export const useRouteTracker = (options = {}) => {
         avgSpeed: state.avgSpeed || 0,
         maxSpeed: state.maxSpeed || 0,
         calories: state.calories || 0,
+        startFlag: state.routeCoordinates && state.routeCoordinates.length > 0 ? state.routeCoordinates[0] : null,
       });
 
       setDuration(computeElapsedSeconds());
@@ -1600,6 +1619,7 @@ export const useRouteTracker = (options = {}) => {
     avgSpeed,
     maxSpeed,
     calories,
+    startFlag,
     hasPermission,
     error,
 
