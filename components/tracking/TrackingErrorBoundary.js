@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import { View, Text } from 'react-native';
-import { useAppStore } from '../../store/useAppStore';
 
 export default class TrackingErrorBoundary extends Component {
   constructor(props) {
@@ -9,22 +8,38 @@ export default class TrackingErrorBoundary extends Component {
   }
 
   static getDerivedStateFromError(error) {
+    console.error('🚨 Error caught by Tracking Error Boundary:', error);
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('🚨 Tracking Error Boundary caught an error:', error, errorInfo);
+    console.error('🚨 Tracking Error Boundary componentDidCatch:', error, errorInfo);
     
-    // Evitar que el error se propague y cause un crash completo
-    // Resetear el estado de error después de un tiempo
-    setTimeout(() => {
+    // Loggear el stack trace completo para debugging
+    if (errorInfo?.componentStack) {
+      console.error('Component Stack:', errorInfo.componentStack);
+    }
+    
+    // Resetear el estado de error después de un tiempo para intentar recuperarse
+    this.resetTimeout = setTimeout(() => {
       this.setState({ hasError: false, error: null });
-    }, 3000);
+    }, 5000);
+  }
+
+  componentWillUnmount() {
+    if (this.resetTimeout) {
+      clearTimeout(this.resetTimeout);
+    }
   }
 
   render() {
     if (this.state.hasError) {
-      const theme = useAppStore();
+      const { theme } = this.props;
+      
+      // Fallback si theme no está disponible
+      const bgColor = theme?.colors?.background || '#f5f5f5';
+      const textColor = theme?.colors?.text || '#333333';
+      const secondaryColor = theme?.colors?.textSecondary || '#666666';
       
       return (
         <View style={{
@@ -32,22 +47,32 @@ export default class TrackingErrorBoundary extends Component {
           justifyContent: 'center',
           alignItems: 'center',
           padding: 20,
-          backgroundColor: theme.colors.background,
+          backgroundColor: bgColor,
         }}>
           <Text style={{
             fontSize: 16,
-            color: theme.colors.text,
+            fontWeight: 'bold',
+            color: textColor,
             textAlign: 'center',
             marginBottom: 10,
           }}>
-            Ocurrió un error en el tracking
+            ⚠️ Error en Tracking
           </Text>
           <Text style={{
             fontSize: 12,
-            color: theme.colors.textSecondary,
+            color: secondaryColor,
             textAlign: 'center',
+            marginBottom: 10,
           }}>
-            La app se está recuperando...
+            {this.state.error?.message || 'Ocurrió un error inesperado'}
+          </Text>
+          <Text style={{
+            fontSize: 11,
+            color: secondaryColor,
+            textAlign: 'center',
+            fontStyle: 'italic',
+          }}>
+            La aplicación se está recuperando...
           </Text>
         </View>
       );

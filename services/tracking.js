@@ -57,25 +57,39 @@ export const subscribeTrackingLive = (onChange) => {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'tracking_live' },
       async (payload) => {
-        // Si viene del realtime, necesitamos enriquecer con los datos del usuario
-        if (payload.new) {
-          const { data: userdata, error } = await supabase
-            .from('tracking_live')
-            .select('user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( * )')
-            .eq('user_id', payload.new.user_id)
-            .single();
+        try {
+          // Si viene del realtime, necesitamos enriquecer con los datos del usuario
+          if (payload.new) {
+            try {
+              const { data: userdata, error } = await supabase
+                .from('tracking_live')
+                .select('user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( * )')
+                .eq('user_id', payload.new.user_id)
+                .single();
 
-          if (error) {
-            console.error('❌ tracking_live refetch error:', error.message);
+              if (error) {
+                console.warn('⚠️ tracking_live refetch warning:', error.message);
+                // No forzar que falle, usar datos básicos del payload
+              } else if (userdata) {
+                // Enriquecer con datos del usuario
+                payload.new = userdata;
+              }
+            } catch (enrichError) {
+              console.warn('⚠️ Error enriqueciendo datos de tracking_live:', enrichError);
+              // Continuar con datos básicos del payload
+            }
           }
 
-          if (!error && userdata) {
-            payload.new = userdata;
+          // Siempre pasar el payload al callback, con o sin enriquecimiento
+          if (typeof onChange === 'function') {
+            try {
+              onChange(payload);
+            } catch (callbackError) {
+              console.error('❌ Error en callback de tracking_live:', callbackError);
+            }
           }
-        }
-
-        if (typeof onChange === 'function') {
-          onChange(payload);
+        } catch (handleError) {
+          console.error('❌ Error crítico en manejo de tracking_live payload:', handleError);
         }
       }
     )
@@ -84,6 +98,10 @@ export const subscribeTrackingLive = (onChange) => {
 
 export const unsubscribeTrackingLive = (channel) => {
   if (channel) {
-    supabase.removeChannel(channel);
+    try {
+      supabase.removeChannel(channel);
+    } catch (unsubError) {
+      console.warn('⚠️ Error desinscribiendo de tracking_live:', unsubError);
+    }
   }
 };

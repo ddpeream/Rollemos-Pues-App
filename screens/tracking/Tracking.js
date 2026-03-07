@@ -714,7 +714,7 @@ const statsContainerStyle = {
   const statsTextSecondary = isDark ? '#E2E8F0' : '#1E293B';
 
   return (
-    <TrackingErrorBoundary>
+    <TrackingErrorBoundary theme={theme}>
       <SafeAreaView
         edges={['top', 'left', 'right']}
         style={[
