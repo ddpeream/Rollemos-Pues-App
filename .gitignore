@@ -48,6 +48,7 @@ htmlcov/
 .expo/
 .expo-shared/
 supabase/.temp/
+supabase/.branches/
 npm-debug.*
 *.jks
 *.p8

@@ -33,7 +33,7 @@ El MVP debe permitir que un usuario autenticado abra el mapa, vea su ubicacion, 
 - `tracking_live` existe, tiene RLS y esta publicado en Realtime.
 - Auth y `public.usuarios` quedaron consistentes: cuatro cuentas y cuatro perfiles.
 - Hay tres registros en `tracking_live`; los registros obsoletos se filtran por antiguedad en el cliente.
-- El esquema remoto restaurado no tiene historial de migraciones.
+- El esquema remoto ya tiene registrada la migracion baseline `20260713201714_remote_schema_baseline`.
 - El modo sin contrasena de la CLI falla porque el proyecto restaurado no puede administrar `cli_login_postgres`.
 - La CLI de Supabase queda fijada como dependencia de desarrollo del proyecto.
 - `src/` contiene la arquitectura nueva y debe preservarse junto con la eliminacion intencional de la app anterior.
@@ -42,20 +42,23 @@ El MVP debe permitir que un usuario autenticado abra el mapa, vea su ubicacion, 
 
 Una migracion de esquema describe tablas, funciones, restricciones, triggers y politicas. No contiene ni elimina las filas de `auth.users`, `public.usuarios` o `tracking_live`.
 
-Para crear la linea base se usara `db pull`; no se usaran `db reset`, restauraciones, truncados ni migraciones destructivas sobre el proyecto enlazado. La contrasena de base se suministra solo como variable temporal y nunca se escribe en el repositorio:
+La linea base se extrajo mediante la integracion oficial de Supabase, sin depender de la contrasena de Postgres y sin ejecutar DDL destructivo sobre produccion. El SQL canonico esta en `supabase/migrations/20260713201714_remote_schema_baseline.sql`. Produccion registra la misma version mediante una migracion inocua porque sus objetos ya existian; el archivo completo se aplica unicamente sobre bases nuevas.
 
-```powershell
-$env:SUPABASE_DB_PASSWORD = '<database-password>'
-npx supabase db pull remote_schema_baseline --linked --schema public --yes
-Remove-Item Env:SUPABASE_DB_PASSWORD
-npx supabase migration list --linked
-```
+Cobertura verificada mediante reconstruccion local desde cero:
 
-La linea base se considera cerrada solo cuando el SQL generado se revise y la cantidad de cuentas/perfiles siga siendo la misma antes y despues.
+- 16 tablas y 146 columnas publicas.
+- 55 constraints, 42 indices propios y 23 indices respaldados por constraints.
+- 12 funciones, 55 politicas publicas y 20 politicas de Storage.
+- 15 tablas con RLS habilitado, 5 buckets y 7 tablas en `supabase_realtime`.
+- 12 triggers reproducibles. `public.notificaciones_insert_push` se excluye deliberadamente porque su definicion remota contiene una credencial `service_role`; debe reemplazarse por una integracion respaldada por secretos antes de incorporarlo a migraciones.
+
+La validacion remota posterior conservo cuatro cuentas en `auth.users`, cuatro perfiles en `public.usuarios` y tres posiciones en `public.tracking_live`. `npx supabase db reset --local` y `npx supabase migration list --local` confirmaron que el baseline se reproduce y que la version local coincide con la registrada en produccion.
+
+Deuda heredada preservada, no corregida durante el baseline: `public.usuarios` tiene politicas pero RLS deshabilitado; las 12 funciones publicas no fijan `search_path`; existen politicas permisivas y buckets publicos. Estos hallazgos requieren migraciones funcionales y pruebas separadas, porque corregirlos dentro de la linea base cambiaria el comportamiento productivo.
 
 ## Hoja de ruta 1-12
 
-### 1. Preservar estado actual y linea base
+### 1. Preservar estado actual y linea base (completado)
 
 - Proteger secretos y archivos locales.
 - Registrar la arquitectura nueva y las eliminaciones intencionales.
