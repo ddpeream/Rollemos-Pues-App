@@ -3,9 +3,13 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   TRACKING_AUTO_STOP,
   TRACKING_AUTO_STOP_ACTION,
+  TRACKING_ERROR,
   TRACKING_FOCUS_DELTA,
+  TRACKING_LOCATION_FILTER,
+  TRACKING_LOCATION_STATUS,
   TRACKING_STATUS,
 } from '../constants/tracking.constants';
+import { processTrackingLocationPosition } from '../normalizers/location.normalizer';
 import {
   getCurrentTrackingPosition,
   getLastKnownTrackingPosition,
@@ -25,22 +29,11 @@ import {
 } from '../services/trackingSessionStorage.service';
 import { useTrackingStore } from '../store/trackingStore';
 
-const hasValidCoordinate = (coords) => (
-  Number.isFinite(coords?.latitude) && Number.isFinite(coords?.longitude)
-);
-
-const toTrackingCoordinate = (position) => ({
-  latitude: position.coords.latitude,
-  longitude: position.coords.longitude,
-  heading: Number.isFinite(position.coords.heading) ? position.coords.heading : 0,
-  speed: Number.isFinite(position.coords.speed) ? position.coords.speed : null,
-  timestamp: Number.isFinite(position.timestamp) ? position.timestamp : Date.now(),
-});
-
 export function useTrackingSession() {
   // Fuente unica del watcher GPS de la sesion de tracking.
   // Otros hooks deben consumir currentLocation desde trackingStore.
   const subscriptionRef = useRef(null);
+  const watcherGenerationRef = useRef(0);
   const hasTriedRestoreRef = useRef(false);
   const hasTriedVisibleLocationRef = useRef(false);
 
@@ -48,12 +41,14 @@ export function useTrackingSession() {
   const currentLocation = useTrackingStore((state) => state.currentLocation);
   const error = useTrackingStore((state) => state.error);
   const loadingStates = useTrackingStore((state) => state.loadingStates);
+  const locationStatus = useTrackingStore((state) => state.locationStatus);
   const permissionStatus = useTrackingStore((state) => state.permissionStatus);
   const routeCoordinatesCount = useTrackingStore((state) => state.routeCoordinates.length);
   const status = useTrackingStore((state) => state.status);
   const setCurrentLocation = useTrackingStore((state) => state.setCurrentLocation);
   const setError = useTrackingStore((state) => state.setError);
   const setLoadingState = useTrackingStore((state) => state.setLoadingState);
+  const setLocationStatus = useTrackingStore((state) => state.setLocationStatus);
   const setPermissionStatus = useTrackingStore((state) => state.setPermissionStatus);
   const setStatus = useTrackingStore((state) => state.setStatus);
   const pauseRouteSession = useTrackingStore((state) => state.pauseRouteSession);
@@ -65,51 +60,101 @@ export function useTrackingSession() {
   const clearAutoStopEvent = useTrackingStore((state) => state.clearAutoStopEvent);
 
   const stopWatcher = useCallback(() => {
+    watcherGenerationRef.current += 1;
     subscriptionRef.current?.remove();
     subscriptionRef.current = null;
   }, []);
 
-  const setPosition = useCallback((position) => {
-    if (hasValidCoordinate(position?.coords)) {
-      const coordinate = toTrackingCoordinate(position);
-      setCurrentLocation(coordinate);
-      return coordinate;
+  const setPosition = useCallback((position, options = {}) => {
+    const { coordinate, error: locationError } = processTrackingLocationPosition({
+      ...options,
+      position,
+      previousCoordinate: useTrackingStore.getState().currentLocation,
+    });
+
+    if (!coordinate) {
+      if (!useTrackingStore.getState().currentLocation) {
+        setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
+        setError(locationError);
+      }
+      return null;
     }
 
-    return null;
-  }, [setCurrentLocation]);
+    setCurrentLocation(coordinate);
+    setLocationStatus(TRACKING_LOCATION_STATUS.READY);
+    setError(null);
+    return coordinate;
+  }, [setCurrentLocation, setError, setLocationStatus]);
 
   const ensurePermission = useCallback(async () => {
-    const nextPermissionStatus = await requestTrackingLocationPermission();
-    setPermissionStatus(nextPermissionStatus);
+    setLocationStatus(TRACKING_LOCATION_STATUS.REQUESTING_PERMISSION);
 
-    if (nextPermissionStatus !== 'granted') {
-      setError('location_permission_denied');
+    try {
+      const nextPermissionStatus = await requestTrackingLocationPermission();
+      setPermissionStatus(nextPermissionStatus);
+
+      if (nextPermissionStatus !== 'granted') {
+        setLocationStatus(TRACKING_LOCATION_STATUS.UNAVAILABLE);
+        setError(TRACKING_ERROR.LOCATION_PERMISSION_DENIED);
+        return false;
+      }
+
+      setError(null);
+      return true;
+    } catch {
+      setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
+      setError(TRACKING_ERROR.LOCATION_PERMISSION_FAILED);
       return false;
     }
-
-    setError(null);
-    return true;
-  }, [setError, setPermissionStatus]);
+  }, [setError, setLocationStatus, setPermissionStatus]);
 
   const hydrateInitialLocation = useCallback(async () => {
     let hydratedLocation = null;
 
-    const lastKnownPosition = await getLastKnownTrackingPosition();
-    hydratedLocation = setPosition(lastKnownPosition) || hydratedLocation;
+    try {
+      const lastKnownPosition = await getLastKnownTrackingPosition();
+      hydratedLocation = setPosition(lastKnownPosition, {
+        allowStale: true,
+        maxAccuracyMeters: TRACKING_LOCATION_FILTER.MAX_INITIAL_ACCURACY_METERS,
+      }) || hydratedLocation;
+    } catch {
+      // A fresh GPS position is still attempted below.
+    }
 
-    const currentPosition = await getCurrentTrackingPosition();
-    hydratedLocation = setPosition(currentPosition) || hydratedLocation;
+    try {
+      const currentPosition = await getCurrentTrackingPosition();
+      hydratedLocation = setPosition(currentPosition, { validateJump: false }) || hydratedLocation;
+    } catch (locationError) {
+      if (!hydratedLocation) throw locationError;
+    }
 
     return hydratedLocation;
   }, [setPosition]);
 
   const startWatcher = useCallback(async () => {
     stopWatcher();
-    subscriptionRef.current = await watchTrackingPosition(setPosition, (watchError) => {
-      setError(watchError?.message || 'tracking_watch_failed');
-    });
-  }, [setError, setPosition, stopWatcher]);
+    const watcherGeneration = watcherGenerationRef.current;
+    const subscription = await watchTrackingPosition(
+      (position) => {
+        if (watcherGeneration === watcherGenerationRef.current) {
+          setPosition(position);
+        }
+      },
+      () => {
+        if (watcherGeneration !== watcherGenerationRef.current) return;
+        setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
+        setError(TRACKING_ERROR.LOCATION_WATCH_FAILED);
+      },
+    );
+
+    if (watcherGeneration !== watcherGenerationRef.current) {
+      subscription.remove();
+      return false;
+    }
+
+    subscriptionRef.current = subscription;
+    return true;
+  }, [setError, setLocationStatus, setPosition, stopWatcher]);
 
   const persistActiveSession = useCallback(async () => {
     const {
@@ -135,7 +180,7 @@ export function useTrackingSession() {
         totalPausedMs,
       });
     } catch (sessionStorageError) {
-      setError(sessionStorageError?.message || 'tracking_session_save_failed');
+      setError(sessionStorageError?.message || TRACKING_ERROR.SESSION_SAVE_FAILED);
     }
   }, [setError]);
 
@@ -209,7 +254,7 @@ export function useTrackingSession() {
 
       return true;
     } catch (trackingError) {
-      setError(trackingError?.message || 'tracking_restore_failed');
+      setError(trackingError?.message || TRACKING_ERROR.RESTORE_FAILED);
       return false;
     }
   }, [ensurePermission, hydrateRouteSession, setAutoStopEvent, setError, startWatcher, status]);
@@ -247,7 +292,7 @@ export function useTrackingSession() {
 
   const hydrateVisibleLocation = useCallback(async () => {
     if (hasTriedVisibleLocationRef.current) return false;
-    if (status !== TRACKING_STATUS.IDLE || currentLocation) return false;
+    if (status !== TRACKING_STATUS.IDLE) return false;
 
     hasTriedVisibleLocationRef.current = true;
 
@@ -258,10 +303,11 @@ export function useTrackingSession() {
       await hydrateInitialLocation();
       return true;
     } catch (trackingError) {
-      setError(trackingError?.message || 'tracking_location_hydrate_failed');
+      setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
+      setError(trackingError?.message || TRACKING_ERROR.LOCATION_HYDRATE_FAILED);
       return false;
     }
-  }, [currentLocation, ensurePermission, hydrateInitialLocation, setError, status]);
+  }, [ensurePermission, hydrateInitialLocation, setError, status]);
 
   const initializeTrackingView = useCallback(async () => {
     const restoredSession = await restoreActiveSession();
@@ -289,7 +335,7 @@ export function useTrackingSession() {
         totalPausedMs,
       });
     } catch (routeStorageError) {
-      setError(routeStorageError?.message || 'route_save_failed');
+      setError(routeStorageError?.message || TRACKING_ERROR.ROUTE_SAVE_FAILED);
     }
   }, [setError]);
 
@@ -310,7 +356,7 @@ export function useTrackingSession() {
       await persistActiveSession();
       return true;
     } catch (trackingError) {
-      setError(trackingError?.message || 'tracking_start_failed');
+      setError(trackingError?.message || TRACKING_ERROR.START_FAILED);
       stopWatcher();
       setStatus(TRACKING_STATUS.IDLE);
       return false;
@@ -364,7 +410,7 @@ export function useTrackingSession() {
       await persistActiveSession();
       return true;
     } catch (trackingError) {
-      setError(trackingError?.message || 'tracking_resume_failed');
+      setError(trackingError?.message || TRACKING_ERROR.RESUME_FAILED);
       return false;
     } finally {
       setLoadingState('isResuming', false);
@@ -452,6 +498,7 @@ export function useTrackingSession() {
     isIdle: status === TRACKING_STATUS.IDLE,
     isPaused: status === TRACKING_STATUS.PAUSED,
     isTracking: status === TRACKING_STATUS.TRACKING,
+    locationStatus,
     pauseTracking,
     permissionStatus,
     resumeTracking,

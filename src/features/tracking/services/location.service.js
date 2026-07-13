@@ -1,7 +1,7 @@
-import * as Location from 'expo-location';
+import { expoLocationProvider } from '../platform/location/expoLocation.provider';
 
 const LOCATION_WATCH_OPTIONS = {
-  accuracy: Location.Accuracy.BestForNavigation,
+  accuracy: 'navigation',
   distanceInterval: 1,
   timeInterval: 1000,
 };
@@ -12,22 +12,21 @@ const LAST_KNOWN_OPTIONS = {
 };
 
 const CURRENT_POSITION_OPTIONS = {
-  accuracy: Location.Accuracy.Highest,
+  accuracy: 'highest',
 };
 
-export const requestTrackingLocationPermission = async () => {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  return status;
-};
+export const requestTrackingLocationPermission = () => (
+  expoLocationProvider.requestForegroundPermission()
+);
 
 export const getLastKnownTrackingPosition = () => (
-  Location.getLastKnownPositionAsync(LAST_KNOWN_OPTIONS)
+  expoLocationProvider.getLastKnownPosition(LAST_KNOWN_OPTIONS)
 );
 
 export const getCurrentTrackingPosition = () => (
-  Location.getCurrentPositionAsync(CURRENT_POSITION_OPTIONS)
+  expoLocationProvider.getCurrentPosition(CURRENT_POSITION_OPTIONS)
 );
 
 export const watchTrackingPosition = (onPosition, onError) => (
-  Location.watchPositionAsync(LOCATION_WATCH_OPTIONS, onPosition, onError)
+  expoLocationProvider.watchPosition(LOCATION_WATCH_OPTIONS, onPosition, onError)
 );

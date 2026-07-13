@@ -16,6 +16,48 @@ export const TRACKING_STATUS = {
   PAUSED: 'paused',
 };
 
+export const TRACKING_LOCATION_STATUS = {
+  IDLE: 'idle',
+  REQUESTING_PERMISSION: 'requesting_permission',
+  READY: 'ready',
+  UNAVAILABLE: 'unavailable',
+  ERROR: 'error',
+};
+
+export const TRACKING_LOCATION_FILTER = {
+  MAX_ACCURACY_METERS: 100,
+  MAX_INITIAL_ACCURACY_METERS: 200,
+  MAX_FUTURE_SKEW_MS: 10000,
+  MAX_PLAUSIBLE_SPEED_MPS: 45,
+  MAX_SAMPLE_AGE_MS: 30000,
+};
+
+export const TRACKING_LOCATION_REJECTION = {
+  NONE: null,
+  INVALID_COORDINATE: 'invalid_coordinate',
+  FUTURE_TIMESTAMP: 'future_timestamp',
+  STALE_TIMESTAMP: 'stale_timestamp',
+  OUT_OF_ORDER: 'out_of_order',
+  LOW_ACCURACY: 'low_accuracy',
+  IMPOSSIBLE_JUMP: 'impossible_jump',
+};
+
+export const TRACKING_ERROR = {
+  LOCATION_PERMISSION_DENIED: 'location_permission_denied',
+  LOCATION_PERMISSION_FAILED: 'location_permission_failed',
+  LOCATION_WATCH_FAILED: 'tracking_watch_failed',
+  LOCATION_HYDRATE_FAILED: 'tracking_location_hydrate_failed',
+  LOCATION_SAMPLE_INVALID: 'tracking_location_sample_invalid',
+  LOCATION_SAMPLE_STALE: 'tracking_location_sample_stale',
+  LOCATION_ACCURACY_LOW: 'tracking_location_accuracy_low',
+  LOCATION_JUMP_REJECTED: 'tracking_location_jump_rejected',
+  SESSION_SAVE_FAILED: 'tracking_session_save_failed',
+  RESTORE_FAILED: 'tracking_restore_failed',
+  START_FAILED: 'tracking_start_failed',
+  RESUME_FAILED: 'tracking_resume_failed',
+  ROUTE_SAVE_FAILED: 'route_save_failed',
+};
+
 export const TRACKING_LOADING_STATE = {
   isStarting: false,
   isPausing: false,

@@ -38,10 +38,6 @@
         }
       }
     },
-    "notification": {
-      "icon": "./assets/notification-icon.png",
-      "color": "#1a1a2e"
-    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -57,11 +53,14 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Rollemos Pues necesita tu ubicación para mostrar tu posición en el mapa."
+          "locationWhenInUsePermission": "Rollemos Pues necesita tu ubicación para mostrar tu posición en el mapa.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       "expo-sqlite",
-      "expo-localization"
+      "expo-localization",
+      "expo-font"
     ]
   }
 }

@@ -68,7 +68,7 @@ Deuda heredada preservada, no corregida durante el baseline: `public.usuarios` t
 
 Criterio de salida: Git limpio, punto recuperable, cuatro cuentas/cuatro perfiles y migracion base revisada.
 
-### 2. Normalizar Android y Expo
+### 2. Normalizar Android y Expo (completado)
 
 - Resolver todos los hallazgos de Expo Doctor.
 - Alinear dependencias con Expo SDK 54.
@@ -77,7 +77,9 @@ Criterio de salida: Git limpio, punto recuperable, cuatro cuentas/cuatro perfile
 
 Criterio de salida: Expo Doctor sin fallos relevantes y app iniciando en Android.
 
-### 3. Definir contratos de tracking y plataforma
+Estado: Expo Doctor pasa 18/18 y Prebuild regenera Android desde `app.json`. La compilacion local alcanzo C++ nativo y se detuvo por la ruta de Windows superior a 260 caracteres; debe repetirse desde una ruta corta o en EAS, sin cambios de codigo.
+
+### 3. Definir contratos de tracking y plataforma (completado)
 
 - Contratos para coordenada, muestra GPS, ruta, segmento, sesion, metricas y errores.
 - Contratos para proveedor de ubicacion, controlador de mapa y background.
@@ -85,7 +87,7 @@ Criterio de salida: Expo Doctor sin fallos relevantes y app iniciando en Android
 
 Criterio de salida: dominio compartido sin dependencia directa del proveedor de mapa.
 
-### 4. Fortalecer el pipeline GPS
+### 4. Fortalecer el pipeline GPS (implementado; prueba Android pendiente)
 
 - Permisos, lectura inicial, watcher unico y limpieza.
 - Validacion de precision, timestamp, velocidad y saltos imposibles.
@@ -93,6 +95,8 @@ Criterio de salida: dominio compartido sin dependencia directa del proveedor de 
 - Ubicacion visible al entrar sin iniciar una ruta.
 
 Criterio de salida: el marcador sigue el dispositivo de forma estable en una prueba real.
+
+Estado: `useTrackingSession` conserva el watcher unico, `trackingStore` conserva el estado canonico y toda muestra pasa por el normalizador antes de actualizar la ubicacion. Falta la prueba fisica de recorrido Android.
 
 ### 5. Centralizar ingesta atomica y maquina de estados
 

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import {
   TRACKING_LOADING_STATE,
+  TRACKING_LOCATION_STATUS,
   TRACKING_METRICS,
   TRACKING_STATUS,
 } from '../constants/tracking.constants';
@@ -12,6 +13,7 @@ export const useTrackingStore = create((set) => ({
   currentLocation: null,
   error: null,
   loadingStates: TRACKING_LOADING_STATE,
+  locationStatus: TRACKING_LOCATION_STATUS.IDLE,
   liveError: null,
   isLivePrivate: false,
   livePaths: {},
@@ -38,6 +40,7 @@ export const useTrackingStore = create((set) => ({
     },
   })),
   setLiveError: (liveError) => set({ liveError }),
+  setLocationStatus: (locationStatus) => set({ locationStatus }),
   setLivePrivacy: (isLivePrivate) => set({
     isLivePrivate,
     isPrivacyReady: true,
