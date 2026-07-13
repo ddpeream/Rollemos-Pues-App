@@ -1,0 +1,125 @@
+import { supabase } from '../../../config/supabase';
+
+const LIVE_SELECT = 'user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( * )';
+
+export const normalizeTrackingLiveSkater = (record) => {
+  if (!record?.user_id || record.lat == null || record.lng == null) return null;
+
+  const latitude = Number(record.lat);
+  const longitude = Number(record.lng);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  return {
+    coordinate: {
+      latitude,
+      longitude,
+    },
+    heading: Number.isFinite(Number(record.heading)) ? Number(record.heading) : 0,
+    isActive: !!record.is_active,
+    speed: Number.isFinite(Number(record.speed)) ? Number(record.speed) : null,
+    updatedAt: record.updated_at,
+    user: record.usuarios || null,
+    userId: record.user_id,
+  };
+};
+
+export const upsertTrackingLive = async ({
+  coordinate,
+  heading = null,
+  isActive = true,
+  speed = null,
+  userId,
+}) => {
+  if (!userId || coordinate?.latitude == null || coordinate?.longitude == null) {
+    return { data: null, error: 'missing_tracking_live_data', ok: false };
+  }
+
+  const payload = {
+    heading,
+    is_active: isActive,
+    lat: coordinate.latitude,
+    lng: coordinate.longitude,
+    speed,
+    updated_at: new Date().toISOString(),
+    user_id: userId,
+  };
+
+  const { data, error } = await supabase
+    .from('tracking_live')
+    .upsert(payload, { onConflict: 'user_id' })
+    .select(LIVE_SELECT)
+    .single();
+
+  if (error) {
+    return { data: null, error: error.message, ok: false };
+  }
+
+  return { data: normalizeTrackingLiveSkater(data), error: null, ok: true };
+};
+
+export const setTrackingLiveActive = async ({ isActive, userId }) => {
+  if (!userId) return { error: 'missing_tracking_live_user', ok: false };
+
+  const { error } = await supabase
+    .from('tracking_live')
+    .update({
+      is_active: isActive,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+
+  if (error) return { error: error.message, ok: false };
+  return { error: null, ok: true };
+};
+
+export const fetchTrackingLive = async () => {
+  const { data, error } = await supabase
+    .from('tracking_live')
+    .select(LIVE_SELECT)
+    .eq('is_active', true);
+
+  if (error) {
+    return { data: [], error: error.message, ok: false };
+  }
+
+  return {
+    data: (data || []).map(normalizeTrackingLiveSkater).filter(Boolean),
+    error: null,
+    ok: true,
+  };
+};
+
+export const subscribeTrackingLive = (onChange) => (
+  supabase
+    .channel('tracking_live')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'tracking_live' },
+      async (payload) => {
+        if (payload.eventType === 'DELETE') {
+          onChange?.({ eventType: payload.eventType, skater: null, userId: payload.old?.user_id });
+          return;
+        }
+
+        if (!payload.new?.user_id) return;
+
+        const { data, error } = await supabase
+          .from('tracking_live')
+          .select(LIVE_SELECT)
+          .eq('user_id', payload.new.user_id)
+          .maybeSingle();
+
+        const skater = normalizeTrackingLiveSkater(data || payload.new);
+        if (!error && skater) {
+          onChange?.({ eventType: payload.eventType, skater, userId: skater.userId });
+        }
+      },
+    )
+    .subscribe()
+);
+
+export const unsubscribeTrackingLive = (channel) => {
+  if (!channel) return;
+  supabase.removeChannel(channel);
+};

@@ -1,0 +1,121 @@
+{
+  "auth": {
+    "login": {
+      "title": "Bienvenido a Rollemos",
+      "subtitle": "Ingresa para rodar, guardar rutas y ver patinadores en vivo.",
+      "emailLabel": "Correo",
+      "emailPlaceholder": "tu@email.com",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "Tu contraseña",
+      "submit": "Ingresar",
+      "divider": "o continúa con",
+      "footerText": "¿No tienes cuenta?",
+      "footerAction": "Regístrate",
+      "errors": {
+        "emailRequired": "Ingresa tu correo.",
+        "emailInvalid": "Ingresa un correo válido.",
+        "passwordRequired": "Ingresa tu contraseña.",
+        "invalidCredentials": "Correo o contraseña incorrectos.",
+        "emailNotConfirmed": "Confirma tu correo antes de iniciar sesión.",
+        "emailAlreadyRegistered": "Este correo ya está registrado."
+      }
+    },
+    "signup": {
+      "title": "Crea tu cuenta",
+      "subtitle": "Configura tu perfil para empezar a rodar con la comunidad.",
+      "form": {
+        "nameLabel": "Nombre",
+        "namePlaceholder": "Tu nombre",
+        "emailLabel": "Correo",
+        "emailPlaceholder": "tu@email.com",
+        "passwordLabel": "Contraseña",
+        "passwordPlaceholder": "Mínimo 6 caracteres",
+        "confirmPasswordLabel": "Confirmar contraseña",
+        "confirmPasswordPlaceholder": "Repite tu contraseña",
+        "cityLabel": "Ciudad",
+        "cityPlaceholder": "Medellín",
+        "levelLabel": "Nivel",
+        "disciplineLabel": "Disciplina",
+        "bioLabel": "Bio",
+        "bioPlaceholder": "Cuéntanos sobre tu estilo de patinaje",
+        "profilePhoto": "Foto de perfil",
+        "submit": "Crear cuenta",
+        "backToLogin": "Volver al login"
+      },
+      "modals": {
+        "levelTitle": "Selecciona tu nivel",
+        "disciplineTitle": "Selecciona tu disciplina"
+      },
+      "levels": {
+        "advanced": "Avanzado",
+        "beginner": "Principiante",
+        "intermediate": "Intermedio",
+        "professional": "Profesional"
+      },
+      "disciplines": {
+        "cruising": "Cruising",
+        "downhill": "Downhill",
+        "freestyle": "Freestyle",
+        "park": "Park",
+        "speed": "Speed",
+        "street": "Street"
+      },
+      "messages": {
+        "confirmEmail": "Cuenta creada. Revisa tu correo para confirmar el acceso."
+      },
+      "errors": {
+        "cityRequired": "Ingresa tu ciudad.",
+        "emailAlreadyRegistered": "Este correo ya está registrado.",
+        "emailInvalid": "Ingresa un correo válido.",
+        "emailRequired": "Ingresa tu correo.",
+        "nameRequired": "Ingresa tu nombre.",
+        "passwordMismatch": "Las contraseñas no coinciden.",
+        "passwordRequired": "Ingresa una contraseña.",
+        "passwordTooShort": "La contraseña debe tener al menos 6 caracteres."
+      }
+    }
+  },
+  "trackingHistory": {
+    "title": "Historial",
+    "subtitle": "{{count}} rutas guardadas",
+    "loading": "Cargando rutas guardadas...",
+    "error": "No se pudo cargar el historial.",
+    "empty": {
+      "title": "Aún no hay rutas",
+      "hint": "Cuando detengas un tracking válido, la ruta se guardará aquí."
+    },
+    "card": {
+      "calories": "Calorías",
+      "delete": "Eliminar",
+      "maxSpeed": "Vel. máxima",
+      "points": "Puntos",
+      "unknownDate": "Sin fecha",
+      "view": "Ver"
+    },
+    "delete": {
+      "cancel": "Cancelar",
+      "confirm": "Eliminar",
+      "message": "Esta ruta se eliminará del almacenamiento local.",
+      "title": "Eliminar ruta"
+    },
+    "detail": {
+      "back": "Volver",
+      "badgeTitle": "Ruta guardada",
+      "error": "No se pudo abrir la ruta.",
+      "loading": "Cargando ruta..."
+    }
+  },
+  "common": {
+    "language": {
+      "es": "Español",
+      "en": "Inglés",
+      "fr": "Francés"
+    },
+    "menu": {
+      "logout": "Cerrar sesión",
+      "notifications": "Notificaciones",
+      "profile": "Perfil",
+      "settings": "Configuración"
+    }
+  }
+}

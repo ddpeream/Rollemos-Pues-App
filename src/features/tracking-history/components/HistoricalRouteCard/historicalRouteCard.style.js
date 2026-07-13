@@ -1,0 +1,125 @@
+import { StyleSheet } from 'react-native';
+
+import { borderRadius, shadows, spacing, typography } from '../../../../theme';
+
+export const createStyles = (theme) => StyleSheet.create({
+  actionButton: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.surface,
+    borderRadius: borderRadius.md,
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  actionText: {
+    color: theme.colors.primary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  card: {
+    backgroundColor: theme.colors.background.secondary,
+    borderColor: theme.colors.border,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+    ...shadows.card,
+  },
+  content: {
+    gap: spacing.md,
+    padding: spacing.md,
+  },
+  dateBadge: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.glass.backdrop,
+    borderRadius: borderRadius.round,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    position: 'absolute',
+    right: spacing.md,
+    top: spacing.md,
+  },
+  dateText: {
+    color: theme.colors.text.primary,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  preview: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.tertiary,
+    height: 150,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  previewGrid: {
+    height: 112,
+    position: 'relative',
+    width: '82%',
+  },
+  previewPoint: {
+    borderRadius: borderRadius.round,
+    height: 10,
+    marginLeft: -5,
+    marginTop: -5,
+    position: 'absolute',
+    width: 10,
+    zIndex: 2,
+  },
+  previewSegment: {
+    borderRadius: borderRadius.round,
+    height: 4,
+    marginTop: -2,
+    opacity: 0.9,
+    position: 'absolute',
+    zIndex: 1,
+  },
+  primaryStats: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  secondaryLabel: {
+    color: theme.colors.text.secondary,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.medium,
+  },
+  secondaryStat: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.xs,
+  },
+  secondaryStats: {
+    borderTopColor: theme.colors.border,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    paddingTop: spacing.md,
+  },
+  secondaryValue: {
+    color: theme.colors.text.primary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  statChip: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: borderRadius.md,
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    justifyContent: 'center',
+    minHeight: 38,
+    paddingHorizontal: spacing.xs,
+  },
+  statText: {
+    color: theme.colors.text.primary,
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+  },
+});

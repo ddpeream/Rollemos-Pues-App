@@ -1,38 +1,39 @@
 # Archivos del sistema
 .DS_Store
 Thumbs.db
-.env/
 __pycache__/
 *.pyc
 
-# Carpetas de dependencias
+# Dependencias
 node_modules/
 venv/
 
-# Archivos de entorno
+# Variables de entorno y secretos locales
+.env/
 .env
+.env.*
 *.env
-.env.local
-.env.*.local
+!.env.example
+secrets.json
 
-# Archivos de compilación / distribución
+# Compilacion y distribucion
 dist/
 build/
+web-build/
 *.egg-info/
 
 # Logs y temporales
 *.log
 *.tmp
 *.swp
+*.swo
 
 # IDEs y editores
 .vscode/
 .idea/
 *.iml
-*.swp
-*.swo
 
-# Archivos de pruebas / cobertura
+# Pruebas y cobertura
 .coverage
 *.coverage
 .cache/
@@ -40,13 +41,13 @@ pytest_cache/
 coverage.xml
 htmlcov/
 
-# Archivos de configuración locales
+# Configuracion local
 *.local
 
-# React Native / Expo
+# React Native, Expo y Supabase CLI
 .expo/
 .expo-shared/
-dist/
+supabase/.temp/
 npm-debug.*
 *.jks
 *.p8
@@ -54,16 +55,8 @@ npm-debug.*
 *.key
 *.mobileprovision
 *.orig.*
-web-build/
 
-# Archivos temporales de Expo
-.env.example
-
-# Caches
+# Caches de frameworks
 .eslintcache
 .next/
 out/
-
-# Archivos de secretos
-.env.secrets
-secrets.json

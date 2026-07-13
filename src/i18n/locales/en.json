@@ -1,0 +1,121 @@
+{
+  "auth": {
+    "login": {
+      "title": "Welcome to Rollemos",
+      "subtitle": "Sign in to skate, save routes, and see live skaters.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@email.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Your password",
+      "submit": "Sign in",
+      "divider": "or continue with",
+      "footerText": "Don't have an account?",
+      "footerAction": "Sign up",
+      "errors": {
+        "emailRequired": "Enter your email.",
+        "emailInvalid": "Enter a valid email.",
+        "passwordRequired": "Enter your password.",
+        "invalidCredentials": "Incorrect email or password.",
+        "emailNotConfirmed": "Confirm your email before signing in.",
+        "emailAlreadyRegistered": "This email is already registered."
+      }
+    },
+    "signup": {
+      "title": "Create your account",
+      "subtitle": "Set up your profile to start skating with the community.",
+      "form": {
+        "nameLabel": "Name",
+        "namePlaceholder": "Your name",
+        "emailLabel": "Email",
+        "emailPlaceholder": "you@email.com",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "At least 6 characters",
+        "confirmPasswordLabel": "Confirm password",
+        "confirmPasswordPlaceholder": "Repeat your password",
+        "cityLabel": "City",
+        "cityPlaceholder": "Medellin",
+        "levelLabel": "Level",
+        "disciplineLabel": "Discipline",
+        "bioLabel": "Bio",
+        "bioPlaceholder": "Tell us about your skating style",
+        "profilePhoto": "Profile photo",
+        "submit": "Create account",
+        "backToLogin": "Back to login"
+      },
+      "modals": {
+        "levelTitle": "Select your level",
+        "disciplineTitle": "Select your discipline"
+      },
+      "levels": {
+        "advanced": "Advanced",
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "professional": "Professional"
+      },
+      "disciplines": {
+        "cruising": "Cruising",
+        "downhill": "Downhill",
+        "freestyle": "Freestyle",
+        "park": "Park",
+        "speed": "Speed",
+        "street": "Street"
+      },
+      "messages": {
+        "confirmEmail": "Account created. Check your email to confirm access."
+      },
+      "errors": {
+        "cityRequired": "Enter your city.",
+        "emailAlreadyRegistered": "This email is already registered.",
+        "emailInvalid": "Enter a valid email.",
+        "emailRequired": "Enter your email.",
+        "nameRequired": "Enter your name.",
+        "passwordMismatch": "Passwords do not match.",
+        "passwordRequired": "Enter a password.",
+        "passwordTooShort": "Password must be at least 6 characters."
+      }
+    }
+  },
+  "trackingHistory": {
+    "title": "History",
+    "subtitle": "{{count}} saved routes",
+    "loading": "Loading saved routes...",
+    "error": "Could not load history.",
+    "empty": {
+      "title": "No routes yet",
+      "hint": "When you stop a valid tracking session, the route will be saved here."
+    },
+    "card": {
+      "calories": "Calories",
+      "delete": "Delete",
+      "maxSpeed": "Max speed",
+      "points": "Points",
+      "unknownDate": "No date",
+      "view": "View"
+    },
+    "delete": {
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "message": "This route will be removed from local storage.",
+      "title": "Delete route"
+    },
+    "detail": {
+      "back": "Back",
+      "badgeTitle": "Saved route",
+      "error": "Could not open the route.",
+      "loading": "Loading route..."
+    }
+  },
+  "common": {
+    "language": {
+      "es": "Spanish",
+      "en": "English",
+      "fr": "French"
+    },
+    "menu": {
+      "logout": "Log out",
+      "notifications": "Notifications",
+      "profile": "Profile",
+      "settings": "Settings"
+    }
+  }
+}

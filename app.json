@@ -17,8 +17,7 @@
       "bundleIdentifier": "com.rollemos.pues",
       "icon": "./assets/icon.png",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para rastrear tus rutas de patinaje y mostrarte spots cercanos.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para grabar tus rutas completas mientras patinas.",
+        "NSLocationWhenInUseUsageDescription": "Rollemos Pues necesita tu ubicación para mostrar tu posición en el mapa.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -31,15 +30,8 @@
       "package": "com.rollemos.pues",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
+        "ACCESS_COARSE_LOCATION"
       ],
-      "foregroundService": {
-        "notificationTitle": "Rollemos Pues",
-        "notificationBody": "Grabando tu ruta en segundo plano"
-      },
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyAp3esnudg_4QNvVOUBONnxpY06TVXC2Ck"
@@ -62,19 +54,14 @@
     },
     "owner": "ddpeream",
     "plugins": [
-      "expo-localization",
-      "expo-sqlite",
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Rollemos Pues necesita tu ubicación para grabar tus rutas completas mientras patinas.",
-          "locationAlwaysPermission": "Rollemos Pues necesita tu ubicación en segundo plano para grabar tus rutas de patinaje.",
-          "locationWhenInUsePermission": "Rollemos Pues necesita tu ubicación para rastrear tus rutas de patinaje y mostrarte spots cercanos.",
-          "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true,
-          "isIosBackgroundLocationEnabled": true
+          "locationWhenInUsePermission": "Rollemos Pues necesita tu ubicación para mostrar tu posición en el mapa."
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-localization"
     ]
   }
 }
