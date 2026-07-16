@@ -2,19 +2,28 @@ const isValidCoordinate = (coordinate) => (
   Number.isFinite(coordinate?.latitude) && Number.isFinite(coordinate?.longitude)
 );
 
-export const getRoutePreviewCoordinates = (route) => {
-  if (Array.isArray(route?.previewCoordinates) && route.previewCoordinates.length > 0) {
-    return route.previewCoordinates.filter(isValidCoordinate);
+export const getRoutePreviewCoordinateSegments = (route) => {
+  if (Array.isArray(route?.previewSegments) && route.previewSegments.length > 0) {
+    return route.previewSegments
+      .map((coordinates) => (
+        Array.isArray(coordinates) ? coordinates.filter(isValidCoordinate) : []
+      ))
+      .filter((coordinates) => coordinates.length > 0);
   }
 
-  return [route?.startCoordinate, route?.endCoordinate].filter(isValidCoordinate);
+  const fallbackCoordinates = [route?.startCoordinate, route?.endCoordinate]
+    .filter(isValidCoordinate);
+
+  return fallbackCoordinates.length > 0 ? [fallbackCoordinates] : [];
 };
 
-export const normalizeRoutePreviewPoints = (coordinates) => {
-  const safeCoordinates = Array.isArray(coordinates)
-    ? coordinates.filter(isValidCoordinate)
+export const normalizeRoutePreviewPointSegments = (coordinateSegments) => {
+  const safeSegments = Array.isArray(coordinateSegments)
+    ? coordinateSegments
+      .map((coordinates) => coordinates.filter(isValidCoordinate))
+      .filter((coordinates) => coordinates.length > 0)
     : [];
-
+  const safeCoordinates = safeSegments.flat();
   if (safeCoordinates.length === 0) return [];
 
   const latitudes = safeCoordinates.map((coordinate) => coordinate.latitude);
@@ -26,28 +35,34 @@ export const normalizeRoutePreviewPoints = (coordinates) => {
   const latitudeRange = maxLatitude - minLatitude || 1;
   const longitudeRange = maxLongitude - minLongitude || 1;
 
-  return safeCoordinates.map((coordinate) => ({
-    left: 10 + ((coordinate.longitude - minLongitude) / longitudeRange) * 80,
-    top: 10 + ((maxLatitude - coordinate.latitude) / latitudeRange) * 80,
-  }));
+  return safeSegments.map((coordinates) => (
+    coordinates.map((coordinate) => ({
+      left: 10 + ((coordinate.longitude - minLongitude) / longitudeRange) * 80,
+      top: 10 + ((maxLatitude - coordinate.latitude) / latitudeRange) * 80,
+    }))
+  ));
 };
 
-export const createRoutePreviewSegments = (points) => {
-  if (!Array.isArray(points) || points.length < 2) return [];
+export const createRoutePreviewSegments = (pointSegments) => {
+  if (!Array.isArray(pointSegments)) return [];
 
-  return points.slice(1).map((point, index) => {
-    const previousPoint = points[index];
-    const deltaLeft = point.left - previousPoint.left;
-    const deltaTop = point.top - previousPoint.top;
-    const length = Math.sqrt((deltaLeft ** 2) + (deltaTop ** 2));
-    const angle = Math.atan2(deltaTop, deltaLeft) * (180 / Math.PI);
+  return pointSegments.flatMap((points, segmentIndex) => {
+    if (!Array.isArray(points) || points.length < 2) return [];
 
-    return {
-      angle,
-      key: `${previousPoint.left}-${previousPoint.top}-${point.left}-${point.top}-${index}`,
-      left: previousPoint.left + (deltaLeft / 2) - (length / 2),
-      length,
-      top: previousPoint.top + (deltaTop / 2),
-    };
+    return points.slice(1).map((point, pointIndex) => {
+      const previousPoint = points[pointIndex];
+      const deltaLeft = point.left - previousPoint.left;
+      const deltaTop = point.top - previousPoint.top;
+      const length = Math.sqrt((deltaLeft ** 2) + (deltaTop ** 2));
+      const angle = Math.atan2(deltaTop, deltaLeft) * (180 / Math.PI);
+
+      return {
+        angle,
+        key: `${segmentIndex}-${pointIndex}-${previousPoint.left}-${point.left}`,
+        left: previousPoint.left + (deltaLeft / 2) - (length / 2),
+        length,
+        top: previousPoint.top + (deltaTop / 2),
+      };
+    });
   });
 };

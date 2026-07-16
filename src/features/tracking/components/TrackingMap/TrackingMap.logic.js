@@ -9,7 +9,7 @@ export default function TrackingMap({
   liveSkaters,
   mapRef,
   mapType,
-  routeCoordinates,
+  routeSegments,
   startFlag,
   theme,
   userCoordinate,
@@ -25,7 +25,7 @@ export default function TrackingMap({
       mapType={mapType}
       markerColor={theme.colors.primary}
       routeColor={theme.colors.primary}
-      routeCoordinates={routeCoordinates}
+      routeSegments={routeSegments}
       startFlag={startFlag}
       startFlagColor={theme.colors.success}
       startFlagIconColor={theme.colors.onPrimary}

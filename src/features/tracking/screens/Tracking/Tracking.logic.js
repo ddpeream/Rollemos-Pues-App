@@ -1,14 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { APP_ROUTES } from '../../../../navigation/navigation.constants';
 import { useTheme } from '../../../../hooks/useTheme';
-import { TRACKING_STATUS } from '../../constants/tracking.constants';
+import { TRACKING_FOCUS_DELTA, TRACKING_STATUS } from '../../constants/tracking.constants';
 import { useTrackingLiveSkaters } from '../../hooks/useTrackingLiveSkaters';
 import { useTrackingMetrics } from '../../hooks/useTrackingMetrics';
 import { useTrackingPrivacy } from '../../hooks/useTrackingPrivacy';
-import { useTrackingRoute } from '../../hooks/useTrackingRoute';
 import { useTrackingSession } from '../../hooks/useTrackingSession';
+import { createReactNativeMapsController } from '../../platform/map/reactNativeMaps.controller';
 import { useTrackingStore } from '../../store/trackingStore';
 import {
   formatCalories,
@@ -24,7 +24,6 @@ export default function Tracking({ navigation }) {
   const [mapType, setMapType] = useState(Platform.OS === 'android' ? 'standard' : 'hybrid');
   const { isDark, theme } = useTheme();
   const {
-    centerMapOnUser,
     currentLocation,
     isPausing,
     isResuming,
@@ -37,11 +36,23 @@ export default function Tracking({ navigation }) {
     stopTracking,
   } = useTrackingSession();
   const metrics = useTrackingStore((state) => state.metrics);
-  const routeCoordinates = useTrackingStore((state) => state.routeCoordinates);
+  const routeSegments = useTrackingStore((state) => state.routeSegments);
   const startFlag = useTrackingStore((state) => state.startFlag);
   const { isLivePrivate, toggleLivePrivacy } = useTrackingPrivacy();
+  const mapController = useMemo(() => createReactNativeMapsController(mapRef), []);
+  const focusRegion = useMemo(() => (
+    currentLocation
+      ? {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        ...TRACKING_FOCUS_DELTA,
+      }
+      : null
+  ), [currentLocation]);
+  const centerMapOnUser = useCallback(() => (
+    focusRegion ? mapController.animateToRegion(focusRegion, 500) : false
+  ), [focusRegion, mapController]);
 
-  useTrackingRoute();
   useTrackingMetrics();
   const { livePaths, liveSkaters } = useTrackingLiveSkaters();
 
@@ -76,7 +87,7 @@ export default function Tracking({ navigation }) {
   };
 
   const handleCenterMap = () => {
-    centerMapOnUser(mapRef);
+    centerMapOnUser();
   };
 
   const handleOpenHistory = () => {
@@ -108,7 +119,7 @@ export default function Tracking({ navigation }) {
   useEffect(() => {
     if (status === TRACKING_STATUS.TRACKING && shouldCenterOnStartRef.current && currentLocation) {
       shouldCenterOnStartRef.current = false;
-      centerMapOnUser(mapRef);
+      centerMapOnUser();
     }
   }, [centerMapOnUser, currentLocation, status]);
 
@@ -129,7 +140,7 @@ export default function Tracking({ navigation }) {
       onToggleLivePrivacy={toggleLivePrivacy}
       onStopTracking={handleStopTracking}
       onToggleMapType={handleToggleMapType}
-      routeCoordinates={routeCoordinates}
+      routeSegments={routeSegments}
       showStop={status !== TRACKING_STATUS.IDLE}
       startFlag={startFlag}
       statsContainerStyle={statsContainerStyle}

@@ -18,6 +18,7 @@ export const TRACKING_STATUS = {
 
 export const TRACKING_LOCATION_STATUS = {
   IDLE: 'idle',
+  CHECKING_AVAILABILITY: 'checking_availability',
   REQUESTING_PERMISSION: 'requesting_permission',
   READY: 'ready',
   UNAVAILABLE: 'unavailable',
@@ -29,6 +30,7 @@ export const TRACKING_LOCATION_FILTER = {
   MAX_INITIAL_ACCURACY_METERS: 200,
   MAX_FUTURE_SKEW_MS: 10000,
   MAX_PLAUSIBLE_SPEED_MPS: 45,
+  MAX_REPORTED_SPEED_MPS: 45,
   MAX_SAMPLE_AGE_MS: 30000,
 };
 
@@ -39,17 +41,20 @@ export const TRACKING_LOCATION_REJECTION = {
   STALE_TIMESTAMP: 'stale_timestamp',
   OUT_OF_ORDER: 'out_of_order',
   LOW_ACCURACY: 'low_accuracy',
+  IMPLAUSIBLE_SPEED: 'implausible_speed',
   IMPOSSIBLE_JUMP: 'impossible_jump',
 };
 
 export const TRACKING_ERROR = {
   LOCATION_PERMISSION_DENIED: 'location_permission_denied',
   LOCATION_PERMISSION_FAILED: 'location_permission_failed',
+  LOCATION_SERVICES_DISABLED: 'location_services_disabled',
   LOCATION_WATCH_FAILED: 'tracking_watch_failed',
   LOCATION_HYDRATE_FAILED: 'tracking_location_hydrate_failed',
   LOCATION_SAMPLE_INVALID: 'tracking_location_sample_invalid',
   LOCATION_SAMPLE_STALE: 'tracking_location_sample_stale',
   LOCATION_ACCURACY_LOW: 'tracking_location_accuracy_low',
+  LOCATION_SPEED_INVALID: 'tracking_location_speed_invalid',
   LOCATION_JUMP_REJECTED: 'tracking_location_jump_rejected',
   SESSION_SAVE_FAILED: 'tracking_session_save_failed',
   RESTORE_FAILED: 'tracking_restore_failed',
@@ -74,13 +79,21 @@ export const TRACKING_METRICS = {
   speed: 0,
 };
 
+export const TRACKING_METRICS_FILTER = {
+  MIN_MOVING_SPEED_KMH: 1,
+  SPEED_STALE_TIMEOUT_MS: 5000,
+  TICK_INTERVAL_MS: 1000,
+};
+
 export const TRACKING_ROUTE_MIN_DISTANCE_METERS = 2;
 
 export const TRACKING_ROUTE_STORAGE = {
   CHUNK_SIZE: 250,
   INDEX_KEY: '@tracking/routes/index',
+  LEGACY_VERSION: 1,
+  PREVIEW_POINTS: 24,
   ROUTE_KEY_PREFIX: '@tracking/routes',
-  VERSION: 1,
+  VERSION: 2,
 };
 
 export const TRACKING_ROUTE_SAVE_CONDITIONS = {
@@ -91,7 +104,8 @@ export const TRACKING_ROUTE_SAVE_CONDITIONS = {
 
 export const TRACKING_SESSION_STORAGE = {
   KEY: '@tracking/session/active',
-  VERSION: 1,
+  LEGACY_VERSION: 1,
+  VERSION: 2,
 };
 
 export const TRACKING_AUTO_STOP = {

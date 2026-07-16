@@ -50,7 +50,7 @@ export default function TrackingMapView({
   mapType,
   markerColor,
   routeColor,
-  routeCoordinates,
+  routeSegments,
   startFlag,
   startFlagColor,
   startFlagIconColor,
@@ -68,15 +68,18 @@ export default function TrackingMapView({
       showsMyLocationButton={false}
       moveOnMarkerPress={false}
     >
-      {routeCoordinates?.length > 1 && (
-        <Polyline
-          coordinates={routeCoordinates}
-          lineCap="round"
-          lineJoin="round"
-          strokeColor={routeColor}
-          strokeWidth={4}
-        />
-      )}
+      {(routeSegments || []).map((segment, index) => (
+        segment?.coordinates?.length > 1 ? (
+          <Polyline
+            key={`route-segment-${segment.startedAt}-${index}`}
+            coordinates={segment.coordinates}
+            lineCap="round"
+            lineJoin="round"
+            strokeColor={routeColor}
+            strokeWidth={4}
+          />
+        ) : null
+      ))}
 
       {Object.entries(livePaths || {}).map(([userId, coordinates]) => (
         coordinates?.length > 1 ? (

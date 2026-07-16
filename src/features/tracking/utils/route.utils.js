@@ -1,7 +1,7 @@
 import { TRACKING_ROUTE_MIN_DISTANCE_METERS } from '../constants/tracking.constants';
 import { getDistanceBetweenCoordinates } from './distance.utils';
 
-export const isValidRouteCoordinate = (coordinate) => (
+const isValidRouteCoordinate = (coordinate) => (
   Number.isFinite(coordinate?.latitude) && Number.isFinite(coordinate?.longitude)
 );
 

@@ -87,7 +87,9 @@ Estado: Expo Doctor pasa 18/18 y Prebuild regenera Android desde `app.json`. La 
 
 Criterio de salida: dominio compartido sin dependencia directa del proveedor de mapa.
 
-### 4. Fortalecer el pipeline GPS (implementado; prueba Android pendiente)
+Estado: contratos de dominio y plataforma completos y verificados con @ts-check; Expo Location se selecciona mediante un adaptador, la camara usa un controlador de react-native-maps fuera de la sesion y Expo, almacenamiento y Supabase normalizan sus datos antes de entrar al dominio.
+
+### 4. Fortalecer el pipeline GPS (completado y validado en Android)
 
 - Permisos, lectura inicial, watcher unico y limpieza.
 - Validacion de precision, timestamp, velocidad y saltos imposibles.
@@ -96,9 +98,11 @@ Criterio de salida: dominio compartido sin dependencia directa del proveedor de 
 
 Criterio de salida: el marcador sigue el dispositivo de forma estable en una prueba real.
 
-Estado: `useTrackingSession` conserva el watcher unico, `trackingStore` conserva el estado canonico y toda muestra pasa por el normalizador antes de actualizar la ubicacion. Falta la prueba fisica de recorrido Android.
+Estado: prueba fisica Android aprobada el 2026-07-15. El marcador siguio el dispositivo antes de iniciar, durante tracking y durante pausa; el recorrido previo a Play no se registro, la camara conservo el zoom manual, salir de la vista limpio el watcher y una sesion nueva inicio desde cero con su propia bandera. Detener guardo la ruta finalizada, limpio la sesion visible y el historial hidrato posteriormente la misma geometria. El escenario con GPS apagado no produjo estados rotos; la denegacion manual del permiso se difiere a la matriz del punto 11.
 
-### 5. Centralizar ingesta atomica y maquina de estados
+Hallazgos de campo asignados a etapas posteriores: al reanudar se conecto la ubicacion actual con el ultimo punto anterior a la pausa y se incorporaron 77 m en dos segundos activos, comportamiento que debe resolverse con segmentos en el punto 6. El valor del cronometro se partio en dos lineas por falta de ancho, ajuste visual correspondiente al punto 7.
+
+### 5. Centralizar ingesta atomica y maquina de estados (completado)
 
 - Un unico comando para aceptar cada muestra valida.
 - Transiciones start, pause, resume, stop y restore invariantes.
@@ -106,7 +110,9 @@ Estado: `useTrackingSession` conserva el watcher unico, `trackingStore` conserva
 
 Criterio de salida: todas las fuentes de ubicacion usan la misma entrada al store.
 
-### 6. Consolidar ruta, segmentos y metricas
+Estado: `acceptTrackingLocation` es la unica entrada de coordenadas GPS canonicas al store y actualiza `currentLocation`, estado de disponibilidad y ruta elegible en una sola escritura. `startTrackingSession`, `pauseTrackingSession`, `resumeTrackingSession`, `stopTrackingSession` y `restoreTrackingSession` aplican parches atomicos y rechazan transiciones invalidas sin modificar el estado. La logica pura vive en `store/trackingSession.logic.js`; el hook paralelo `useTrackingRoute`, los setters directos y las mutaciones parciales fueron eliminados. Lectura inicial y watcher convergen en la misma ingesta; restauracion usa su comando de frontera normalizada.
+
+### 6. Consolidar ruta, segmentos y metricas (implementado; prueba fisica Android pendiente)
 
 - Separar segmentos al pausar y reanudar.
 - Evitar lineas falsas entre puntos no continuos.
@@ -114,6 +120,10 @@ Criterio de salida: todas las fuentes de ubicacion usan la misma entrada al stor
 - Mantener bandera de salida y polyline coherentes.
 
 Criterio de salida: ruta y metricas verificadas con recorridos controlados.
+
+Estado: `routeSegments` reemplaza la lista plana como unica geometria canonica en `trackingStore`. Iniciar abre el primer segmento, pausar lo cierra, las muestras pausadas solo mueven el marcador y reanudar abre un segmento desde la ubicacion actual. Distancia, velocidad actual y maxima se actualizan incrementalmente dentro del comando atomico de ingesta; el reloj solo actualiza duracion, promedio, calorias y vencimiento de velocidad. Mapa activo, historial y previews renderizan cada segmento por separado, por lo que no dibujan ni contabilizan el desplazamiento durante la pausa.
+
+Persistencia local de sesion y rutas usa formato version 2 con limites de segmento. Los datos version 1 se normalizan como un unico segmento y permanecen legibles. La validacion automatizada cubrio 61 aserciones de transiciones, metricas, compatibilidad, guardado, hidratacion y borrado; TypeScript, parseo de 243 archivos, Expo Doctor 18/18 y bundle Android de 1278 modulos finalizaron correctamente. Falta repetir en dispositivo el recorrido controlado pausa-movimiento-reanudacion para aprobar el criterio fisico.
 
 ### 7. Estabilizar camara, marcador y render del mapa
 

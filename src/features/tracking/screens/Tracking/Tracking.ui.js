@@ -25,7 +25,7 @@ export default function TrackingView({
   onStopTracking,
   onToggleLivePrivacy,
   onToggleMapType,
-  routeCoordinates,
+  routeSegments,
   showStop,
   startFlag,
   statsContainerStyle,
@@ -46,7 +46,7 @@ export default function TrackingView({
         liveSkaters={liveSkaters}
         mapRef={mapRef}
         mapType={mapType}
-        routeCoordinates={routeCoordinates}
+        routeSegments={routeSegments}
         startFlag={startFlag}
         theme={theme}
         userCoordinate={userCoordinate}

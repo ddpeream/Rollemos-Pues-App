@@ -1,28 +1,12 @@
 import { supabase } from '../../../config/supabase';
+import {
+  normalizeTrackingLiveCoordinate,
+  normalizeTrackingLiveSkater,
+} from '../normalizers/trackingLive.normalizer';
 
 const LIVE_SELECT = 'user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( * )';
 
-export const normalizeTrackingLiveSkater = (record) => {
-  if (!record?.user_id || record.lat == null || record.lng == null) return null;
-
-  const latitude = Number(record.lat);
-  const longitude = Number(record.lng);
-
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-
-  return {
-    coordinate: {
-      latitude,
-      longitude,
-    },
-    heading: Number.isFinite(Number(record.heading)) ? Number(record.heading) : 0,
-    isActive: !!record.is_active,
-    speed: Number.isFinite(Number(record.speed)) ? Number(record.speed) : null,
-    updatedAt: record.updated_at,
-    user: record.usuarios || null,
-    userId: record.user_id,
-  };
-};
+export { normalizeTrackingLiveSkater };
 
 export const upsertTrackingLive = async ({
   coordinate,
@@ -31,16 +15,22 @@ export const upsertTrackingLive = async ({
   speed = null,
   userId,
 }) => {
-  if (!userId || coordinate?.latitude == null || coordinate?.longitude == null) {
+  const normalizedCoordinate = normalizeTrackingLiveCoordinate({
+    ...coordinate,
+    heading,
+    speed,
+  }, coordinate?.timestamp || Date.now());
+
+  if (!userId || !normalizedCoordinate) {
     return { data: null, error: 'missing_tracking_live_data', ok: false };
   }
 
   const payload = {
-    heading,
+    heading: normalizedCoordinate.heading,
     is_active: isActive,
-    lat: coordinate.latitude,
-    lng: coordinate.longitude,
-    speed,
+    lat: normalizedCoordinate.latitude,
+    lng: normalizedCoordinate.longitude,
+    speed: normalizedCoordinate.speed,
     updated_at: new Date().toISOString(),
     user_id: userId,
   };

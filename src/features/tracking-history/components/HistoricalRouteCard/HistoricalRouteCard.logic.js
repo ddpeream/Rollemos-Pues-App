@@ -9,8 +9,8 @@ import {
 } from '../../../tracking/utils/format.utils';
 import {
   createRoutePreviewSegments,
-  getRoutePreviewCoordinates,
-  normalizeRoutePreviewPoints,
+  getRoutePreviewCoordinateSegments,
+  normalizeRoutePreviewPointSegments,
 } from '../../utils/routePreview.utils';
 import { createStyles } from './historicalRouteCard.style';
 import HistoricalRouteCardView from './HistoricalRouteCard.ui';
@@ -36,13 +36,13 @@ export default function HistoricalRouteCard({
     });
   }, [copy.unknownDate, route?.createdAt, route?.endedAt]);
 
-  const previewPoints = useMemo(() => (
-    normalizeRoutePreviewPoints(getRoutePreviewCoordinates(route))
+  const previewPointSegments = useMemo(() => (
+    normalizeRoutePreviewPointSegments(getRoutePreviewCoordinateSegments(route))
   ), [route]);
-
+  const previewPoints = useMemo(() => previewPointSegments.flat(), [previewPointSegments]);
   const previewSegments = useMemo(() => (
-    createRoutePreviewSegments(previewPoints)
-  ), [previewPoints]);
+    createRoutePreviewSegments(previewPointSegments)
+  ), [previewPointSegments]);
 
   return (
     <HistoricalRouteCardView

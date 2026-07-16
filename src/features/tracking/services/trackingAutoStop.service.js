@@ -4,21 +4,20 @@ import {
   TRACKING_AUTO_STOP_REASON,
   TRACKING_STATUS,
 } from '../constants/tracking.constants';
-
-const getLastRouteCoordinate = (routeCoordinates) => {
-  if (!Array.isArray(routeCoordinates) || routeCoordinates.length === 0) return null;
-  return routeCoordinates[routeCoordinates.length - 1];
-};
+import {
+  closeActiveRouteSegment,
+  getLastRouteCoordinate,
+} from '../store/trackingRoute.logic';
 
 const getLastActivityAt = (session) => {
-  const lastRouteCoordinate = getLastRouteCoordinate(session?.routeCoordinates);
+  const lastRouteCoordinate = getLastRouteCoordinate(session?.routeSegments);
 
   return (
-    session?.currentLocation?.timestamp ||
-    lastRouteCoordinate?.timestamp ||
-    session?.updatedAt ||
-    session?.startedAt ||
-    null
+    session?.currentLocation?.timestamp
+    || lastRouteCoordinate?.timestamp
+    || session?.updatedAt
+    || session?.startedAt
+    || null
   );
 };
 
@@ -36,7 +35,7 @@ export const getTrackingAutoStopDecision = ({
     return createDecision(TRACKING_AUTO_STOP_ACTION.NONE);
   }
 
-  if (!session.startedAt || !Array.isArray(session.routeCoordinates)) {
+  if (!session.startedAt || !Array.isArray(session.routeSegments)) {
     return createDecision(
       TRACKING_AUTO_STOP_ACTION.CLEAN_SESSION,
       TRACKING_AUTO_STOP_REASON.BROKEN_SESSION,
@@ -84,7 +83,12 @@ export const createAutoStopEvent = (decision) => ({
 
 export const createAutoPausedSession = (session, now = Date.now()) => ({
   ...session,
+  metrics: {
+    ...session.metrics,
+    speed: 0,
+  },
   pausedAt: session.pausedAt || now,
+  routeSegments: closeActiveRouteSegment(session.routeSegments, now),
   status: TRACKING_STATUS.PAUSED,
   updatedAt: now,
 });
