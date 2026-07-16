@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import TrackingControls from '../../components/TrackingControls/TrackingControls.logic';
@@ -11,6 +11,7 @@ import { styles } from './tracking.style';
 
 export default function TrackingView({
   buttonConfig,
+  currentUserLabel,
   isDark,
   isLivePrivate,
   isMainActionLoading,
@@ -39,6 +40,18 @@ export default function TrackingView({
       style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
     >
       <StatusBar barStyle="light-content" />
+
+      {currentUserLabel ? (
+        <Text
+          style={[
+            styles.userLabel,
+            statsContainerStyle,
+            { color: theme.colors.tracking.statsTextPrimary },
+          ]}
+        >
+          {currentUserLabel}
+        </Text>
+      ) : null}
 
       <TrackingMap
         isDark={isDark}

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 
 import { APP_ROUTES } from '../../../../navigation/navigation.constants';
 import { useTheme } from '../../../../hooks/useTheme';
+import { useUserStore } from '../../../users';
 import { TRACKING_FOCUS_DELTA, TRACKING_STATUS } from '../../constants/tracking.constants';
 import { useTrackingLiveSkaters } from '../../hooks/useTrackingLiveSkaters';
 import { useTrackingMetrics } from '../../hooks/useTrackingMetrics';
@@ -22,6 +23,9 @@ export default function Tracking({ navigation }) {
   const mapRef = useRef(null);
   const [mapType, setMapType] = useState(Platform.OS === 'android' ? 'standard' : 'hybrid');
   const { isDark, theme } = useTheme();
+  const currentUserLabel = useUserStore(
+    (state) => state.currentUser?.nombre || state.currentUser?.email || '',
+  );
   const {
     currentLocation,
     isPausing,
@@ -122,6 +126,7 @@ export default function Tracking({ navigation }) {
   return (
     <TrackingView
       buttonConfig={buttonConfig[status]}
+      currentUserLabel={currentUserLabel}
       isDark={isDark}
       isLivePrivate={isLivePrivate}
       isMainActionLoading={isStarting || isPausing || isResuming}
