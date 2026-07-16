@@ -11,5 +11,3 @@ export const TRACKING_HISTORY_MAP_EDGE_PADDING = {
   right: 48,
   top: 120,
 };
-
-export const TRACKING_HISTORY_MAP_FIT_DELAY_MS = 400;

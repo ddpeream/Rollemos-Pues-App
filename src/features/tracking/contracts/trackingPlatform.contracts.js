@@ -1,5 +1,6 @@
 // @ts-check
 
+/** @typedef {import('./tracking.contracts').TrackingCoordinate} TrackingCoordinate */
 /** @typedef {import('./tracking.contracts').TrackingLocationPermission} TrackingLocationPermission */
 /** @typedef {import('./tracking.contracts').TrackingLocationSample} TrackingLocationSample */
 
@@ -58,6 +59,27 @@
 /**
  * @typedef {Object} TrackingMapController
  * @property {(region: TrackingMapRegion, durationMs?: number) => boolean} animateToRegion
+ * @property {(coordinates: TrackingCoordinate[], options?: TrackingMapFitOptions) => boolean} fitToCoordinates
+ */
+
+/**
+ * @typedef {Object} TrackingMapEdgePadding
+ * @property {number} bottom
+ * @property {number} left
+ * @property {number} right
+ * @property {number} top
+ */
+
+/**
+ * @typedef {Object} TrackingMapFitOptions
+ * @property {boolean} [animated]
+ * @property {TrackingMapEdgePadding} [edgePadding]
+ */
+
+/**
+ * @typedef {Object} TrackingMarkerController
+ * @property {(coordinate: TrackingCoordinate, durationMs?: number) => boolean} animateToCoordinate
+ * @property {(coordinate: TrackingCoordinate) => boolean} setCoordinate
  */
 
 /**

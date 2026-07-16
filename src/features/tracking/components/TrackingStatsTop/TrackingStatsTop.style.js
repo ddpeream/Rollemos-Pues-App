@@ -20,21 +20,30 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   item: {
-    flex: 1,
+    flex: trackingTokens.statsTop.itemFlex,
+    minWidth: 0,
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
+  durationItem: {
+    flex: trackingTokens.statsTop.durationItemFlex,
+  },
   value: {
+    width: '100%',
     fontSize: typography.fontSize.lg + 2,
     fontWeight: typography.fontWeight.bold,
+    fontVariant: ['tabular-nums'],
     letterSpacing: typography.letterSpacing.none,
+    textAlign: 'center',
   },
   label: {
+    width: '100%',
     fontSize: typography.fontSize.xs - 1,
     fontWeight: typography.fontWeight.medium,
     marginTop: spacing.xs / 2,
     textTransform: 'uppercase',
     letterSpacing: typography.letterSpacing.none,
+    textAlign: 'center',
   },
   divider: {
     width: sizes.tracking.statsDividerWidth,

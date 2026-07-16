@@ -125,7 +125,7 @@ Estado: `routeSegments` reemplaza la lista plana como unica geometria canonica e
 
 Persistencia local de sesion y rutas usa formato version 2 con limites de segmento. Los datos version 1 se normalizan como un unico segmento y permanecen legibles. La validacion automatizada cubrio 61 aserciones de transiciones, metricas, compatibilidad, guardado, hidratacion y borrado; TypeScript, parseo de 243 archivos, Expo Doctor 18/18 y bundle Android de 1278 modulos finalizaron correctamente. Falta repetir en dispositivo el recorrido controlado pausa-movimiento-reanudacion para aprobar el criterio fisico.
 
-### 7. Estabilizar camara, marcador y render del mapa
+### 7. Estabilizar camara, marcador y render del mapa (implementado; prueba fisica Android pendiente)
 
 - Camara no controlada durante navegacion manual.
 - Centrado solo por accion explicita.
@@ -133,6 +133,12 @@ Persistencia local de sesion y rutas usa formato version 2 con limites de segmen
 - Capas de ruta local, historica y live claramente separadas.
 
 Criterio de salida: actualizaciones GPS no alteran el zoom ni la posicion elegida por el usuario.
+
+Estado: el mapa activo permanece no controlado mediante `initialRegion`; no recibe `region` y ninguna muestra GPS mueve su camara. Iniciar, pausar y reanudar tampoco centran el mapa: el unico movimiento programatico activo sale del boton de centrado. El historial encuadra una ruta una sola vez despues de `onMapReady`, usando el mismo contrato de camara en lugar de acceder directamente a `react-native-maps`.
+
+El patin conserva `trackingStore.currentLocation` como unica coordenada canonica y usa `AnimatedRegion` solamente como interpolacion visual mediante un adaptador de marcador. Mapa, polylines y marcadores fueron memorizados; segmentos locales y paths live reutilizan una primitiva visual con ordenes de capa definidos en el tema. El cronometro reserva un ancho estable, usa digitos tabulares y no permite salto de linea.
+
+TypeScript, parseo de 245 archivos, Expo Doctor 18/18 y bundle Android de 1279 modulos finalizaron correctamente. Falta comprobar en dispositivo que el zoom manual sobreviva varias muestras GPS, que el patin se anime sin parpadeos y que una ruta historica solo se encuadre al abrirla.
 
 ### 8. Consolidar persistencia local y restauracion
 

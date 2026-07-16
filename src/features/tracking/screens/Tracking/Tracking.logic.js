@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { APP_ROUTES } from '../../../../navigation/navigation.constants';
@@ -20,7 +20,6 @@ import TrackingView from './Tracking.ui';
 
 export default function Tracking({ navigation }) {
   const mapRef = useRef(null);
-  const shouldCenterOnStartRef = useRef(false);
   const [mapType, setMapType] = useState(Platform.OS === 'android' ? 'standard' : 'hybrid');
   const { isDark, theme } = useTheme();
   const {
@@ -50,8 +49,13 @@ export default function Tracking({ navigation }) {
       : null
   ), [currentLocation]);
   const centerMapOnUser = useCallback(() => (
-    focusRegion ? mapController.animateToRegion(focusRegion, 500) : false
-  ), [focusRegion, mapController]);
+    focusRegion
+      ? mapController.animateToRegion(
+        focusRegion,
+        theme.tracking.map.centerAnimationDurationMs,
+      )
+      : false
+  ), [focusRegion, mapController, theme.tracking.map.centerAnimationDurationMs]);
 
   useTrackingMetrics();
   const { livePaths, liveSkaters } = useTrackingLiveSkaters();
@@ -97,8 +101,7 @@ export default function Tracking({ navigation }) {
 
   const handleMainButton = async () => {
     if (status === TRACKING_STATUS.IDLE) {
-      const didStart = await startTracking();
-      shouldCenterOnStartRef.current = didStart;
+      await startTracking();
       return;
     }
 
@@ -115,13 +118,6 @@ export default function Tracking({ navigation }) {
   const handleStopTracking = async () => {
     await stopTracking();
   };
-
-  useEffect(() => {
-    if (status === TRACKING_STATUS.TRACKING && shouldCenterOnStartRef.current && currentLocation) {
-      shouldCenterOnStartRef.current = false;
-      centerMapOnUser();
-    }
-  }, [centerMapOnUser, currentLocation, status]);
 
   return (
     <TrackingView
