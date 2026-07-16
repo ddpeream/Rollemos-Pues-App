@@ -1,4 +1,4 @@
-import { trackingLocationProvider } from '../platform/location';
+import { expoLocationProvider } from '../platform/location/expoLocation.provider';
 
 const LOCATION_WATCH_OPTIONS = {
   accuracy: 'navigation',
@@ -15,26 +15,18 @@ const CURRENT_POSITION_OPTIONS = {
   accuracy: 'highest',
 };
 
-export const getTrackingForegroundPermission = () => (
-  trackingLocationProvider.getForegroundPermission()
-);
-
-export const hasTrackingLocationServicesEnabled = () => (
-  trackingLocationProvider.hasLocationServicesEnabled()
-);
-
 export const requestTrackingLocationPermission = () => (
-  trackingLocationProvider.requestForegroundPermission()
+  expoLocationProvider.requestForegroundPermission()
 );
 
 export const getLastKnownTrackingPosition = () => (
-  trackingLocationProvider.getLastKnownPosition(LAST_KNOWN_OPTIONS)
+  expoLocationProvider.getLastKnownPosition(LAST_KNOWN_OPTIONS)
 );
 
 export const getCurrentTrackingPosition = () => (
-  trackingLocationProvider.getCurrentPosition(CURRENT_POSITION_OPTIONS)
+  expoLocationProvider.getCurrentPosition(CURRENT_POSITION_OPTIONS)
 );
 
 export const watchTrackingPosition = (onPosition, onError) => (
-  trackingLocationProvider.watchPosition(LOCATION_WATCH_OPTIONS, onPosition, onError)
+  expoLocationProvider.watchPosition(LOCATION_WATCH_OPTIONS, onPosition, onError)
 );

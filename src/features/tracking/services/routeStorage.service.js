@@ -6,10 +6,6 @@ import {
 } from '../constants/tracking.constants';
 import { getCaloriesEstimate } from '../utils/calories.utils';
 import { getRouteDistance } from '../utils/distance.utils';
-import {
-  normalizeStoredRouteIndex,
-  normalizeStoredTrackingCoordinates,
-} from '../normalizers/storage.normalizer';
 import { getAverageSpeedKmh, getMaxSpeedKmh } from '../utils/speed.utils';
 
 const getRouteChunkKey = (routeId, chunkIndex) => (
@@ -65,17 +61,14 @@ const loadRouteIndex = async () => {
 
   try {
     const parsedIndex = JSON.parse(rawIndex);
-    return normalizeStoredRouteIndex(parsedIndex);
+    return Array.isArray(parsedIndex) ? parsedIndex : [];
   } catch (error) {
     return [];
   }
 };
 
 const saveRouteIndex = (routesIndex) => (
-  AsyncStorage.setItem(
-    TRACKING_ROUTE_STORAGE.INDEX_KEY,
-    JSON.stringify(normalizeStoredRouteIndex(routesIndex)),
-  )
+  AsyncStorage.setItem(TRACKING_ROUTE_STORAGE.INDEX_KEY, JSON.stringify(routesIndex))
 );
 
 export const loadSavedRoutes = async () => loadRouteIndex();
@@ -95,7 +88,7 @@ export const hydrateSavedRoute = async (routeId) => {
 
     try {
       const parsedChunk = JSON.parse(rawChunk);
-      return normalizeStoredTrackingCoordinates(parsedChunk);
+      return Array.isArray(parsedChunk) ? parsedChunk : [];
     } catch (error) {
       return [];
     }
@@ -130,7 +123,7 @@ export const saveCompletedRoute = async ({
   startedAt,
   totalPausedMs = 0,
 }) => {
-  const safeRouteCoordinates = normalizeStoredTrackingCoordinates(routeCoordinates);
+  const safeRouteCoordinates = Array.isArray(routeCoordinates) ? routeCoordinates : [];
   const pointsCount = safeRouteCoordinates.length;
   const distance = getRouteDistance(safeRouteCoordinates);
   const duration = Number.isFinite(metrics.duration) && metrics.duration > 0

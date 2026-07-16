@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import {
   TRACKING_AUTO_STOP,
   TRACKING_AUTO_STOP_ACTION,
   TRACKING_ERROR,
+  TRACKING_FOCUS_DELTA,
   TRACKING_LOCATION_FILTER,
   TRACKING_LOCATION_STATUS,
   TRACKING_STATUS,
@@ -12,8 +13,6 @@ import { processTrackingLocationPosition } from '../normalizers/location.normali
 import {
   getCurrentTrackingPosition,
   getLastKnownTrackingPosition,
-  getTrackingForegroundPermission,
-  hasTrackingLocationServicesEnabled,
   requestTrackingLocationPermission,
   watchTrackingPosition,
 } from '../services/location.service';
@@ -35,34 +34,22 @@ export function useTrackingSession() {
   // Otros hooks deben consumir currentLocation desde trackingStore.
   const subscriptionRef = useRef(null);
   const watcherGenerationRef = useRef(0);
-  const watcherStartPromiseRef = useRef(null);
-  const isMountedRef = useRef(true);
   const hasTriedRestoreRef = useRef(false);
   const hasTriedVisibleLocationRef = useRef(false);
 
   const autoStopEvent = useTrackingStore((state) => state.autoStopEvent);
-  const canAskLocationPermissionAgain = useTrackingStore(
-    (state) => state.canAskLocationPermissionAgain,
-  );
   const currentLocation = useTrackingStore((state) => state.currentLocation);
   const error = useTrackingStore((state) => state.error);
   const loadingStates = useTrackingStore((state) => state.loadingStates);
   const locationStatus = useTrackingStore((state) => state.locationStatus);
   const permissionStatus = useTrackingStore((state) => state.permissionStatus);
-  const locationServicesEnabled = useTrackingStore((state) => state.locationServicesEnabled);
   const routeCoordinatesCount = useTrackingStore((state) => state.routeCoordinates.length);
   const status = useTrackingStore((state) => state.status);
   const setCurrentLocation = useTrackingStore((state) => state.setCurrentLocation);
   const setError = useTrackingStore((state) => state.setError);
   const setLoadingState = useTrackingStore((state) => state.setLoadingState);
   const setLocationStatus = useTrackingStore((state) => state.setLocationStatus);
-  const resetLoadingStates = useTrackingStore((state) => state.resetLoadingStates);
-  const setLocationPermissionDetails = useTrackingStore(
-    (state) => state.setLocationPermissionDetails,
-  );
-  const setLocationServicesEnabled = useTrackingStore(
-    (state) => state.setLocationServicesEnabled,
-  );
+  const setPermissionStatus = useTrackingStore((state) => state.setPermissionStatus);
   const setStatus = useTrackingStore((state) => state.setStatus);
   const pauseRouteSession = useTrackingStore((state) => state.pauseRouteSession);
   const resetRouteSession = useTrackingStore((state) => state.resetRouteSession);
@@ -76,12 +63,9 @@ export function useTrackingSession() {
     watcherGenerationRef.current += 1;
     subscriptionRef.current?.remove();
     subscriptionRef.current = null;
-    watcherStartPromiseRef.current = null;
   }, []);
 
   const setPosition = useCallback((position, options = {}) => {
-    if (!isMountedRef.current) return null;
-
     const { coordinate, error: locationError } = processTrackingLocationPosition({
       ...options,
       position,
@@ -89,12 +73,10 @@ export function useTrackingSession() {
     });
 
     if (!coordinate) {
-      setError(locationError);
-
       if (!useTrackingStore.getState().currentLocation) {
         setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
+        setError(locationError);
       }
-
       return null;
     }
 
@@ -105,34 +87,13 @@ export function useTrackingSession() {
   }, [setCurrentLocation, setError, setLocationStatus]);
 
   const ensurePermission = useCallback(async () => {
-    if (!isMountedRef.current) return false;
-
-    setLocationStatus(TRACKING_LOCATION_STATUS.CHECKING_AVAILABILITY);
+    setLocationStatus(TRACKING_LOCATION_STATUS.REQUESTING_PERMISSION);
 
     try {
-      const servicesEnabled = await hasTrackingLocationServicesEnabled();
-      if (!isMountedRef.current) return false;
+      const nextPermissionStatus = await requestTrackingLocationPermission();
+      setPermissionStatus(nextPermissionStatus);
 
-      setLocationServicesEnabled(servicesEnabled);
-
-      if (!servicesEnabled) {
-        setLocationStatus(TRACKING_LOCATION_STATUS.UNAVAILABLE);
-        setError(TRACKING_ERROR.LOCATION_SERVICES_DISABLED);
-        return false;
-      }
-
-      let permission = await getTrackingForegroundPermission();
-      if (!isMountedRef.current) return false;
-
-      if (!permission.granted && permission.canAskAgain) {
-        setLocationStatus(TRACKING_LOCATION_STATUS.REQUESTING_PERMISSION);
-        permission = await requestTrackingLocationPermission();
-        if (!isMountedRef.current) return false;
-      }
-
-      setLocationPermissionDetails(permission);
-
-      if (!permission.granted) {
+      if (nextPermissionStatus !== 'granted') {
         setLocationStatus(TRACKING_LOCATION_STATUS.UNAVAILABLE);
         setError(TRACKING_ERROR.LOCATION_PERMISSION_DENIED);
         return false;
@@ -141,26 +102,17 @@ export function useTrackingSession() {
       setError(null);
       return true;
     } catch {
-      if (!isMountedRef.current) return false;
-
       setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
       setError(TRACKING_ERROR.LOCATION_PERMISSION_FAILED);
       return false;
     }
-  }, [
-    setError,
-    setLocationPermissionDetails,
-    setLocationServicesEnabled,
-    setLocationStatus,
-  ]);
+  }, [setError, setLocationStatus, setPermissionStatus]);
 
   const hydrateInitialLocation = useCallback(async () => {
     let hydratedLocation = null;
 
     try {
       const lastKnownPosition = await getLastKnownTrackingPosition();
-      if (!isMountedRef.current) return null;
-
       hydratedLocation = setPosition(lastKnownPosition, {
         allowStale: true,
         maxAccuracyMeters: TRACKING_LOCATION_FILTER.MAX_INITIAL_ACCURACY_METERS,
@@ -171,8 +123,6 @@ export function useTrackingSession() {
 
     try {
       const currentPosition = await getCurrentTrackingPosition();
-      if (!isMountedRef.current) return null;
-
       hydratedLocation = setPosition(currentPosition, { validateJump: false }) || hydratedLocation;
     } catch (locationError) {
       if (!hydratedLocation) throw locationError;
@@ -182,70 +132,30 @@ export function useTrackingSession() {
   }, [setPosition]);
 
   const startWatcher = useCallback(async () => {
-    if (!isMountedRef.current) return false;
-    if (subscriptionRef.current) return true;
-    if (watcherStartPromiseRef.current) return watcherStartPromiseRef.current;
-
-    watcherGenerationRef.current += 1;
+    stopWatcher();
     const watcherGeneration = watcherGenerationRef.current;
-
-    const startPromise = (async () => {
-      try {
-        const subscription = await watchTrackingPosition(
-          (position) => {
-            if (
-              isMountedRef.current
-              && watcherGeneration === watcherGenerationRef.current
-            ) {
-              setPosition(position);
-            }
-          },
-          () => {
-            if (
-              !isMountedRef.current
-              || watcherGeneration !== watcherGenerationRef.current
-            ) {
-              return;
-            }
-
-            stopWatcher();
-            setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
-            setError(TRACKING_ERROR.LOCATION_WATCH_FAILED);
-          },
-        );
-
-        if (
-          !isMountedRef.current
-          || watcherGeneration !== watcherGenerationRef.current
-        ) {
-          subscription.remove();
-          return false;
+    const subscription = await watchTrackingPosition(
+      (position) => {
+        if (watcherGeneration === watcherGenerationRef.current) {
+          setPosition(position);
         }
+      },
+      () => {
+        if (watcherGeneration !== watcherGenerationRef.current) return;
+        setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
+        setError(TRACKING_ERROR.LOCATION_WATCH_FAILED);
+      },
+    );
 
-        subscriptionRef.current = subscription;
-        return true;
-      } catch {
-        if (
-          isMountedRef.current
-          && watcherGeneration === watcherGenerationRef.current
-        ) {
-          setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
-          setError(TRACKING_ERROR.LOCATION_WATCH_FAILED);
-        }
-
-        return false;
-      }
-    })();
-
-    watcherStartPromiseRef.current = startPromise;
-    const didStart = await startPromise;
-
-    if (watcherStartPromiseRef.current === startPromise) {
-      watcherStartPromiseRef.current = null;
+    if (watcherGeneration !== watcherGenerationRef.current) {
+      subscription.remove();
+      return false;
     }
 
-    return didStart;
+    subscriptionRef.current = subscription;
+    return true;
   }, [setError, setLocationStatus, setPosition, stopWatcher]);
+
   const persistActiveSession = useCallback(async () => {
     const {
       currentLocation: snapshotCurrentLocation,
@@ -302,7 +212,7 @@ export function useTrackingSession() {
     if (hasTriedRestoreRef.current) return false;
     hasTriedRestoreRef.current = true;
 
-    if (useTrackingStore.getState().status !== TRACKING_STATUS.IDLE) return false;
+    if (status !== TRACKING_STATUS.IDLE) return false;
 
     try {
       const session = await loadActiveTrackingSession();
@@ -327,18 +237,33 @@ export function useTrackingSession() {
 
       hydrateRouteSession(session);
 
+      if (session.status === TRACKING_STATUS.TRACKING) {
+        const hasPermission = await ensurePermission();
+
+        if (!hasPermission) {
+          hydrateRouteSession({
+            ...session,
+            pausedAt: Date.now(),
+            status: TRACKING_STATUS.PAUSED,
+          });
+          return true;
+        }
+
+        await startWatcher();
+      }
 
       return true;
     } catch (trackingError) {
       setError(trackingError?.message || TRACKING_ERROR.RESTORE_FAILED);
       return false;
     }
-  }, [hydrateRouteSession, setAutoStopEvent, setError]);
+  }, [ensurePermission, hydrateRouteSession, setAutoStopEvent, setError, startWatcher, status]);
 
   const applyAutoStopDecision = useCallback(async (autoStopDecision) => {
     if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.NONE) return false;
 
     if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.CLEAN_SESSION) {
+      stopWatcher();
       await clearActiveTrackingSession();
       resetRouteSession();
       setStatus(TRACKING_STATUS.IDLE);
@@ -347,6 +272,7 @@ export function useTrackingSession() {
     }
 
     if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.AUTO_PAUSE) {
+      stopWatcher();
       pauseRouteSession();
       setStatus(TRACKING_STATUS.PAUSED);
       setAutoStopEvent(createAutoStopEvent(autoStopDecision));
@@ -361,62 +287,35 @@ export function useTrackingSession() {
     resetRouteSession,
     setAutoStopEvent,
     setStatus,
+    stopWatcher,
   ]);
 
   const hydrateVisibleLocation = useCallback(async () => {
-    if (hasTriedVisibleLocationRef.current) {
-      return Boolean(subscriptionRef.current);
-    }
+    if (hasTriedVisibleLocationRef.current) return false;
+    if (status !== TRACKING_STATUS.IDLE) return false;
 
     hasTriedVisibleLocationRef.current = true;
 
     try {
       const hasPermission = await ensurePermission();
-      if (!hasPermission || !isMountedRef.current) return false;
+      if (!hasPermission) return false;
 
       await hydrateInitialLocation();
-      if (!isMountedRef.current) return false;
-
-      return startWatcher();
+      return true;
     } catch (trackingError) {
-      if (!isMountedRef.current) return false;
-
       setLocationStatus(TRACKING_LOCATION_STATUS.ERROR);
       setError(trackingError?.message || TRACKING_ERROR.LOCATION_HYDRATE_FAILED);
       return false;
     }
-  }, [
-    ensurePermission,
-    hydrateInitialLocation,
-    setError,
-    setLocationStatus,
-    startWatcher,
-  ]);
+  }, [ensurePermission, hydrateInitialLocation, setError, status]);
 
   const initializeTrackingView = useCallback(async () => {
     const restoredSession = await restoreActiveSession();
-    if (!isMountedRef.current) return;
+    if (restoredSession) return;
 
-    const isLocationActive = await hydrateVisibleLocation();
-    if (
-      isLocationActive
-      || !restoredSession
-      || !isMountedRef.current
-      || useTrackingStore.getState().status !== TRACKING_STATUS.TRACKING
-    ) {
-      return;
-    }
+    await hydrateVisibleLocation();
+  }, [hydrateVisibleLocation, restoreActiveSession]);
 
-    pauseRouteSession();
-    setStatus(TRACKING_STATUS.PAUSED);
-    await persistActiveSession();
-  }, [
-    hydrateVisibleLocation,
-    pauseRouteSession,
-    persistActiveSession,
-    restoreActiveSession,
-    setStatus,
-  ]);
   const saveCurrentRoute = useCallback(async () => {
     const {
       metrics,
@@ -441,48 +340,28 @@ export function useTrackingSession() {
   }, [setError]);
 
   const startTracking = useCallback(async () => {
-    if (
-      status !== TRACKING_STATUS.IDLE
-      || useTrackingStore.getState().loadingStates.isStarting
-    ) {
-      return false;
-    }
+    if (status !== TRACKING_STATUS.IDLE) return false;
 
     setLoadingState('isStarting', true);
 
     try {
       const hasPermission = await ensurePermission();
-      if (!hasPermission || !isMountedRef.current) return false;
-
-      const initialLocation = (
-        await hydrateInitialLocation()
-        || useTrackingStore.getState().currentLocation
-      );
-
-      if (!initialLocation || !isMountedRef.current) {
-        setError(TRACKING_ERROR.LOCATION_HYDRATE_FAILED);
-        return false;
-      }
-
-      const didStartWatcher = await startWatcher();
-      if (!didStartWatcher || !isMountedRef.current) return false;
+      if (!hasPermission) return false;
 
       clearAutoStopEvent();
+      const initialLocation = await hydrateInitialLocation();
       startRouteSession(initialLocation);
+      await startWatcher();
       setStatus(TRACKING_STATUS.TRACKING);
       await persistActiveSession();
       return true;
     } catch (trackingError) {
-      if (isMountedRef.current) {
-        setError(trackingError?.message || TRACKING_ERROR.START_FAILED);
-        setStatus(TRACKING_STATUS.IDLE);
-      }
-
+      setError(trackingError?.message || TRACKING_ERROR.START_FAILED);
+      stopWatcher();
+      setStatus(TRACKING_STATUS.IDLE);
       return false;
     } finally {
-      if (isMountedRef.current) {
-        setLoadingState('isStarting', false);
-      }
+      setLoadingState('isStarting', false);
     }
   }, [
     clearAutoStopEvent,
@@ -492,26 +371,28 @@ export function useTrackingSession() {
     setError,
     setLoadingState,
     setStatus,
-    startRouteSession,
     startWatcher,
+    startRouteSession,
     status,
+    stopWatcher,
   ]);
+
   const pauseTracking = useCallback(async () => {
     if (status !== TRACKING_STATUS.TRACKING) return false;
 
     setLoadingState('isPausing', true);
 
     try {
+      stopWatcher();
       pauseRouteSession();
       setStatus(TRACKING_STATUS.PAUSED);
       await persistActiveSession();
       return true;
     } finally {
-      if (isMountedRef.current) {
-        setLoadingState('isPausing', false);
-      }
+      setLoadingState('isPausing', false);
     }
-  }, [pauseRouteSession, persistActiveSession, setLoadingState, setStatus, status]);
+  }, [pauseRouteSession, persistActiveSession, setLoadingState, setStatus, status, stopWatcher]);
+
   const resumeTracking = useCallback(async () => {
     if (status !== TRACKING_STATUS.PAUSED) return false;
 
@@ -519,76 +400,54 @@ export function useTrackingSession() {
 
     try {
       const hasPermission = await ensurePermission();
-      if (!hasPermission || !isMountedRef.current) return false;
-
-      const currentPosition = (
-        await hydrateInitialLocation()
-        || useTrackingStore.getState().currentLocation
-      );
-
-      if (!currentPosition || !isMountedRef.current) {
-        setError(TRACKING_ERROR.LOCATION_HYDRATE_FAILED);
-        return false;
-      }
-
-      const didStartWatcher = await startWatcher();
-      if (!didStartWatcher || !isMountedRef.current) return false;
+      if (!hasPermission) return false;
 
       clearAutoStopEvent();
       resumeRouteSession();
+      await hydrateInitialLocation();
+      await startWatcher();
       setStatus(TRACKING_STATUS.TRACKING);
       await persistActiveSession();
       return true;
     } catch (trackingError) {
-      if (isMountedRef.current) {
-        setError(trackingError?.message || TRACKING_ERROR.RESUME_FAILED);
-      }
-
+      setError(trackingError?.message || TRACKING_ERROR.RESUME_FAILED);
       return false;
     } finally {
-      if (isMountedRef.current) {
-        setLoadingState('isResuming', false);
-      }
+      setLoadingState('isResuming', false);
     }
   }, [
-    clearAutoStopEvent,
     ensurePermission,
+    clearAutoStopEvent,
     hydrateInitialLocation,
-    persistActiveSession,
-    resumeRouteSession,
     setError,
     setLoadingState,
     setStatus,
     startWatcher,
+    persistActiveSession,
+    resumeRouteSession,
     status,
   ]);
+
   const stopTracking = useCallback(async () => {
     if (status === TRACKING_STATUS.IDLE) return false;
 
     setLoadingState('isStopping', true);
 
     try {
+      stopWatcher();
       await saveCurrentRoute();
       await clearActiveTrackingSession();
       resetRouteSession();
       setStatus(TRACKING_STATUS.IDLE);
       return true;
     } finally {
-      if (isMountedRef.current) {
-        setLoadingState('isStopping', false);
-      }
+      setLoadingState('isStopping', false);
     }
-  }, [resetRouteSession, saveCurrentRoute, setLoadingState, setStatus, status]);
-  useEffect(() => {
-    isMountedRef.current = true;
-    initializeTrackingView();
+  }, [resetRouteSession, saveCurrentRoute, setLoadingState, setStatus, status, stopWatcher]);
 
-    return () => {
-      isMountedRef.current = false;
-      stopWatcher();
-      resetLoadingStates();
-    };
-  }, [initializeTrackingView, resetLoadingStates, stopWatcher]);
+  useEffect(() => {
+    initializeTrackingView();
+  }, [initializeTrackingView]);
 
   useEffect(() => {
     if (status === TRACKING_STATUS.IDLE) return;
@@ -610,20 +469,36 @@ export function useTrackingSession() {
     return () => clearInterval(interval);
   }, [applyAutoStopDecision, getSessionSnapshot, status]);
 
+  const focusRegion = useMemo(() => {
+    if (!currentLocation) return null;
 
+    return {
+      latitude: currentLocation.latitude,
+      longitude: currentLocation.longitude,
+      ...TRACKING_FOCUS_DELTA,
+    };
+  }, [currentLocation]);
+
+  const centerMapOnUser = useCallback((mapRef) => {
+    if (!focusRegion) return false;
+    mapRef.current?.animateToRegion(focusRegion, 500);
+    return true;
+  }, [focusRegion]);
+
+  useEffect(() => stopWatcher, [stopWatcher]);
 
   return {
     ...loadingStates,
     autoStopEvent,
-    canAskLocationPermissionAgain,
+    centerMapOnUser,
     currentLocation,
     error,
+    focusRegion,
     hasPermission: permissionStatus === 'granted',
     isIdle: status === TRACKING_STATUS.IDLE,
     isPaused: status === TRACKING_STATUS.PAUSED,
     isTracking: status === TRACKING_STATUS.TRACKING,
     locationStatus,
-    locationServicesEnabled,
     pauseTracking,
     permissionStatus,
     resumeTracking,

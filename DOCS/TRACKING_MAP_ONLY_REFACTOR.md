@@ -87,9 +87,7 @@ Estado: Expo Doctor pasa 18/18 y Prebuild regenera Android desde `app.json`. La 
 
 Criterio de salida: dominio compartido sin dependencia directa del proveedor de mapa.
 
-Estado: contratos de dominio y plataforma completos y verificados con @ts-check; Expo Location se selecciona mediante un adaptador, la camara usa un controlador de react-native-maps fuera de la sesion y Expo, almacenamiento y Supabase normalizan sus datos antes de entrar al dominio.
-
-### 4. Fortalecer el pipeline GPS (completado en codigo; validacion fisica Android pendiente)
+### 4. Fortalecer el pipeline GPS (implementado; prueba Android pendiente)
 
 - Permisos, lectura inicial, watcher unico y limpieza.
 - Validacion de precision, timestamp, velocidad y saltos imposibles.
@@ -98,7 +96,7 @@ Estado: contratos de dominio y plataforma completos y verificados con @ts-check;
 
 Criterio de salida: el marcador sigue el dispositivo de forma estable en una prueba real.
 
-Estado: `useTrackingSession` mantiene un solo watcher foreground mientras la vista esta montada y lo limpia de forma segura al desmontar. El marcador recibe ubicacion en reposo, tracking y pausa, mientras `useTrackingRoute` solo registra puntos durante tracking. Permisos, posibilidad de volver a preguntar, disponibilidad de servicios GPS, precision, timestamps, velocidad reportada, velocidad implicita y saltos imposibles se validan antes de actualizar el estado canonico en `trackingStore`. La implementacion y el bundle Android estan verificados; la prueba fisica de recorrido queda como validacion de dispositivo.
+Estado: `useTrackingSession` conserva el watcher unico, `trackingStore` conserva el estado canonico y toda muestra pasa por el normalizador antes de actualizar la ubicacion. Falta la prueba fisica de recorrido Android.
 
 ### 5. Centralizar ingesta atomica y maquina de estados
 

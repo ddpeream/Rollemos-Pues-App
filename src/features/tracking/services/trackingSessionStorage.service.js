@@ -1,7 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { TRACKING_SESSION_STORAGE } from '../constants/tracking.constants';
-import { normalizeStoredTrackingSession } from '../normalizers/storage.normalizer';
+import {
+  TRACKING_SESSION_STORAGE,
+  TRACKING_STATUS,
+} from '../constants/tracking.constants';
+
+const VALID_RESTORABLE_STATUS = new Set([
+  TRACKING_STATUS.TRACKING,
+  TRACKING_STATUS.PAUSED,
+]);
+
+const isRestorableSession = (session) => (
+  session?.storageVersion === TRACKING_SESSION_STORAGE.VERSION &&
+  VALID_RESTORABLE_STATUS.has(session?.status) &&
+  Number.isFinite(session?.startedAt) &&
+  Array.isArray(session?.routeCoordinates)
+);
 
 export const saveActiveTrackingSession = async ({
   currentLocation,
@@ -13,23 +27,23 @@ export const saveActiveTrackingSession = async ({
   status,
   totalPausedMs,
 }) => {
-  const session = normalizeStoredTrackingSession({
+  if (!VALID_RESTORABLE_STATUS.has(status) || !startedAt) {
+    await AsyncStorage.removeItem(TRACKING_SESSION_STORAGE.KEY);
+    return { saved: false };
+  }
+
+  const session = {
     currentLocation,
     metrics,
     pausedAt,
-    routeCoordinates,
+    routeCoordinates: Array.isArray(routeCoordinates) ? routeCoordinates : [],
     startFlag,
     startedAt,
     status,
     storageVersion: TRACKING_SESSION_STORAGE.VERSION,
     totalPausedMs,
     updatedAt: Date.now(),
-  });
-
-  if (!session) {
-    await AsyncStorage.removeItem(TRACKING_SESSION_STORAGE.KEY);
-    return { saved: false };
-  }
+  };
 
   await AsyncStorage.setItem(TRACKING_SESSION_STORAGE.KEY, JSON.stringify(session));
   return { saved: true, session };
@@ -40,7 +54,8 @@ export const loadActiveTrackingSession = async () => {
   if (!rawSession) return null;
 
   try {
-    return normalizeStoredTrackingSession(JSON.parse(rawSession));
+    const session = JSON.parse(rawSession);
+    return isRestorableSession(session) ? session : null;
   } catch (error) {
     return null;
   }
