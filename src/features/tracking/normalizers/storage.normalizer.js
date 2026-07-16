@@ -2,10 +2,12 @@
 
 import {
   TRACKING_METRICS,
-  TRACKING_ROUTE_STORAGE,
-  TRACKING_SESSION_STORAGE,
   TRACKING_STATUS,
 } from '../constants/tracking.constants';
+import {
+  TRACKING_ROUTE_STORAGE,
+  TRACKING_SESSION_STORAGE,
+} from '../constants/trackingStorage.constants';
 import { normalizeTrackingCoordinate } from './location.normalizer';
 
 /** @typedef {import('../contracts/tracking.contracts').StoredTrackingRouteSummary} StoredTrackingRouteSummary */

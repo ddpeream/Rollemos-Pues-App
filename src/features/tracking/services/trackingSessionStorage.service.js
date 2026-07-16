@@ -1,7 +1,15 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { TRACKING_SESSION_STORAGE } from '../constants/tracking.constants';
+import { TRACKING_SESSION_STORAGE } from '../constants/trackingStorage.constants';
 import { normalizeStoredTrackingSession } from '../normalizers/storage.normalizer';
+import { loadActiveTrackingRoute } from './trackingRouteReader.service';
+import {
+  clearActiveTrackingRoute,
+  persistActiveTrackingRoute,
+} from './trackingRouteWriter.service';
+import { prepareTrackingStorage } from './trackingStorageMigration.service';
+import {
+  enqueueTrackingStorageWrite,
+  flushTrackingStorageWrites,
+} from './trackingStorageQueue.service';
 
 export const saveActiveTrackingSession = async ({
   currentLocation,
@@ -25,27 +33,27 @@ export const saveActiveTrackingSession = async ({
     totalPausedMs,
     updatedAt: Date.now(),
   });
+  const database = await prepareTrackingStorage();
 
   if (!session) {
-    await AsyncStorage.removeItem(TRACKING_SESSION_STORAGE.KEY);
+    await enqueueTrackingStorageWrite(() => clearActiveTrackingRoute(database));
     return { saved: false };
   }
 
-  await AsyncStorage.setItem(TRACKING_SESSION_STORAGE.KEY, JSON.stringify(session));
+  await enqueueTrackingStorageWrite(
+    () => persistActiveTrackingRoute(database, session),
+  );
+
   return { saved: true, session };
 };
 
 export const loadActiveTrackingSession = async () => {
-  const rawSession = await AsyncStorage.getItem(TRACKING_SESSION_STORAGE.KEY);
-  if (!rawSession) return null;
-
-  try {
-    return normalizeStoredTrackingSession(JSON.parse(rawSession));
-  } catch (error) {
-    return null;
-  }
+  const database = await prepareTrackingStorage();
+  await flushTrackingStorageWrites();
+  return loadActiveTrackingRoute(database);
 };
 
-export const clearActiveTrackingSession = () => (
-  AsyncStorage.removeItem(TRACKING_SESSION_STORAGE.KEY)
-);
+export const clearActiveTrackingSession = async () => {
+  const database = await prepareTrackingStorage();
+  return enqueueTrackingStorageWrite(() => clearActiveTrackingRoute(database));
+};

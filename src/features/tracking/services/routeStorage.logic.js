@@ -1,7 +1,5 @@
-import {
-  TRACKING_ROUTE_SAVE_CONDITIONS,
-  TRACKING_ROUTE_STORAGE,
-} from '../constants/tracking.constants';
+import { TRACKING_ROUTE_SAVE_CONDITIONS } from '../constants/tracking.constants';
+import { TRACKING_ROUTE_STORAGE } from '../constants/trackingStorage.constants';
 
 const sampleCoordinates = (coordinates, maxPoints) => {
   if (coordinates.length <= maxPoints) return coordinates;
@@ -13,16 +11,6 @@ const sampleCoordinates = (coordinates, maxPoints) => {
   return Array.from({ length: maxPoints }, (_, index) => (
     coordinates[Math.round(index * step)]
   ));
-};
-
-export const chunkRouteCoordinates = (coordinates) => {
-  const chunks = [];
-
-  for (let index = 0; index < coordinates.length; index += TRACKING_ROUTE_STORAGE.CHUNK_SIZE) {
-    chunks.push(coordinates.slice(index, index + TRACKING_ROUTE_STORAGE.CHUNK_SIZE));
-  }
-
-  return chunks;
 };
 
 export const createRoutePreviewCoordinateSegments = (routeSegments) => {

@@ -8,7 +8,8 @@ import {
   TRACKING_LOCATION_STATUS,
   TRACKING_STATUS,
 } from '../constants/tracking.constants';
-import { processTrackingLocationPosition } from '../normalizers/location.normalizer';
+import { useTrackingAppState } from './useTrackingAppState.logic';
+import { useTrackingBackgroundSession } from './useTrackingBackgroundSession.logic';
 import {
   getCurrentTrackingPosition,
   getLastKnownTrackingPosition,
@@ -18,8 +19,8 @@ import {
   watchTrackingPosition,
 } from '../services/location.service';
 import { saveCompletedRoute } from '../services/routeStorage.service';
+import { ingestTrackingLocationPosition } from '../services/trackingLocationIngestion.logic';
 import {
-  createAutoPausedSession,
   createAutoStopEvent,
   getTrackingAutoStopDecision,
 } from '../services/trackingAutoStop.service';
@@ -53,9 +54,7 @@ export function useTrackingSession() {
   const locationServicesEnabled = useTrackingStore((state) => state.locationServicesEnabled);
   const routePointsCount = useTrackingStore((state) => getRoutePointCount(state.routeSegments));
   const status = useTrackingStore((state) => state.status);
-  const acceptTrackingLocation = useTrackingStore((state) => state.acceptTrackingLocation);
   const pauseTrackingSession = useTrackingStore((state) => state.pauseTrackingSession);
-  const rejectTrackingLocation = useTrackingStore((state) => state.rejectTrackingLocation);
   const restoreTrackingSession = useTrackingStore((state) => state.restoreTrackingSession);
   const resumeTrackingSession = useTrackingStore((state) => state.resumeTrackingSession);
   const startTrackingSession = useTrackingStore((state) => state.startTrackingSession);
@@ -82,19 +81,11 @@ export function useTrackingSession() {
   const ingestPosition = useCallback((position, options = {}) => {
     if (!isMountedRef.current) return null;
 
-    const { coordinate, error: locationError } = processTrackingLocationPosition({
-      ...options,
+    return ingestTrackingLocationPosition({
+      options,
       position,
-      previousCoordinate: useTrackingStore.getState().currentLocation,
     });
-
-    if (!coordinate) {
-      rejectTrackingLocation(locationError);
-      return null;
-    }
-
-    return acceptTrackingLocation(coordinate) ? coordinate : null;
-  }, [acceptTrackingLocation, rejectTrackingLocation]);
+  }, []);
 
   const ensurePermission = useCallback(async () => {
     if (!isMountedRef.current) return false;
@@ -261,10 +252,18 @@ export function useTrackingSession() {
         status: snapshotStatus,
         totalPausedMs,
       });
+      return true;
     } catch (sessionStorageError) {
       setError(sessionStorageError?.message || TRACKING_ERROR.SESSION_SAVE_FAILED);
+      return false;
     }
   }, [setError]);
+  const {
+    startBackgroundSession,
+    stopAndReconcileBackgroundSession,
+  } = useTrackingBackgroundSession({
+    persistSession: persistActiveSession,
+  });
 
   const getSessionSnapshot = useCallback(() => {
     const {
@@ -300,21 +299,7 @@ export function useTrackingSession() {
       const session = await loadActiveTrackingSession();
       if (!session) return false;
 
-      const autoStopDecision = getTrackingAutoStopDecision({ session });
-
-      if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.CLEAN_SESSION) {
-        await clearActiveTrackingSession();
-        setAutoStopEvent(createAutoStopEvent(autoStopDecision));
-        return false;
-      }
-
-      const shouldAutoPause = (
-        autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.AUTO_PAUSE
-      );
-      const sessionToRestore = shouldAutoPause
-        ? createAutoPausedSession(session)
-        : session;
-      const didRestore = restoreTrackingSession(sessionToRestore);
+      const didRestore = restoreTrackingSession(session);
 
       if (!didRestore) {
         await clearActiveTrackingSession();
@@ -322,9 +307,35 @@ export function useTrackingSession() {
         return false;
       }
 
-      if (shouldAutoPause) {
+      if (session.status === TRACKING_STATUS.TRACKING) {
+        if (!await stopAndReconcileBackgroundSession()) return true;
+      }
+
+      const autoStopDecision = getTrackingAutoStopDecision({
+        session: {
+          ...getSessionSnapshot(),
+          updatedAt: session.updatedAt,
+        },
+      });
+
+      if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.CLEAN_SESSION) {
+        if (!await stopAndReconcileBackgroundSession()) return true;
+        await clearActiveTrackingSession();
+        stopTrackingSession();
         setAutoStopEvent(createAutoStopEvent(autoStopDecision));
-        await saveActiveTrackingSession(sessionToRestore);
+        return false;
+      }
+
+      if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.AUTO_PAUSE) {
+        if (!await stopAndReconcileBackgroundSession()) return true;
+
+        if (!pauseTrackingSession()) {
+          setError(TRACKING_ERROR.RESTORE_FAILED);
+          return false;
+        }
+
+        setAutoStopEvent(createAutoStopEvent(autoStopDecision));
+        await persistActiveSession();
       }
 
       return true;
@@ -332,12 +343,23 @@ export function useTrackingSession() {
       setError(trackingError?.message || TRACKING_ERROR.RESTORE_FAILED);
       return false;
     }
-  }, [restoreTrackingSession, setAutoStopEvent, setError]);
+  }, [
+    getSessionSnapshot,
+    pauseTrackingSession,
+    persistActiveSession,
+    restoreTrackingSession,
+    setAutoStopEvent,
+    setError,
+    stopAndReconcileBackgroundSession,
+    stopTrackingSession,
+  ]);
 
   const applyAutoStopDecision = useCallback(async (autoStopDecision) => {
     if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.NONE) return false;
 
     if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.CLEAN_SESSION) {
+      if (!await stopAndReconcileBackgroundSession()) return false;
+
       await clearActiveTrackingSession();
 
       if (!stopTrackingSession()) return false;
@@ -347,6 +369,8 @@ export function useTrackingSession() {
     }
 
     if (autoStopDecision.action === TRACKING_AUTO_STOP_ACTION.AUTO_PAUSE) {
+      if (!await stopAndReconcileBackgroundSession()) return false;
+
       if (!pauseTrackingSession()) return false;
 
       setAutoStopEvent(createAutoStopEvent(autoStopDecision));
@@ -360,6 +384,7 @@ export function useTrackingSession() {
     persistActiveSession,
     setAutoStopEvent,
     stopTrackingSession,
+    stopAndReconcileBackgroundSession,
   ]);
 
   const hydrateVisibleLocation = useCallback(async () => {
@@ -393,18 +418,27 @@ export function useTrackingSession() {
   ]);
 
   const initializeTrackingView = useCallback(async () => {
-    const restoredSession = await restoreActiveSession();
+    await restoreActiveSession();
     if (!isMountedRef.current) return;
+
+    if (useTrackingStore.getState().status === TRACKING_STATUS.TRACKING) {
+      if (!await stopAndReconcileBackgroundSession()) return;
+    }
 
     const isLocationActive = await hydrateVisibleLocation();
     if (
-      isLocationActive
-      || !restoredSession
-      || !isMountedRef.current
+      !isMountedRef.current
       || useTrackingStore.getState().status !== TRACKING_STATUS.TRACKING
     ) {
       return;
     }
+
+    if (isLocationActive) {
+      await startBackgroundSession();
+      return;
+    }
+
+    if (!await stopAndReconcileBackgroundSession()) return;
 
     if (pauseTrackingSession()) {
       await persistActiveSession();
@@ -414,6 +448,8 @@ export function useTrackingSession() {
     pauseTrackingSession,
     persistActiveSession,
     restoreActiveSession,
+    startBackgroundSession,
+    stopAndReconcileBackgroundSession,
   ]);
   const saveCurrentRoute = useCallback(async () => {
     const endedAt = Date.now();
@@ -428,7 +464,7 @@ export function useTrackingSession() {
     } = useTrackingStore.getState();
 
     try {
-      await saveCompletedRoute({
+      return await saveCompletedRoute({
         endedAt,
         metrics,
         pausedAt,
@@ -438,6 +474,7 @@ export function useTrackingSession() {
       });
     } catch (routeStorageError) {
       setError(routeStorageError?.message || TRACKING_ERROR.ROUTE_SAVE_FAILED);
+      throw routeStorageError;
     }
   }, [setError]);
 
@@ -474,6 +511,7 @@ export function useTrackingSession() {
       }
 
       await persistActiveSession();
+      await startBackgroundSession();
       return true;
     } catch (trackingError) {
       if (isMountedRef.current) {
@@ -494,6 +532,7 @@ export function useTrackingSession() {
     setLoadingState,
     startTrackingSession,
     startWatcher,
+    startBackgroundSession,
     status,
   ]);
   const pauseTracking = useCallback(async () => {
@@ -502,6 +541,8 @@ export function useTrackingSession() {
     setLoadingState('isPausing', true);
 
     try {
+      if (!await stopAndReconcileBackgroundSession()) return false;
+
       if (!pauseTrackingSession()) return false;
 
       await persistActiveSession();
@@ -511,7 +552,13 @@ export function useTrackingSession() {
         setLoadingState('isPausing', false);
       }
     }
-  }, [pauseTrackingSession, persistActiveSession, setLoadingState, status]);
+  }, [
+    pauseTrackingSession,
+    persistActiveSession,
+    setLoadingState,
+    status,
+    stopAndReconcileBackgroundSession,
+  ]);
   const resumeTracking = useCallback(async () => {
     if (status !== TRACKING_STATUS.PAUSED) return false;
 
@@ -540,6 +587,7 @@ export function useTrackingSession() {
       }
 
       await persistActiveSession();
+      await startBackgroundSession();
       return true;
     } catch (trackingError) {
       if (isMountedRef.current) {
@@ -561,6 +609,7 @@ export function useTrackingSession() {
     setLoadingState,
     startWatcher,
     status,
+    startBackgroundSession,
   ]);
   const stopTracking = useCallback(async () => {
     if (status === TRACKING_STATUS.IDLE) return false;
@@ -568,15 +617,56 @@ export function useTrackingSession() {
     setLoadingState('isStopping', true);
 
     try {
+      if (!await stopAndReconcileBackgroundSession()) return false;
       await saveCurrentRoute();
-      await clearActiveTrackingSession();
+
       return stopTrackingSession();
+    } catch {
+      return false;
     } finally {
       if (isMountedRef.current) {
         setLoadingState('isStopping', false);
       }
     }
-  }, [saveCurrentRoute, setLoadingState, status, stopTrackingSession]);
+  }, [
+    saveCurrentRoute,
+    setLoadingState,
+    status,
+    stopAndReconcileBackgroundSession,
+    stopTrackingSession,
+  ]);
+
+  const handleTrackingBackground = useCallback(() => {
+    stopWatcher();
+  }, [stopWatcher]);
+
+  const handleTrackingForeground = useCallback(async () => {
+    if (!isMountedRef.current) return;
+
+    if (useTrackingStore.getState().status === TRACKING_STATUS.TRACKING) {
+      if (!await stopAndReconcileBackgroundSession()) return;
+    }
+
+    const hasPermission = await ensurePermission();
+    if (!hasPermission || !isMountedRef.current) return;
+
+    await startWatcher();
+
+    if (useTrackingStore.getState().status === TRACKING_STATUS.TRACKING) {
+      await startBackgroundSession();
+    }
+  }, [
+    ensurePermission,
+    startBackgroundSession,
+    startWatcher,
+    stopAndReconcileBackgroundSession,
+  ]);
+
+  useTrackingAppState({
+    onBackground: handleTrackingBackground,
+    onForeground: handleTrackingForeground,
+  });
+
   useEffect(() => {
     isMountedRef.current = true;
     initializeTrackingView();

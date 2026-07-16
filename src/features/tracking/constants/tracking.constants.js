@@ -55,6 +55,11 @@ export const TRACKING_ERROR = {
   LOCATION_SAMPLE_STALE: 'tracking_location_sample_stale',
   LOCATION_ACCURACY_LOW: 'tracking_location_accuracy_low',
   LOCATION_SPEED_INVALID: 'tracking_location_speed_invalid',
+  BACKGROUND_PERMISSION_DENIED: 'tracking_background_permission_denied',
+  BACKGROUND_RECONCILIATION_FAILED: 'tracking_background_reconciliation_failed',
+  BACKGROUND_START_FAILED: 'tracking_background_start_failed',
+  BACKGROUND_STOP_FAILED: 'tracking_background_stop_failed',
+  BACKGROUND_UNAVAILABLE: 'tracking_background_unavailable',
   LOCATION_JUMP_REJECTED: 'tracking_location_jump_rejected',
   SESSION_SAVE_FAILED: 'tracking_session_save_failed',
   RESTORE_FAILED: 'tracking_restore_failed',
@@ -87,25 +92,10 @@ export const TRACKING_METRICS_FILTER = {
 
 export const TRACKING_ROUTE_MIN_DISTANCE_METERS = 2;
 
-export const TRACKING_ROUTE_STORAGE = {
-  CHUNK_SIZE: 250,
-  INDEX_KEY: '@tracking/routes/index',
-  LEGACY_VERSION: 1,
-  PREVIEW_POINTS: 24,
-  ROUTE_KEY_PREFIX: '@tracking/routes',
-  VERSION: 2,
-};
-
 export const TRACKING_ROUTE_SAVE_CONDITIONS = {
   MIN_DISTANCE_METERS: 20,
   MIN_DURATION_SECONDS: 10,
   MIN_POINTS: 2,
-};
-
-export const TRACKING_SESSION_STORAGE = {
-  KEY: '@tracking/session/active',
-  LEGACY_VERSION: 1,
-  VERSION: 2,
 };
 
 export const TRACKING_AUTO_STOP = {
@@ -125,11 +115,6 @@ export const TRACKING_AUTO_STOP_REASON = {
   INACTIVE_LOCATION: 'inactive_location',
   ORPHANED_SESSION: 'orphaned_session',
   BROKEN_SESSION: 'broken_session',
-};
-
-export const TRACKING_LIVE = {
-  MAX_PATH_POINTS: 120,
-  STALE_TIMEOUT_MS: 2 * 60 * 1000,
 };
 
 export const TRACKING_PRIVACY_STORAGE = {

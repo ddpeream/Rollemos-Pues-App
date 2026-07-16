@@ -16,6 +16,12 @@ import {
   createStartedSessionPatch,
   createStoppedSessionPatch,
 } from './trackingSession.logic';
+import {
+  applyTrackingLiveChange,
+  attachTrackingLiveProfile,
+  createInitialTrackingLiveState,
+  pruneTrackingLiveState,
+} from './trackingLive.logic';
 
 export const useTrackingStore = create((set, get) => ({
   autoStopEvent: null,
@@ -117,8 +123,18 @@ export const useTrackingStore = create((set, get) => ({
     privacyError: null,
   }),
   setPrivacyError: (privacyError) => set({ isPrivacyReady: true, privacyError }),
-  setLiveSkaters: (liveSkaters) => set({ liveSkaters }),
-  setLivePaths: (livePaths) => set({ livePaths }),
+  applyLiveTrackingChange: (change, myUserId, now = Date.now()) => set((state) => (
+    applyTrackingLiveChange(state, { change, myUserId, now })
+  )),
+  attachLiveTrackingProfile: (userId, profile) => set((state) => (
+    attachTrackingLiveProfile(state, { profile, userId })
+  )),
+  initializeLiveTracking: (liveSkaters, myUserId, now = Date.now()) => set(
+    createInitialTrackingLiveState({ myUserId, now, skaters: liveSkaters }),
+  ),
+  pruneLiveTracking: (now = Date.now()) => set((state) => (
+    pruneTrackingLiveState(state, now)
+  )),
 
   setLoadingState: (key, value) => set((state) => ({
     loadingStates: {

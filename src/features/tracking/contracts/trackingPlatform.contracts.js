@@ -85,13 +85,20 @@
 /**
  * @typedef {Object} TrackingBackgroundOptions
  * @property {TrackingLocationAccuracy} accuracy
+ * @property {number} deferredUpdatesDistance
+ * @property {number} deferredUpdatesInterval
  * @property {number} distanceInterval
+ * @property {string} notificationBody
+ * @property {string} notificationTitle
  * @property {number} timeInterval
  */
 
 /**
  * @typedef {Object} TrackingBackgroundProvider
+ * @property {() => Promise<TrackingLocationPermission>} getPermission
  * @property {() => Promise<boolean>} isAvailable
+ * @property {() => Promise<boolean>} isStarted
+ * @property {() => Promise<TrackingLocationPermission>} requestPermission
  * @property {(options: TrackingBackgroundOptions) => Promise<void>} start
  * @property {() => Promise<void>} stop
  */

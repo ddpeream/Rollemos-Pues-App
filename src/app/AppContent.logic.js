@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 
+import { useTrackingLivePublisher } from '../features/tracking';
 import { useLanguage } from '../hooks/useLanguage';
 import { useTheme } from '../hooks/useTheme';
 import RootNavigator from '../navigation/RootNavigator';
@@ -13,6 +14,7 @@ export default function AppContent() {
   const { initializeLanguage } = useLanguage();
   const { initializeTheme, isDark, theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  useTrackingLivePublisher();
 
   useEffect(() => {
     initializeTheme();

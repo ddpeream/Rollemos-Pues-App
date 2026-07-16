@@ -1,4 +1,5 @@
 import 'react-native-url-polyfill/auto';
+import './src/features/tracking/tasks/trackingLocation.task';
 import { registerRootComponent } from 'expo';
 
 import App from './src/App';

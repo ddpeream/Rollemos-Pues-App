@@ -4,6 +4,7 @@ import { normalizeTrackingCoordinate } from './location.normalizer';
 
 /** @typedef {import('../contracts/tracking.contracts').TrackingCoordinate} TrackingCoordinate */
 /** @typedef {import('../contracts/tracking.contracts').TrackingLiveSkater} TrackingLiveSkater */
+/** @typedef {import('../contracts/trackingLive.contracts').TrackingLiveProfile} TrackingLiveProfile */
 
 /**
  * @param {any} value
@@ -22,6 +23,27 @@ export const normalizeTrackingLiveCoordinate = (value, fallbackTimestamp = Date.
     timestamp: Number.isFinite(value?.timestamp) ? value.timestamp : fallbackTimestamp,
   }, { fallbackTimestamp })
 );
+
+/**
+ * @param {any} record
+ * @returns {TrackingLiveProfile|null}
+ */
+export const normalizeTrackingLiveProfile = (record) => {
+  if (typeof record?.id !== 'string' || !record.id) return null;
+
+  const optionalText = (value) => (
+    typeof value === 'string' && value.trim() ? value : null
+  );
+
+  return {
+    avatar_url: optionalText(record.avatar_url),
+    ciudad: optionalText(record.ciudad),
+    disciplina: optionalText(record.disciplina),
+    id: record.id,
+    nivel: optionalText(record.nivel),
+    nombre: optionalText(record.nombre),
+  };
+};
 
 /**
  * @param {any} record
@@ -49,7 +71,7 @@ export const normalizeTrackingLiveSkater = (record) => {
     isActive: record.is_active === true,
     speed: coordinate.speed,
     updatedAt: new Date(updatedAtTimestamp).toISOString(),
-    user: record.usuarios && typeof record.usuarios === 'object' ? record.usuarios : null,
+    user: normalizeTrackingLiveProfile(record.usuarios),
     userId: record.user_id,
   };
 };

@@ -2,22 +2,39 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { TRACKING_PRIVACY_STORAGE } from '../constants/tracking.constants';
 
+let privacyLoadPromise = null;
+
 export const saveTrackingPrivacy = async (isPrivate) => {
+  const normalizedPrivacy = !!isPrivate;
   await AsyncStorage.setItem(
     TRACKING_PRIVACY_STORAGE.KEY,
-    JSON.stringify(!!isPrivate),
+    JSON.stringify(normalizedPrivacy),
   );
+  privacyLoadPromise = Promise.resolve(normalizedPrivacy);
 
-  return !!isPrivate;
+  return normalizedPrivacy;
 };
 
-export const loadTrackingPrivacy = async () => {
-  const storedPrivacy = await AsyncStorage.getItem(TRACKING_PRIVACY_STORAGE.KEY);
+const readTrackingPrivacy = async () => {
+  const storedPrivacy = await AsyncStorage.getItem(
+    TRACKING_PRIVACY_STORAGE.KEY,
+  );
   if (storedPrivacy == null) return false;
 
   try {
     return !!JSON.parse(storedPrivacy);
-  } catch (error) {
+  } catch {
     return false;
   }
+};
+
+export const loadTrackingPrivacy = () => {
+  if (!privacyLoadPromise) {
+    privacyLoadPromise = readTrackingPrivacy().catch((error) => {
+      privacyLoadPromise = null;
+      throw error;
+    });
+  }
+
+  return privacyLoadPromise;
 };

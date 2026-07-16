@@ -140,7 +140,7 @@ El patin conserva `trackingStore.currentLocation` como unica coordenada canonica
 
 TypeScript, parseo de 245 archivos, Expo Doctor 18/18 y bundle Android de 1279 modulos finalizaron correctamente. Falta comprobar en dispositivo que el zoom manual sobreviva varias muestras GPS, que el patin se anime sin parpadeos y que una ruta historica solo se encuadre al abrirla.
 
-### 8. Consolidar persistencia local y restauracion
+### 8. Consolidar persistencia local y restauracion (implementado; prueba fisica Android pendiente)
 
 - SQLite como almacenamiento durable de sesiones y rutas largas.
 - Escrituras por lotes y transacciones.
@@ -149,7 +149,15 @@ TypeScript, parseo de 245 archivos, Expo Doctor 18/18 y bundle Android de 1279 m
 
 Criterio de salida: cerrar y reabrir la app no pierde una ruta en curso.
 
-### 9. Implementar background tracking Android
+Estado: `trackingStore` sigue siendo la unica verdad de ejecucion y SQLite pasa a ser la unica verdad durable. Una misma entidad `tracking_routes` representa la ruta activa, pausada o completada; segmentos y puntos viven normalizados en tablas hijas. El esquema activa WAL, limita la base a una sola ruta activa y usa una cola serial para evitar carreras entre muestras GPS, pausa, reanudacion, Stop e historial.
+
+Cada persistencia de sesion actualiza solo metadatos y agrega los puntos que aun no existen, en lotes de 250 dentro de una transaccion exclusiva. Stop espera la cola y convierte esa misma ruta activa en historica, o la elimina si no cumple las condiciones minimas. Si la transaccion final falla, el store no se reinicia y la ruta activa durable permanece recuperable.
+
+Las APIs publicas de sesion e historial no cambiaron. La migracion desde AsyncStorage es unica e idempotente: conserva IDs, rutas version 1/2 y sesiones activas o pausadas; valida estado, segmentos y cantidad real de puntos dentro de la transaccion; marca la migracion solo tras verificarla y limpia las claves antiguas despues del commit. No hay lectura ni escritura dual despues de migrar.
+
+TypeScript, parseo de 253 archivos, validacion del esquema SQLite, conteo de bindings, cola de escrituras, Expo Doctor 18/18 y bundle Android de 1287 modulos finalizaron correctamente. Falta comprobar en dispositivo la actualizacion sobre datos AsyncStorage existentes y los cierres forzados con sesion activa y pausada para aprobar el criterio fisico.
+
+### 9. Implementar background tracking Android (implementado; prueba fisica Android pendiente)
 
 - Task Manager y servicio foreground Android.
 - Buffer durable de puntos capturados en segundo plano.
@@ -158,7 +166,17 @@ Criterio de salida: cerrar y reabrir la app no pierde una ruta en curso.
 
 Criterio de salida: una ruta continua sobrevive pantalla bloqueada y cambio de app.
 
-### 10. Endurecer Live Tracking Supabase
+
+Estado: `expo-task-manager` registra un unico task global antes de montar React y el adaptador Expo implementa el contrato de background ya existente. Start registra el servicio foreground Android solo despues de persistir la sesion activa; Pause, Stop y auto-pausa detienen primero el servicio y reconcilian sus muestras. Al salir de primer plano se elimina el watcher foreground y, al volver, se detiene temporalmente el task, se fusiona el buffer y solo despues se reactiva el watcher, evitando dos productores simultaneos sobre el store.
+
+SQLite sube de esquema 1 a 2 mediante una migracion incremental que conserva rutas y sesiones existentes. La tabla local `tracking_background_points` funciona como bandeja durable, aplica deduplicacion por ruta, timestamp y coordenada, y solo acepta muestras cuando la ruta durable esta activa con estado `tracking`. Al cerrar este punto el task no importaba React, hooks, Zustand ni Supabase.
+
+`trackingStore` conserva la unica verdad de ejecucion y SQLite la unica verdad durable. Todas las muestras foreground y las muestras reconciliadas pasan por `trackingLocationIngestion.logic.js`, que reutiliza el mismo normalizador, filtros y comando atomico del store. El buffer se confirma y elimina solamente despues de persistir exitosamente la sesion fusionada; si la app cae entre persistencia y confirmacion, la siguiente reconciliacion descarta duplicados sin perder la ruta.
+
+La ruta local se captura tanto publica como privada. La publicacion Supabase desde background se agrega en el punto 10 despues de guardar el buffer local y usa solamente la ultima muestra aceptada, respetando privacidad y sin convertir la red en requisito para conservar la ruta.
+
+TypeScript, sintaxis JavaScript, Expo Doctor 18/18 y bundle Android de 1299 modulos finalizaron correctamente. El manifiesto nativo contiene ubicacion background y foreground service location. Falta aprobar en APK real el permiso "Permitir todo el tiempo", la notificacion persistente, pantalla bloqueada, cambio de app, pausa, reanudacion y Stop con historial continuo.
+### 10. Endurecer Live Tracking Supabase (implementado; prueba multidispositivo Android pendiente)
 
 - Publicacion limitada por frecuencia y distancia.
 - Presencia activa con expiracion y limpieza de sesiones abandonadas.
@@ -166,6 +184,16 @@ Criterio de salida: una ruta continua sobrevive pantalla bloqueada y cambio de a
 - Rutas live acotadas y separadas del tracking local.
 
 Criterio de salida: dos o mas dispositivos se ven mutuamente sin duplicados ni usuarios fantasma.
+
+Estado: el publicador global se monta en `AppContent` y consume autenticacion, privacidad, estado y ubicacion desde sus stores existentes. Publica en foreground y background mediante el mismo servicio serializado, con minimo de 3 segundos o 5 metros y heartbeat de 15 segundos. Una entrega fallida no adelanta el checkpoint local; pausa, Stop, privacidad y logout serializan la desactivacion para impedir que una escritura pendiente reactive la presencia.
+
+SQLite sube de esquema 2 a 3 con `tracking_live_checkpoints`, separado de la ruta y de la sesion activa. El checkpoint solo registra la ultima publicacion remota confirmada. No se crea tabla ni migracion remota: se reutilizan `tracking_live`, sus politicas y su publicacion Realtime existentes.
+
+El visor se limita a cargar y observar otros usuarios. Se suscribe antes del fetch inicial y encola eventos durante esa ventana; luego aplica INSERT, UPDATE y DELETE directamente desde el payload Realtime. Los perfiles usan cache con solicitudes concurrentes deduplicadas, el store aplica cambios atomicos, cada live path conserva hasta 120 puntos y las presencias con mas de 2 minutos se podan cada 15 segundos.
+
+La privacidad no altera la captura ni el guardado local. En privado, background conserva el buffer pero omite Supabase; al volver a publico, el siguiente punto valido o heartbeat restablece la presencia. La sesion de Supabase conserva AsyncStorage y agrega `processLock` y control de auto-refresh segun el estado de la app.
+
+Validacion tecnica: TypeScript y sintaxis JavaScript correctos, Expo Doctor 18/18 y bundle Android de 1309 modulos; consulta remota de `tracking_live` con relacion de usuario confirmada; canal Realtime llego a `SUBSCRIBED`. Falta validar en APK con dos cuentas y dos dispositivos: visibilidad mutua, rutas live, privacidad, pausa/Stop/logout, pantalla bloqueada, red intermitente y expiracion sin usuarios fantasma.
 
 ### 11. Ejecutar pruebas de campo, resiliencia y observabilidad
 

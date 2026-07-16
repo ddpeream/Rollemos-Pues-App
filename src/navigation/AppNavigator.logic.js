@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { useAuthStore } from '../features/auth';
+import { useAppLogout } from '../app/hooks/useAppLogout.logic';
 import Tracking from '../features/tracking';
 import TrackingHistory, { TrackingHistoryDetail } from '../features/tracking-history';
 import { sizes } from '../theme';
@@ -20,7 +20,7 @@ function LogoutPlaceholder() {
 
 function AppTabs() {
   const { theme } = useTheme();
-  const logout = useAuthStore((state) => state.logout);
+  const logout = useAppLogout();
 
   return (
     <Tab.Navigator
@@ -67,7 +67,7 @@ function AppTabs() {
 }
 
 export default function AppNavigator() {
-  const logout = useAuthStore((state) => state.logout);
+  const logout = useAppLogout();
 
   return (
     <>

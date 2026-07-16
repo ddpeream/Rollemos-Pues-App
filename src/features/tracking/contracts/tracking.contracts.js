@@ -125,7 +125,7 @@
  * @property {boolean} isActive
  * @property {number|null} speed
  * @property {string} updatedAt
- * @property {Object|null} user
+ * @property {import('./trackingLive.contracts').TrackingLiveProfile|null} user
  * @property {string} userId
  */
 

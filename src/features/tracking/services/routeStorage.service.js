@@ -1,11 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { TRACKING_ROUTE_STORAGE } from '../constants/tracking.constants';
 import {
-  normalizeStoredRouteIndex,
-  normalizeStoredTrackingCoordinates,
-  normalizeStoredTrackingSegments,
-} from '../normalizers/storage.normalizer';
+  TRACKING_ROUTE_STORAGE,
+  TRACKING_STORAGE_ROUTE_STATUS,
+} from '../constants/trackingStorage.constants';
+import { normalizeStoredTrackingSegments } from '../normalizers/storage.normalizer';
 import {
   closeActiveRouteSegment,
   flattenRouteSegments,
@@ -17,81 +14,45 @@ import {
 import { getCaloriesEstimate } from '../utils/calories.utils';
 import { getAverageSpeedKmh } from '../utils/speed.utils';
 import {
-  chunkRouteCoordinates,
   createRoutePreviewCoordinateSegments,
   getFinalRouteDurationSeconds,
-  hydrateRouteSegmentsFromCoordinates,
   shouldSaveCompletedRoute,
 } from './routeStorage.logic';
+import {
+  hydrateCompletedTrackingRoute,
+  loadCompletedTrackingRoutes,
+} from './trackingRouteReader.service';
+import {
+  deleteCompletedTrackingRoute,
+  discardActiveTrackingRoute,
+  finalizeTrackingRoute,
+} from './trackingRouteWriter.service';
+import { createTrackingRouteId } from './trackingStorage.logic';
+import { prepareTrackingStorage } from './trackingStorageMigration.service';
+import {
+  enqueueTrackingStorageWrite,
+  flushTrackingStorageWrites,
+} from './trackingStorageQueue.service';
 
-const getRouteChunkKey = (routeId, chunkIndex) => (
-  `${TRACKING_ROUTE_STORAGE.ROUTE_KEY_PREFIX}/${routeId}/chunk/${chunkIndex}`
-);
-
-const createRouteId = () => (
-  `route_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
-);
-
-const loadRouteIndex = async () => {
-  const rawIndex = await AsyncStorage.getItem(TRACKING_ROUTE_STORAGE.INDEX_KEY);
-  if (!rawIndex) return [];
-
-  try {
-    return normalizeStoredRouteIndex(JSON.parse(rawIndex));
-  } catch {
-    return [];
-  }
+export const loadSavedRoutes = async () => {
+  const database = await prepareTrackingStorage();
+  await flushTrackingStorageWrites();
+  return loadCompletedTrackingRoutes(database);
 };
 
-const saveRouteIndex = (routesIndex) => (
-  AsyncStorage.setItem(
-    TRACKING_ROUTE_STORAGE.INDEX_KEY,
-    JSON.stringify(normalizeStoredRouteIndex(routesIndex)),
-  )
-);
-
-export const loadSavedRoutes = async () => loadRouteIndex();
-
 export const hydrateSavedRoute = async (routeId) => {
-  const routesIndex = await loadRouteIndex();
-  const routeSummary = routesIndex.find((route) => route.id === routeId);
-  if (!routeSummary) return null;
-
-  const chunkKeys = Array.from({ length: routeSummary.chunksCount }, (_, index) => (
-    getRouteChunkKey(routeId, index)
-  ));
-  const chunkEntries = await AsyncStorage.multiGet(chunkKeys);
-  const routeCoordinates = chunkEntries.flatMap(([, rawChunk]) => {
-    if (!rawChunk) return [];
-
-    try {
-      return normalizeStoredTrackingCoordinates(JSON.parse(rawChunk));
-    } catch {
-      return [];
-    }
-  });
-
-  return {
-    ...routeSummary,
-    routeSegments: hydrateRouteSegmentsFromCoordinates(
-      routeCoordinates,
-      routeSummary.segmentPointCounts,
-    ),
-  };
+  const database = await prepareTrackingStorage();
+  await flushTrackingStorageWrites();
+  return hydrateCompletedTrackingRoute(database, routeId);
 };
 
 export const deleteSavedRoute = async (routeId) => {
-  const routesIndex = await loadRouteIndex();
-  const routeSummary = routesIndex.find((route) => route.id === routeId);
-  const nextRoutesIndex = routesIndex.filter((route) => route.id !== routeId);
-  const chunkKeys = routeSummary
-    ? Array.from({ length: routeSummary.chunksCount }, (_, index) => getRouteChunkKey(routeId, index))
-    : [];
+  const database = await prepareTrackingStorage();
 
-  await AsyncStorage.multiRemove(chunkKeys);
-  await saveRouteIndex(nextRoutesIndex);
-
-  return nextRoutesIndex;
+  return enqueueTrackingStorageWrite(async () => {
+    await deleteCompletedTrackingRoute(database, routeId);
+    return loadCompletedTrackingRoutes(database);
+  });
 };
 
 export const saveCompletedRoute = async ({
@@ -112,21 +73,23 @@ export const saveCompletedRoute = async ({
   const duration = Number.isFinite(metrics.duration) && metrics.duration > 0
     ? metrics.duration
     : getFinalRouteDurationSeconds({ endedAt, pausedAt, startedAt, totalPausedMs });
+  const database = await prepareTrackingStorage();
 
   if (!shouldSaveCompletedRoute({ distance, duration, pointsCount })) {
+    await enqueueTrackingStorageWrite(
+      () => discardActiveTrackingRoute(database, startedAt),
+    );
     return { saved: false, reason: 'route_does_not_meet_save_conditions' };
   }
 
-  const id = createRouteId();
-  const chunks = chunkRouteCoordinates(routeCoordinates);
   const avgSpeed = getAverageSpeedKmh(distance, duration);
   const maxSpeed = getRouteMaxSpeedFromSegments(safeRouteSegments);
   const calories = getCaloriesEstimate({ avgSpeedKmh: avgSpeed, durationSeconds: duration });
   const routeSummary = {
-    id,
+    id: createTrackingRouteId(startedAt),
     avgSpeed,
     calories,
-    chunksCount: chunks.length,
+    chunksCount: Math.ceil(pointsCount / TRACKING_ROUTE_STORAGE.CHUNK_SIZE),
     createdAt: endedAt,
     distance,
     duration,
@@ -140,14 +103,28 @@ export const saveCompletedRoute = async ({
     startedAt,
     storageVersion: TRACKING_ROUTE_STORAGE.VERSION,
   };
-  const chunkEntries = chunks.map((chunk, index) => [
-    getRouteChunkKey(id, index),
-    JSON.stringify(chunk),
-  ]);
-  const routesIndex = await loadRouteIndex();
+  const completedSnapshot = {
+    currentLocation: routeSummary.endCoordinate,
+    metrics: {
+      avgSpeed,
+      calories,
+      distance,
+      duration,
+      maxSpeed,
+      speed: 0,
+    },
+    pausedAt,
+    routeSegments: safeRouteSegments,
+    startFlag: routeSummary.startCoordinate,
+    startedAt,
+    status: TRACKING_STORAGE_ROUTE_STATUS.COMPLETED,
+    totalPausedMs,
+    updatedAt: endedAt,
+  };
 
-  await AsyncStorage.multiSet(chunkEntries);
-  await saveRouteIndex([routeSummary, ...routesIndex]);
+  await enqueueTrackingStorageWrite(
+    () => finalizeTrackingRoute(database, completedSnapshot, routeSummary),
+  );
 
   return { route: routeSummary, saved: true };
 };

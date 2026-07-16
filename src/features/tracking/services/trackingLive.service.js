@@ -1,58 +1,70 @@
 import { supabase } from '../../../config/supabase';
+import { TRACKING_LIVE } from '../constants/trackingLive.constants';
 import {
   normalizeTrackingLiveCoordinate,
+  normalizeTrackingLiveProfile,
   normalizeTrackingLiveSkater,
 } from '../normalizers/trackingLive.normalizer';
 
-const LIVE_SELECT = 'user_id, lat, lng, speed, heading, is_active, updated_at, usuarios ( * )';
+const LIVE_PROFILE_COLUMNS = 'id, nombre, avatar_url, ciudad, nivel, disciplina';
+const LIVE_SELECT = `
+  user_id,
+  lat,
+  lng,
+  speed,
+  heading,
+  is_active,
+  updated_at,
+  usuarios (${LIVE_PROFILE_COLUMNS})
+`;
 
 export { normalizeTrackingLiveSkater };
 
 export const upsertTrackingLive = async ({
   coordinate,
-  heading = null,
   isActive = true,
-  speed = null,
   userId,
 }) => {
-  const normalizedCoordinate = normalizeTrackingLiveCoordinate({
-    ...coordinate,
-    heading,
-    speed,
-  }, coordinate?.timestamp || Date.now());
+  const normalizedCoordinate = normalizeTrackingLiveCoordinate(
+    coordinate,
+    coordinate?.timestamp || Date.now(),
+  );
 
   if (!userId || !normalizedCoordinate) {
     return { data: null, error: 'missing_tracking_live_data', ok: false };
   }
 
+  const updatedAt = new Date().toISOString();
   const payload = {
     heading: normalizedCoordinate.heading,
     is_active: isActive,
     lat: normalizedCoordinate.latitude,
     lng: normalizedCoordinate.longitude,
     speed: normalizedCoordinate.speed,
-    updated_at: new Date().toISOString(),
+    updated_at: updatedAt,
     user_id: userId,
   };
 
-  const { data, error } = await supabase
-    .from('tracking_live')
-    .upsert(payload, { onConflict: 'user_id' })
-    .select(LIVE_SELECT)
-    .single();
+  const { error } = await supabase
+    .from(TRACKING_LIVE.TABLE_NAME)
+    .upsert(payload, { onConflict: 'user_id' });
 
   if (error) {
     return { data: null, error: error.message, ok: false };
   }
 
-  return { data: normalizeTrackingLiveSkater(data), error: null, ok: true };
+  return {
+    data: normalizeTrackingLiveSkater({ ...payload, usuarios: null }),
+    error: null,
+    ok: true,
+  };
 };
 
 export const setTrackingLiveActive = async ({ isActive, userId }) => {
   if (!userId) return { error: 'missing_tracking_live_user', ok: false };
 
   const { error } = await supabase
-    .from('tracking_live')
+    .from(TRACKING_LIVE.TABLE_NAME)
     .update({
       is_active: isActive,
       updated_at: new Date().toISOString(),
@@ -63,50 +75,69 @@ export const setTrackingLiveActive = async ({ isActive, userId }) => {
   return { error: null, ok: true };
 };
 
-export const fetchTrackingLive = async () => {
-  const { data, error } = await supabase
-    .from('tracking_live')
+export const fetchTrackingLive = async ({ excludeUserId = null, now = Date.now() } = {}) => {
+  let query = supabase
+    .from(TRACKING_LIVE.TABLE_NAME)
     .select(LIVE_SELECT)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .gte('updated_at', new Date(now - TRACKING_LIVE.STALE_TIMEOUT_MS).toISOString());
+
+  if (excludeUserId) {
+    query = query.neq('user_id', excludeUserId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return { data: [], error: error.message, ok: false };
   }
 
   return {
-    data: (data || []).map(normalizeTrackingLiveSkater).filter(Boolean),
+    data: (data || [])
+      .map(normalizeTrackingLiveSkater)
+      .filter(Boolean),
     error: null,
     ok: true,
   };
 };
 
-export const subscribeTrackingLive = (onChange) => (
+export const fetchTrackingLiveProfile = async (userId) => {
+  if (!userId) return { data: null, error: null, ok: true };
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select(LIVE_PROFILE_COLUMNS)
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) return { data: null, error: error.message, ok: false };
+  return { data: normalizeTrackingLiveProfile(data), error: null, ok: true };
+};
+
+export const subscribeTrackingLive = ({
+  channelKey = 'default',
+  onChange,
+  onStatus,
+}) => (
   supabase
-    .channel('tracking_live')
+    .channel(`${TRACKING_LIVE.CHANNEL_NAME}:${channelKey}`)
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'tracking_live' },
-      async (payload) => {
-        if (payload.eventType === 'DELETE') {
-          onChange?.({ eventType: payload.eventType, skater: null, userId: payload.old?.user_id });
-          return;
-        }
+      { event: '*', schema: 'public', table: TRACKING_LIVE.TABLE_NAME },
+      (payload) => {
+        const isDelete = payload.eventType === 'DELETE';
+        const record = isDelete ? payload.old : payload.new;
+        const userId = record?.user_id || null;
+        if (!userId) return;
 
-        if (!payload.new?.user_id) return;
-
-        const { data, error } = await supabase
-          .from('tracking_live')
-          .select(LIVE_SELECT)
-          .eq('user_id', payload.new.user_id)
-          .maybeSingle();
-
-        const skater = normalizeTrackingLiveSkater(data || payload.new);
-        if (!error && skater) {
-          onChange?.({ eventType: payload.eventType, skater, userId: skater.userId });
-        }
+        onChange?.({
+          eventType: payload.eventType,
+          skater: isDelete ? null : normalizeTrackingLiveSkater(record),
+          userId,
+        });
       },
     )
-    .subscribe()
+    .subscribe((status, error) => onStatus?.({ error, status }))
 );
 
 export const unsubscribeTrackingLive = (channel) => {
