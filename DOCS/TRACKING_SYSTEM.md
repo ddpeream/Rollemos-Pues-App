@@ -1,5 +1,7 @@
 # 🗺️ Sistema de Tracking de Rutas GPS
 
+> Documento historico de la implementacion anterior. La arquitectura y el estado canonicos del refactor actual estan en DOCS/TRACKING_MAP_ONLY_REFACTOR.md.
+
 Sistema completo de grabación y tracking de rutas en tiempo real para la app de patinaje.
 
 ## ✨ Características Implementadas

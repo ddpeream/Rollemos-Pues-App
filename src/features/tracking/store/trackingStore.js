@@ -10,9 +10,11 @@ import { shouldAppendRouteCoordinate } from '../utils/route.utils';
 
 export const useTrackingStore = create((set) => ({
   autoStopEvent: null,
+  canAskLocationPermissionAgain: true,
   currentLocation: null,
   error: null,
   loadingStates: TRACKING_LOADING_STATE,
+  locationServicesEnabled: null,
   locationStatus: TRACKING_LOCATION_STATUS.IDLE,
   liveError: null,
   isLivePrivate: false,
@@ -40,6 +42,11 @@ export const useTrackingStore = create((set) => ({
     },
   })),
   setLiveError: (liveError) => set({ liveError }),
+  setLocationPermissionDetails: ({ canAskAgain, status }) => set({
+    canAskLocationPermissionAgain: canAskAgain,
+    permissionStatus: status,
+  }),
+  setLocationServicesEnabled: (locationServicesEnabled) => set({ locationServicesEnabled }),
   setLocationStatus: (locationStatus) => set({ locationStatus }),
   setLivePrivacy: (isLivePrivate) => set({
     isLivePrivate,
@@ -49,7 +56,6 @@ export const useTrackingStore = create((set) => ({
   setPrivacyError: (privacyError) => set({ isPrivacyReady: true, privacyError }),
   setLiveSkaters: (liveSkaters) => set({ liveSkaters }),
   setLivePaths: (livePaths) => set({ livePaths }),
-  setPermissionStatus: (permissionStatus) => set({ permissionStatus }),
   setStatus: (status) => set({ status }),
 
   setLoadingState: (key, value) => set((state) => ({

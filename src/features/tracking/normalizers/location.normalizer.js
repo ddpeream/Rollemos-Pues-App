@@ -1,3 +1,5 @@
+// @ts-check
+
 import {
   TRACKING_ERROR,
   TRACKING_LOCATION_FILTER,
@@ -6,37 +8,82 @@ import {
 import { getDistanceBetweenCoordinates } from '../utils/distance.utils';
 
 /** @typedef {import('../contracts/tracking.contracts').TrackingCoordinate} TrackingCoordinate */
+/** @typedef {import('../contracts/tracking.contracts').TrackingLocationSample} TrackingLocationSample */
 
+/** @param {unknown} value */
 const isFiniteNumber = (value) => Number.isFinite(value);
 
-export const hasValidTrackingCoordinates = (coords) => (
-  isFiniteNumber(coords?.latitude)
-  && isFiniteNumber(coords?.longitude)
-  && coords.latitude >= -90
-  && coords.latitude <= 90
-  && coords.longitude >= -180
-  && coords.longitude <= 180
+/** @param {Partial<TrackingCoordinate>|null|undefined} coordinate */
+export const hasValidTrackingCoordinates = (coordinate) => (
+  isFiniteNumber(coordinate?.latitude)
+  && isFiniteNumber(coordinate?.longitude)
+  && coordinate.latitude >= -90
+  && coordinate.latitude <= 90
+  && coordinate.longitude >= -180
+  && coordinate.longitude <= 180
 );
 
-/** @returns {TrackingCoordinate|null} */
-export const normalizeTrackingLocationPosition = (position, now = Date.now()) => {
-  if (!hasValidTrackingCoordinates(position?.coords)) return null;
+/**
+ * Canonical coordinate normalizer shared by every tracking boundary.
+ * @param {Partial<TrackingCoordinate>|null|undefined} value
+ * @param {{ fallbackTimestamp?: number|null }} [options]
+ * @returns {TrackingCoordinate|null}
+ */
+export const normalizeTrackingCoordinate = (
+  value,
+  { fallbackTimestamp = Date.now() } = {},
+) => {
+  if (!hasValidTrackingCoordinates(value)) return null;
 
-  const { coords } = position;
-  const timestamp = isFiniteNumber(position.timestamp) ? position.timestamp : now;
+  const timestamp = isFiniteNumber(value?.timestamp)
+    ? Number(value.timestamp)
+    : fallbackTimestamp;
+
+  if (!isFiniteNumber(timestamp)) return null;
 
   return {
-    accuracy: isFiniteNumber(coords.accuracy) ? coords.accuracy : null,
-    altitude: isFiniteNumber(coords.altitude) ? coords.altitude : null,
-    altitudeAccuracy: isFiniteNumber(coords.altitudeAccuracy) ? coords.altitudeAccuracy : null,
-    heading: isFiniteNumber(coords.heading) && coords.heading >= 0 ? coords.heading % 360 : 0,
-    latitude: coords.latitude,
-    longitude: coords.longitude,
-    speed: isFiniteNumber(coords.speed) && coords.speed >= 0 ? coords.speed : null,
-    timestamp,
+    accuracy: isFiniteNumber(value?.accuracy) ? Number(value.accuracy) : null,
+    altitude: isFiniteNumber(value?.altitude) ? Number(value.altitude) : null,
+    altitudeAccuracy: isFiniteNumber(value?.altitudeAccuracy)
+      ? Number(value.altitudeAccuracy)
+      : null,
+    heading: isFiniteNumber(value?.heading) && Number(value.heading) >= 0
+      ? Number(value.heading) % 360
+      : 0,
+    latitude: Number(value?.latitude),
+    longitude: Number(value?.longitude),
+    speed: isFiniteNumber(value?.speed) && Number(value.speed) >= 0
+      ? Number(value.speed)
+      : null,
+    timestamp: Number(timestamp),
   };
 };
 
+/**
+ * Converts a provider-neutral GPS sample into the canonical domain coordinate.
+ * @param {TrackingLocationSample|null|undefined} position
+ * @param {number} [now]
+ * @returns {TrackingCoordinate|null}
+ */
+export const normalizeTrackingLocationPosition = (position, now = Date.now()) => {
+  if (!position?.coords) return null;
+
+  return normalizeTrackingCoordinate({
+    ...position.coords,
+    timestamp: position.timestamp,
+  }, { fallbackTimestamp: now });
+};
+
+/**
+ * @param {{
+ *   allowStale?: boolean,
+ *   maxAccuracyMeters?: number,
+ *   now?: number,
+ *   position: TrackingLocationSample|null|undefined,
+ *   previousCoordinate?: TrackingCoordinate|null,
+ *   validateJump?: boolean
+ * }} input
+ */
 export const processTrackingLocationPosition = ({
   allowStale = false,
   maxAccuracyMeters = TRACKING_LOCATION_FILTER.MAX_ACCURACY_METERS,
@@ -76,6 +123,17 @@ export const processTrackingLocationPosition = ({
       coordinate: null,
       error: TRACKING_ERROR.LOCATION_ACCURACY_LOW,
       rejection: TRACKING_LOCATION_REJECTION.LOW_ACCURACY,
+    };
+  }
+
+  if (
+    coordinate.speed !== null
+    && coordinate.speed > TRACKING_LOCATION_FILTER.MAX_REPORTED_SPEED_MPS
+  ) {
+    return {
+      coordinate: null,
+      error: TRACKING_ERROR.LOCATION_SPEED_INVALID,
+      rejection: TRACKING_LOCATION_REJECTION.IMPLAUSIBLE_SPEED,
     };
   }
 
