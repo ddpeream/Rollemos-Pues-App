@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { View } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { TRACKING_INITIAL_REGION } from '../../constants/tracking.constants';
@@ -45,30 +45,6 @@ const StartFlagMarker = memo(function StartFlagMarker({
     >
       <View style={[styles.startFlagMarker, { backgroundColor: color }]}>
         <Ionicons name="flag-outline" size={18} color={iconColor} />
-      </View>
-    </Marker>
-  );
-});
-
-const LiveSkaterMarker = memo(function LiveSkaterMarker({
-  color,
-  iconColor,
-  skater,
-  zIndex,
-}) {
-  if (!skater?.coordinate) return null;
-
-  return (
-    <Marker
-      key={`live-skater-${color}-${iconColor}`}
-      anchor={{ x: 0.5, y: 0.5 }}
-      coordinate={skater.coordinate}
-      rotation={skater.heading || 0}
-      tracksViewChanges={false}
-      zIndex={zIndex}
-    >
-      <View style={[styles.liveSkaterMarker, { backgroundColor: color }]}>
-        <MaterialCommunityIcons name="roller-skate" size={16} color={iconColor} />
       </View>
     </Marker>
   );
@@ -144,11 +120,12 @@ function TrackingMapView({
       />
 
       {(liveSkaters || []).map((skater) => (
-        <LiveSkaterMarker
+        <SkateMarker
           key={skater.userId}
           color={livePathColor}
+          coordinate={skater.coordinate}
+          heading={skater.heading}
           iconColor={liveSkaterIconColor}
-          skater={skater}
           zIndex={liveSkaterZIndex}
         />
       ))}

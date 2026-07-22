@@ -11,8 +11,10 @@ export default function SkateMarkerView({
   color,
   flat,
   heading,
+  iconColor = colors.onSecondary,
   markerRef,
   tracksViewChanges,
+  zIndex = sizes.zIndex.marker,
 }) {
   return (
     <MarkerAnimated
@@ -22,10 +24,10 @@ export default function SkateMarkerView({
       flat={flat}
       rotation={heading}
       tracksViewChanges={tracksViewChanges}
-      zIndex={sizes.zIndex.marker}
+      zIndex={zIndex}
     >
       <View style={[styles.marker, { backgroundColor: color }]}>
-        <MaterialCommunityIcons name="roller-skate" size={sizes.icon.md} color={colors.onSecondary} />
+        <MaterialCommunityIcons name="roller-skate" size={sizes.icon.md} color={iconColor} />
       </View>
     </MarkerAnimated>
   );

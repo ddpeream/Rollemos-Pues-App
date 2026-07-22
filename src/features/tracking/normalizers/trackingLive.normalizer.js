@@ -52,6 +52,7 @@ export const normalizeTrackingLiveProfile = (record) => {
 export const normalizeTrackingLiveSkater = (record) => {
   if (typeof record?.user_id !== 'string' || !record.user_id) return null;
 
+  const receivedAt = Date.now();
   const updatedAtTimestamp = Date.parse(record.updated_at);
   if (!Number.isFinite(updatedAtTimestamp)) return null;
 
@@ -69,6 +70,7 @@ export const normalizeTrackingLiveSkater = (record) => {
     coordinate,
     heading: coordinate.heading,
     isActive: record.is_active === true,
+    receivedAt,
     speed: coordinate.speed,
     updatedAt: new Date(updatedAtTimestamp).toISOString(),
     user: normalizeTrackingLiveProfile(record.usuarios),

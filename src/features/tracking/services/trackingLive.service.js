@@ -7,16 +7,7 @@ import {
 } from '../normalizers/trackingLive.normalizer';
 
 const LIVE_PROFILE_COLUMNS = 'id, nombre, avatar_url, ciudad, nivel, disciplina';
-const LIVE_SELECT = `
-  user_id,
-  lat,
-  lng,
-  speed,
-  heading,
-  is_active,
-  updated_at,
-  usuarios (${LIVE_PROFILE_COLUMNS})
-`;
+const LIVE_ROW_SELECT = 'user_id, lat, lng, speed, heading, is_active, updated_at';
 
 export { normalizeTrackingLiveSkater };
 
@@ -34,27 +25,27 @@ export const upsertTrackingLive = async ({
     return { data: null, error: 'missing_tracking_live_data', ok: false };
   }
 
-  const updatedAt = new Date().toISOString();
   const payload = {
     heading: normalizedCoordinate.heading,
     is_active: isActive,
     lat: normalizedCoordinate.latitude,
     lng: normalizedCoordinate.longitude,
     speed: normalizedCoordinate.speed,
-    updated_at: updatedAt,
     user_id: userId,
   };
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from(TRACKING_LIVE.TABLE_NAME)
-    .upsert(payload, { onConflict: 'user_id' });
+    .upsert(payload, { onConflict: 'user_id' })
+    .select(LIVE_ROW_SELECT)
+    .single();
 
   if (error) {
     return { data: null, error: error.message, ok: false };
   }
 
   return {
-    data: normalizeTrackingLiveSkater({ ...payload, usuarios: null }),
+    data: normalizeTrackingLiveSkater(data),
     error: null,
     ok: true,
   };
@@ -65,28 +56,21 @@ export const setTrackingLiveActive = async ({ isActive, userId }) => {
 
   const { error } = await supabase
     .from(TRACKING_LIVE.TABLE_NAME)
-    .update({
-      is_active: isActive,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ is_active: isActive })
     .eq('user_id', userId);
 
   if (error) return { error: error.message, ok: false };
   return { error: null, ok: true };
 };
 
-export const fetchTrackingLive = async ({ excludeUserId = null, now = Date.now() } = {}) => {
-  let query = supabase
-    .from(TRACKING_LIVE.TABLE_NAME)
-    .select(LIVE_SELECT)
-    .eq('is_active', true)
-    .gte('updated_at', new Date(now - TRACKING_LIVE.STALE_TIMEOUT_MS).toISOString());
-
-  if (excludeUserId) {
-    query = query.neq('user_id', excludeUserId);
-  }
-
-  const { data, error } = await query;
+export const fetchTrackingLive = async ({ excludeUserId = null } = {}) => {
+  const { data, error } = await supabase.rpc(
+    TRACKING_LIVE.ACTIVE_FUNCTION_NAME,
+    {
+      p_exclude_user_id: excludeUserId,
+      p_stale_after_seconds: Math.ceil(TRACKING_LIVE.STALE_TIMEOUT_MS / 1000),
+    },
+  );
 
   if (error) {
     return { data: [], error: error.message, ok: false };
@@ -140,7 +124,6 @@ export const subscribeTrackingLive = ({
     .subscribe((status, error) => onStatus?.({ error, status }))
 );
 
-export const unsubscribeTrackingLive = (channel) => {
-  if (!channel) return;
-  supabase.removeChannel(channel);
-};
+export const unsubscribeTrackingLive = (channel) => (
+  channel ? supabase.removeChannel(channel) : Promise.resolve(null)
+);

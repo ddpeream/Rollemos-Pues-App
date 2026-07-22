@@ -1,4 +1,5 @@
 export const TRACKING_LIVE = Object.freeze({
+  ACTIVE_FUNCTION_NAME: 'get_active_tracking_live',
   CHANNEL_NAME: 'tracking-live',
   HEARTBEAT_INTERVAL_MS: 15 * 1000,
   MAX_PATH_POINTS: 120,
@@ -28,6 +29,18 @@ export const TRACKING_LIVE_PUBLISH_REASON = Object.freeze({
 });
 
 export const TRACKING_LIVE_SUBSCRIPTION_STATUS = Object.freeze({
+  CLOSED: 'CLOSED',
+  CONNECTING: 'CONNECTING',
   ERROR: 'CHANNEL_ERROR',
+  IDLE: 'IDLE',
+  SUBSCRIBED: 'SUBSCRIBED',
   TIMED_OUT: 'TIMED_OUT',
+});
+
+/** @type {Readonly<import('../contracts/trackingLive.contracts').TrackingLiveConnectionState>} */
+export const TRACKING_LIVE_CONNECTION_INITIAL_STATE = Object.freeze({
+  initialFetchCount: 0,
+  lastEventAt: null,
+  lastSynchronizedAt: null,
+  status: TRACKING_LIVE_SUBSCRIPTION_STATUS.IDLE,
 });

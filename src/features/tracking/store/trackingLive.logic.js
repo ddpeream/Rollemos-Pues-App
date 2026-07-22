@@ -7,8 +7,9 @@ import { TRACKING_LIVE } from '../constants/trackingLive.constants';
 
 /** @param {TrackingLiveSkater} skater */
 export const isTrackingLiveSkaterFresh = (skater, now = Date.now()) => {
-  const updatedAt = Date.parse(skater?.updatedAt);
-  return Number.isFinite(updatedAt) && now - updatedAt <= TRACKING_LIVE.STALE_TIMEOUT_MS;
+  const receivedAt = Number(skater?.receivedAt);
+  return Number.isFinite(receivedAt)
+    && Math.max(0, now - receivedAt) <= TRACKING_LIVE.STALE_TIMEOUT_MS;
 };
 
 const appendLivePathCoordinate = (currentPath, coordinate) => {
@@ -25,7 +26,10 @@ const appendLivePathCoordinate = (currentPath, coordinate) => {
   return [...path, coordinate].slice(-TRACKING_LIVE.MAX_PATH_POINTS);
 };
 
-export const createInitialTrackingLiveState = ({ myUserId, now, skaters }) => {
+export const synchronizeTrackingLiveState = (
+  state,
+  { myUserId, now = Date.now(), skaters },
+) => {
   const livePaths = {};
   const liveSkaters = (Array.isArray(skaters) ? skaters : []).filter((skater) => (
     skater.userId !== myUserId
@@ -34,11 +38,21 @@ export const createInitialTrackingLiveState = ({ myUserId, now, skaters }) => {
   ));
 
   liveSkaters.forEach((skater) => {
-    livePaths[skater.userId] = [skater.coordinate];
+    livePaths[skater.userId] = appendLivePathCoordinate(
+      state.livePaths?.[skater.userId],
+      skater.coordinate,
+    );
   });
 
   return { livePaths, liveSkaters };
 };
+
+export const createInitialTrackingLiveState = ({ myUserId, now, skaters }) => (
+  synchronizeTrackingLiveState(
+    { livePaths: {}, liveSkaters: [] },
+    { myUserId, now, skaters },
+  )
+);
 
 /**
  * @param {TrackingLiveState} state

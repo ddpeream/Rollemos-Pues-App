@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useAuthStore } from '../../auth';
 import {
@@ -17,9 +17,12 @@ import {
   resolveTrackingLiveProfile,
 } from '../services/trackingLiveProfile.service';
 import { useTrackingStore } from '../store/trackingStore';
+import { useTrackingAppState } from './useTrackingAppState.logic';
 
 export function useTrackingLiveSkaters() {
+  const refreshLiveRef = useRef(null);
   const myUserId = useAuthStore((state) => state.authUser?.id || null);
+  const liveConnection = useTrackingStore((state) => state.liveConnection);
   const livePaths = useTrackingStore((state) => state.livePaths);
   const liveSkaters = useTrackingStore((state) => state.liveSkaters);
   const applyLiveTrackingChange = useTrackingStore(
@@ -33,12 +36,35 @@ export function useTrackingLiveSkaters() {
   );
   const pruneLiveTracking = useTrackingStore((state) => state.pruneLiveTracking);
   const resetLiveTracking = useTrackingStore((state) => state.resetLiveTracking);
+  const setLiveConnection = useTrackingStore((state) => state.setLiveConnection);
   const setLiveError = useTrackingStore((state) => state.setLiveError);
+  const synchronizeLiveTracking = useTrackingStore(
+    (state) => state.synchronizeLiveTracking,
+  );
+
+  const handleForeground = useCallback(() => {
+    refreshLiveRef.current?.();
+  }, []);
+  const handleBackground = useCallback(() => undefined, []);
+
+  useTrackingAppState({
+    onBackground: handleBackground,
+    onForeground: handleForeground,
+  });
 
   useEffect(() => {
-    let isMounted = true;
-    let isInitialized = false;
+    if (!myUserId) {
+      refreshLiveRef.current = null;
+      resetLiveTracking();
+      return undefined;
+    }
+
     let channel = null;
+    let hasSubscribed = false;
+    let isInitialized = false;
+    let isMounted = true;
+    let isSynchronizing = false;
+    let synchronizePromise = null;
     const pendingChanges = [];
 
     const applyChange = (change) => {
@@ -75,8 +101,62 @@ export function useTrackingLiveSkaters() {
       }
     };
 
+    const flushPendingChanges = () => {
+      pendingChanges.splice(0).forEach(applyChange);
+    };
+
+    const completeInitialSynchronization = (skaters) => {
+      initializeLiveTrackingState(skaters, myUserId);
+      isInitialized = true;
+    };
+
+    const synchronize = () => {
+      if (synchronizePromise) return synchronizePromise;
+
+      isSynchronizing = true;
+      synchronizePromise = (async () => {
+        try {
+          const result = await fetchTrackingLive({ excludeUserId: myUserId });
+          if (!isMounted) return;
+
+          if (!result.ok) {
+            setLiveError(result.error || TRACKING_LIVE_ERROR.FETCH_FAILED);
+            if (!isInitialized) completeInitialSynchronization([]);
+            return;
+          }
+
+          primeTrackingLiveProfiles(result.data);
+          if (isInitialized) {
+            synchronizeLiveTracking(result.data, myUserId);
+          } else {
+            completeInitialSynchronization(result.data);
+          }
+
+          setLiveError(null);
+          setLiveConnection({
+            initialFetchCount: result.data.length,
+            lastSynchronizedAt: Date.now(),
+          });
+        } catch (error) {
+          if (!isMounted) return;
+
+          setLiveError(error?.message || TRACKING_LIVE_ERROR.FETCH_FAILED);
+          if (!isInitialized) completeInitialSynchronization([]);
+        }
+      })().finally(() => {
+        isSynchronizing = false;
+        if (isMounted && isInitialized) flushPendingChanges();
+        synchronizePromise = null;
+      });
+
+      return synchronizePromise;
+    };
+
     const handleChange = (change) => {
-      if (!isInitialized) {
+      if (!isMounted) return;
+
+      setLiveConnection({ lastEventAt: Date.now() });
+      if (!isInitialized || isSynchronizing) {
         pendingChanges.push(change);
         return;
       }
@@ -84,49 +164,44 @@ export function useTrackingLiveSkaters() {
       applyChange(change);
     };
 
-    const initializeLiveSubscription = async () => {
-      if (!myUserId) {
-        resetLiveTracking();
+    const handleStatus = ({ error, status }) => {
+      if (!isMounted) return;
+
+      setLiveConnection({ status });
+      if (status === TRACKING_LIVE_SUBSCRIPTION_STATUS.SUBSCRIBED) {
+        setLiveError(null);
+        if (hasSubscribed) synchronize();
+        hasSubscribed = true;
         return;
       }
 
-      channel = subscribeTrackingLive({
-        channelKey: myUserId,
-        onChange: handleChange,
-        onStatus: ({ error, status }) => {
-          if (
-            status === TRACKING_LIVE_SUBSCRIPTION_STATUS.ERROR
-            || status === TRACKING_LIVE_SUBSCRIPTION_STATUS.TIMED_OUT
-          ) {
-            setLiveError(error?.message || TRACKING_LIVE_ERROR.SUBSCRIPTION_FAILED);
-          }
-        },
-      });
-
-      const initialLive = await fetchTrackingLive({ excludeUserId: myUserId });
-      if (!isMounted) return;
-
-      if (!initialLive.ok) {
-        setLiveError(initialLive.error || TRACKING_LIVE_ERROR.FETCH_FAILED);
+      if (
+        status === TRACKING_LIVE_SUBSCRIPTION_STATUS.ERROR
+        || status === TRACKING_LIVE_SUBSCRIPTION_STATUS.TIMED_OUT
+        || status === TRACKING_LIVE_SUBSCRIPTION_STATUS.CLOSED
+      ) {
+        setLiveError(error?.message || TRACKING_LIVE_ERROR.SUBSCRIPTION_FAILED);
       }
-
-      primeTrackingLiveProfiles(initialLive.data);
-      initializeLiveTrackingState(initialLive.data, myUserId);
-      isInitialized = true;
-      pendingChanges.splice(0).forEach(applyChange);
     };
 
-    initializeLiveSubscription().catch((error) => {
-      if (!isMounted) return;
-
-      setLiveError(error?.message || TRACKING_LIVE_ERROR.FETCH_FAILED);
-      initializeLiveTrackingState([], myUserId);
-      isInitialized = true;
-      pendingChanges.splice(0).forEach(applyChange);
+    setLiveConnection({
+      initialFetchCount: 0,
+      lastEventAt: null,
+      lastSynchronizedAt: null,
+      status: TRACKING_LIVE_SUBSCRIPTION_STATUS.CONNECTING,
     });
+    channel = subscribeTrackingLive({
+      channelKey: myUserId,
+      onChange: handleChange,
+      onStatus: handleStatus,
+    });
+
+    refreshLiveRef.current = synchronize;
+    synchronize();
 
     return () => {
       isMounted = false;
+      refreshLiveRef.current = null;
       unsubscribeTrackingLive(channel);
       resetLiveTracking();
     };
@@ -136,7 +211,9 @@ export function useTrackingLiveSkaters() {
     initializeLiveTrackingState,
     myUserId,
     resetLiveTracking,
+    setLiveConnection,
     setLiveError,
+    synchronizeLiveTracking,
   ]);
 
   useEffect(() => {
@@ -148,10 +225,11 @@ export function useTrackingLiveSkaters() {
   }, [pruneLiveTracking]);
 
   return useMemo(() => ({
+    liveConnection,
     livePaths,
     liveSkaters,
     myUserId,
-  }), [livePaths, liveSkaters, myUserId]);
+  }), [liveConnection, livePaths, liveSkaters, myUserId]);
 }
 
 export default useTrackingLiveSkaters;

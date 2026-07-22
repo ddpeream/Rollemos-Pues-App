@@ -123,6 +123,7 @@
  * @property {TrackingCoordinate} coordinate
  * @property {number} heading
  * @property {boolean} isActive
+ * @property {number} receivedAt
  * @property {number|null} speed
  * @property {string} updatedAt
  * @property {import('./trackingLive.contracts').TrackingLiveProfile|null} user

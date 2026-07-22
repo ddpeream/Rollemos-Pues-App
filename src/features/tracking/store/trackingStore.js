@@ -6,6 +6,7 @@ import {
   TRACKING_METRICS,
   TRACKING_STATUS,
 } from '../constants/tracking.constants';
+import { TRACKING_LIVE_CONNECTION_INITIAL_STATE } from '../constants/trackingLive.constants';
 import { createTimedMetrics } from './trackingMetrics.logic';
 import {
   createAcceptedLocationPatch,
@@ -21,6 +22,7 @@ import {
   attachTrackingLiveProfile,
   createInitialTrackingLiveState,
   pruneTrackingLiveState,
+  synchronizeTrackingLiveState,
 } from './trackingLive.logic';
 
 export const useTrackingStore = create((set, get) => ({
@@ -32,6 +34,7 @@ export const useTrackingStore = create((set, get) => ({
   locationServicesEnabled: null,
   locationStatus: TRACKING_LOCATION_STATUS.IDLE,
   liveError: null,
+  liveConnection: { ...TRACKING_LIVE_CONNECTION_INITIAL_STATE },
   isLivePrivate: false,
   livePaths: {},
   liveSkaters: [],
@@ -111,6 +114,9 @@ export const useTrackingStore = create((set, get) => ({
   setAutoStopEvent: (autoStopEvent) => set({ autoStopEvent }),
   setError: (error) => set({ error }),
   setLiveError: (liveError) => set({ liveError }),
+  setLiveConnection: (patch) => set((state) => ({
+    liveConnection: { ...state.liveConnection, ...patch },
+  })),
   setLocationPermissionDetails: ({ canAskAgain, status }) => set({
     canAskLocationPermissionAgain: canAskAgain,
     permissionStatus: status,
@@ -132,6 +138,9 @@ export const useTrackingStore = create((set, get) => ({
   initializeLiveTracking: (liveSkaters, myUserId, now = Date.now()) => set(
     createInitialTrackingLiveState({ myUserId, now, skaters: liveSkaters }),
   ),
+  synchronizeLiveTracking: (liveSkaters, myUserId, now = Date.now()) => set((state) => (
+    synchronizeTrackingLiveState(state, { myUserId, now, skaters: liveSkaters })
+  )),
   pruneLiveTracking: (now = Date.now()) => set((state) => (
     pruneTrackingLiveState(state, now)
   )),
@@ -149,6 +158,7 @@ export const useTrackingStore = create((set, get) => ({
     liveError: null,
     livePaths: {},
     liveSkaters: [],
+    liveConnection: { ...TRACKING_LIVE_CONNECTION_INITIAL_STATE },
   }),
 }));
 

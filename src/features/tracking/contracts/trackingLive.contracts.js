@@ -19,6 +19,14 @@
  */
 
 /**
+ * @typedef {Object} TrackingLiveConnectionState
+ * @property {number} initialFetchCount
+ * @property {number|null} lastEventAt
+ * @property {number|null} lastSynchronizedAt
+ * @property {'IDLE'|'CONNECTING'|'SUBSCRIBED'|'TIMED_OUT'|'CLOSED'|'CHANNEL_ERROR'} status
+ */
+
+/**
  * @typedef {Object} TrackingLiveState
  * @property {Record<string, import('./tracking.contracts').TrackingCoordinate[]>} livePaths
  * @property {import('./tracking.contracts').TrackingLiveSkater[]} liveSkaters

@@ -6,7 +6,13 @@ import { trackingTokens } from '../../../../theme';
 import { createReactNativeMapsMarkerController } from '../../platform/map/reactNativeMaps.markerController';
 import SkateMarkerView from './SkateMarker.ui';
 
-function SkateMarker({ coordinate, color, heading = 0 }) {
+function SkateMarker({
+  coordinate,
+  color,
+  heading = 0,
+  iconColor,
+  zIndex,
+}) {
   const markerRef = useRef(null);
   const animatedCoordinateRef = useRef(null);
   const previousCoordinateRef = useRef(null);
@@ -34,7 +40,7 @@ function SkateMarker({ coordinate, color, heading = 0 }) {
     }, trackingTokens.map.markerRenderSettleDurationMs);
 
     return () => clearTimeout(timer);
-  }, [color, hasCoordinate]);
+  }, [color, hasCoordinate, iconColor]);
 
   useEffect(() => {
     if (!coordinate) {
@@ -69,8 +75,10 @@ function SkateMarker({ coordinate, color, heading = 0 }) {
       color={color}
       flat={Platform.OS === 'android'}
       heading={heading}
+      iconColor={iconColor}
       markerRef={markerRef}
       tracksViewChanges={tracksViewChanges}
+      zIndex={zIndex}
     />
   );
 }
