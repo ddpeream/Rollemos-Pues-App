@@ -10,6 +10,13 @@ export const TRACKING_LIVE = Object.freeze({
   TABLE_NAME: 'tracking_live',
 });
 
+export const TRACKING_LIVE_DIAGNOSTIC_REASON = Object.freeze({
+  AUTH_FAILED: 'auth_failed',
+  NETWORK_FAILED: 'network_failed',
+  SUPABASE_FAILED: 'supabase_failed',
+  UNKNOWN_FAILED: 'unknown_failed',
+});
+
 export const TRACKING_LIVE_ERROR = Object.freeze({
   BACKGROUND_PUBLISH_FAILED: 'tracking_live_background_publish_failed',
   FETCH_FAILED: 'tracking_live_fetch_failed',

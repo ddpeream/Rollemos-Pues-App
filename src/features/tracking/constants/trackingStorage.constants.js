@@ -1,7 +1,7 @@
 export const TRACKING_DATABASE = {
   BATCH_SIZE: 250,
   NAME: 'tracking.db',
-  SCHEMA_VERSION: 3,
+  SCHEMA_VERSION: 4,
 };
 
 export const TRACKING_ROUTE_STORAGE = {

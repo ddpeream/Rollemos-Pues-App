@@ -10,6 +10,8 @@ export const publishTrackingLiveBackgroundLocation = async ({
   coordinate,
   routeId,
 }) => {
+  let userId = null;
+
   try {
     if (await loadTrackingPrivacy()) {
       return {
@@ -17,31 +19,35 @@ export const publishTrackingLiveBackgroundLocation = async ({
         ok: true,
         published: false,
         reason: TRACKING_LIVE_PUBLISH_REASON.PRIVATE,
+        userId,
       };
     }
 
     const authResult = await getAuthSession();
-    const userId = authResult.data?.user?.id || null;
+    userId = authResult.data?.user?.id || null;
     if (!authResult.ok || !userId) {
       return {
         error: authResult.error,
         ok: authResult.ok,
         published: false,
         reason: TRACKING_LIVE_PUBLISH_REASON.MISSING_USER,
+        userId,
       };
     }
 
-    return publishTrackingLiveLocation({
+    const result = await publishTrackingLiveLocation({
       coordinate,
       force: false,
       routeId,
       userId,
     });
+    return { ...result, userId };
   } catch (error) {
     return {
       error: error?.message || TRACKING_LIVE_ERROR.BACKGROUND_PUBLISH_FAILED,
       ok: false,
       published: false,
+      userId,
     };
   }
 };

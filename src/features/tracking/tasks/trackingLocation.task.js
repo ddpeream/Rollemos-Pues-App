@@ -3,6 +3,7 @@ import * as TaskManager from 'expo-task-manager';
 import { TRACKING_BACKGROUND } from '../constants/trackingBackground.constants';
 import { appendTrackingBackgroundLocations } from '../services/trackingBackgroundBuffer.service';
 import { publishTrackingLiveBackgroundLocation } from '../services/trackingLiveBackground.service';
+import { saveTrackingLiveBackgroundDiagnostic } from '../services/trackingLiveDiagnostics.service';
 
 if (!TaskManager.isTaskDefined(TRACKING_BACKGROUND.TASK_NAME)) {
   TaskManager.defineTask(TRACKING_BACKGROUND.TASK_NAME, async ({ data, error }) => {
@@ -11,13 +12,20 @@ if (!TaskManager.isTaskDefined(TRACKING_BACKGROUND.TASK_NAME)) {
     const bufferResult = await appendTrackingBackgroundLocations(data?.locations);
     if (!bufferResult.latestCoordinate || !bufferResult.routeId) return bufferResult;
 
+    const attemptedAt = Date.now();
     const liveResult = await publishTrackingLiveBackgroundLocation({
       coordinate: bufferResult.latestCoordinate,
       routeId: bufferResult.routeId,
     });
+    const liveDiagnostic = await saveTrackingLiveBackgroundDiagnostic({
+      attemptedAt,
+      result: liveResult,
+      routeId: bufferResult.routeId,
+    }).catch(() => null);
 
     return {
       ...bufferResult,
+      liveDiagnosticSaved: Boolean(liveDiagnostic),
       liveError: liveResult.error || null,
       livePublished: liveResult.published === true,
     };

@@ -117,6 +117,21 @@ const TRACKING_LIVE_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS tracking_live_checkpoints_published
     ON tracking_live_checkpoints(published_at);
 `;
+const TRACKING_LIVE_DIAGNOSTIC_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS tracking_live_diagnostics (
+    user_key TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT,
+    route_id TEXT,
+    attempted_at INTEGER NOT NULL,
+    ok INTEGER NOT NULL CHECK (ok IN (0, 1)),
+    published INTEGER NOT NULL CHECK (published IN (0, 1)),
+    reason TEXT NOT NULL,
+    error TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS tracking_live_diagnostics_attempted
+    ON tracking_live_diagnostics(attempted_at DESC);
+`;
 
 const setDatabaseVersion = (database, version) => (
   database.execAsync(`PRAGMA user_version = ${version}`)
@@ -154,6 +169,11 @@ const initializeTrackingDatabase = async () => {
   if (currentVersion < 3) {
     await database.execAsync(TRACKING_LIVE_SCHEMA_SQL);
     await setDatabaseVersion(database, 3);
+  }
+
+  if (currentVersion < 4) {
+    await database.execAsync(TRACKING_LIVE_DIAGNOSTIC_SCHEMA_SQL);
+    await setDatabaseVersion(database, 4);
   }
 
   return database;

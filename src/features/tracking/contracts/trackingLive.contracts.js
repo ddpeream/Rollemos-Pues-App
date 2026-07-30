@@ -19,6 +19,17 @@
  */
 
 /**
+ * @typedef {Object} TrackingLiveDiagnostic
+ * @property {number} attemptedAt
+ * @property {string|null} error
+ * @property {boolean} ok
+ * @property {boolean} published
+ * @property {string} reason
+ * @property {string|null} routeId
+ * @property {string|null} userId
+ */
+
+/**
  * @typedef {Object} TrackingLiveConnectionState
  * @property {number} initialFetchCount
  * @property {number|null} lastEventAt
